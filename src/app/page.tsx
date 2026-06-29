@@ -24,6 +24,7 @@ import {
   Wifi,
   WifiOff,
   User,
+  RefreshCw,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/dashboard/overview-tab';
 import { TablesTab } from '@/components/dashboard/tables-tab';
@@ -62,6 +63,9 @@ export default function Home() {
     isConnected,
     authenticatedUser,
     restaurantName,
+    lastRefreshed,
+    isRefreshing,
+    refreshData,
   } = useURYStore();
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -233,6 +237,18 @@ export default function Home() {
                 </>
               )}
             </Badge>
+            {isConnected && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => refreshData()}
+                disabled={isRefreshing}
+                title={lastRefreshed ? `Zadnja osvežitev: ${lastRefreshed.toLocaleTimeString('sl-SI')}` : 'Osveži podatke'}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

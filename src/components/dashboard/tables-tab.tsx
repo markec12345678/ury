@@ -13,8 +13,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Clock, Users, Wifi, WifiOff } from 'lucide-react';
 import { useURYStore } from '@/lib/ury-store';
+import type { TableStatus } from '@/lib/ury-types';
 import { useURYSocket } from '@/lib/use-ury-socket';
-import type { TableStatus } from '@/lib/mock-data';
 
 const statusColors: Record<TableStatus, string> = {
   free: 'border-emerald-400 bg-emerald-50 hover:bg-emerald-100',

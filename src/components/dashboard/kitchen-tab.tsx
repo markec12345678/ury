@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Clock, ChefHat, Flame, UtensilsCrossed, AlertTriangle, CheckCircle2, XCircle, Wifi, WifiOff, Bell } from 'lucide-react';
 import { useURYStore } from '@/lib/ury-store';
 import { useURYSocket } from '@/lib/use-ury-socket';
-import type { KOTStatus, ProductionUnit } from '@/lib/mock-data';
+import type { KOTStatus, ProductionUnit } from '@/lib/ury-types';
 
 const statusConfig: Record<KOTStatus, { border: string; bg: string; icon: React.ElementType; label: string; badgeClass: string }> = {
   new: { border: 'border-gray-300', bg: 'bg-white', icon: Flame, label: 'Novo', badgeClass: 'bg-gray-100 text-gray-700 border-gray-300' },

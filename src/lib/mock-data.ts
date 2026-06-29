@@ -1,6 +1,48 @@
 // URY Restaurant Management Evaluation Dashboard - Mock Data
 // Restaurant: Spice Garden (Indian Restaurant)
 
+export type {
+  OrderStatus,
+  OrderType,
+  RecentOrder,
+  TableStatus,
+  TableData,
+  KOTStatus,
+  ProductionUnit,
+  KOTItem,
+  KOTCard,
+  CashierData,
+  ShiftInfo,
+  APIEndpoint,
+  KPIs,
+  HourlySales,
+  PLSummary,
+  DailyPL,
+  ExpenseBreakdown,
+  PLLineItem,
+  Room,
+  FrontendApp,
+  BackendComponent,
+  InfrastructureComponent,
+  DocEventHook,
+} from '@/lib/ury-types';
+
+// Re-export types for backward compatibility
+import type {
+  RecentOrder,
+  TableData,
+  KOTStatus,
+  ProductionUnit,
+  KOTItem,
+  KOTCard,
+  CashierData,
+  ShiftInfo,
+  APIEndpoint,
+  HourlySales,
+  ExpenseBreakdown,
+  PLLineItem,
+} from '@/lib/ury-types';
+
 export const RESTAURANT_NAME = "Spice Garden";
 export const CURRENCY = "₹";
 
@@ -29,17 +71,7 @@ export const hourlySalesData = [
   { hour: "22:00", dineIn: 4600, takeaway: 1900 },
 ];
 
-export type OrderStatus = "Draft" | "Paid" | "Cancelled";
-export type OrderType = "Dine-in" | "Takeaway" | "Delivery";
-
-export interface RecentOrder {
-  invoice: string;
-  customer: string;
-  type: OrderType;
-  amount: number;
-  status: OrderStatus;
-  time: string;
-}
+// Types moved to ury-types.ts — re-exported above
 
 export const recentOrders: RecentOrder[] = [
   { invoice: "INV-2026-0187", customer: "Rajesh Sharma", type: "Dine-in", amount: 1850, status: "Paid", time: "21:42" },
@@ -54,18 +86,7 @@ export const recentOrders: RecentOrder[] = [
 
 // ── Tab 2: Tables ────────────────────────────────────────
 
-export type TableStatus = "free" | "occupied" | "attention" | "active";
-
-export interface TableData {
-  id: number;
-  room: string;
-  status: TableStatus;
-  pax: number;
-  occupiedSince?: string; // minutes ago
-  orderItems?: string[];
-  orderTotal?: number;
-  customer?: string;
-}
+// TableData type moved to ury-types.ts
 
 export const rooms = [
   { id: "glavna", name: "Glavna dvorana", tables: 16 },
@@ -115,27 +136,7 @@ export const tablesData: TableData[] = [
 
 // ── Tab 3: Kitchen / KOT ─────────────────────────────────
 
-export type KOTStatus = "new" | "modified" | "cancelled" | "ready" | "preparing" | "served";
-export type ProductionUnit = "Kuhinja 1" | "Kuhinja 2" | "Bar";
-
-export interface KOTItem {
-  name: string;
-  qty: number;
-  course?: string;
-  comments?: string;
-}
-
-export interface KOTCard {
-  id: string;
-  orderNo: string;
-  table: string;
-  items: KOTItem[];
-  timePlaced: string; // HH:MM
-  elapsed: number; // minutes
-  status: KOTStatus;
-  production: ProductionUnit;
-  kotType: "New Order" | "Order Modified" | "Partially cancelled";
-}
+// KOT types moved to ury-types.ts
 
 export const kotCards: KOTCard[] = [
   {
@@ -295,27 +296,7 @@ export const plLineItems = [
 
 // ── Tab 5: Shift / Cashier ───────────────────────────────
 
-export interface CashierData {
-  name: string;
-  role: string;
-  openedAt: string;
-  status: 'active' | 'closing';
-  openingBalance: number;
-  currentTotal: number;
-  cashPayments: number;
-  cardPayments: number;
-  upiPayments: number;
-  ordersProcessed: number;
-  room: string;
-}
-
-export interface ShiftInfo {
-  status: 'open' | 'closed';
-  openedAt: string;      // HH:MM
-  closesAt: string;      // HH:MM
-  openedBy: string;
-  openingBalance: number;
-}
+// CashierData & ShiftInfo types moved to ury-types.ts
 
 export const mockShiftInfo: ShiftInfo = {
   status: 'open',
@@ -369,15 +350,7 @@ export const mockCashiers: CashierData[] = [
 
 // ── Tab 6: API Explorer ──────────────────────────────────
 
-export interface APIEndpoint {
-  method: string;
-  module: string;
-  httpMethod: string;
-  parameters: string;
-  description: string;
-  paramDetails?: { name: string; type: string; required: boolean; description: string }[];
-  exampleResponse?: string;
-}
+// APIEndpoint type moved to ury-types.ts
 
 export const apiEndpoints: APIEndpoint[] = [
   // POS API
