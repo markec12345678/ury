@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,8 +11,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Users, ShoppingCart, IndianRupee } from 'lucide-react';
-import { tablesData, rooms, type TableData, type TableStatus, CURRENCY } from '@/lib/mock-data';
+import { Clock, Users, ShoppingCart, IndianRupee, Wifi, WifiOff } from 'lucide-react';
+import { tablesData as initialTablesData, rooms, type TableData, type TableStatus, CURRENCY } from '@/lib/mock-data';
+import { useURYSocket } from '@/lib/use-ury-socket';
 
 const statusColors: Record<TableStatus, string> = {
   free: 'border-emerald-400 bg-emerald-50 hover:bg-emerald-100',
@@ -38,30 +39,74 @@ const statusLabel: Record<TableStatus, string> = {
 export function TablesTab() {
   const [activeRoom, setActiveRoom] = useState('glavna');
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
+  const [tables, setTables] = useState<TableData[]>(initialTablesData);
+  const [flashingTable, setFlashingTable] = useState<number | null>(null);
+  const { onTableStatusChange, connected: socketConnected } = useURYSocket();
 
-  const filteredTables = tablesData.filter((t) => t.room === activeRoom);
+  // Real-time table status events
+  useEffect(() => {
+    const unsubscribe = onTableStatusChange((event) => {
+      setTables((prev) =>
+        prev.map((t) =>
+          t.id === event.tableId
+            ? {
+                ...t,
+                status: event.status as TableStatus,
+                pax: event.pax,
+                customer: event.customer,
+                occupiedSince: event.occupiedSince,
+              }
+            : t
+        )
+      );
+      setFlashingTable(event.tableId);
+      setTimeout(() => setFlashingTable(null), 2000);
+    });
+
+    return () => {
+      onTableStatusChange(() => {});
+    };
+  }, [onTableStatusChange]);
+
+  const filteredTables = tables.filter((t) => t.room === activeRoom);
+
+  const totalOccupied = tables.filter((t) => t.status !== 'free').length;
 
   return (
     <div className="space-y-4">
-      {/* Room Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {rooms.map((room) => {
-          const roomTables = tablesData.filter((t) => t.room === room.id);
-          const occupied = roomTables.filter((t) => t.status !== 'free').length;
-          return (
-            <Button
-              key={room.id}
-              variant={activeRoom === room.id ? 'default' : 'outline'}
-              className={activeRoom === room.id ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              onClick={() => setActiveRoom(room.id)}
-            >
-              {room.name}
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {occupied}/{room.tables}
-              </Badge>
-            </Button>
-          );
-        })}
+      {/* Header with stats */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {rooms.map((room) => {
+            const roomTables = tables.filter((t) => t.room === room.id);
+            const occupied = roomTables.filter((t) => t.status !== 'free').length;
+            return (
+              <Button
+                key={room.id}
+                variant={activeRoom === room.id ? 'default' : 'outline'}
+                className={activeRoom === room.id ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                onClick={() => setActiveRoom(room.id)}
+              >
+                {room.name}
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {occupied}/{room.tables}
+                </Badge>
+              </Button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-xs flex items-center gap-1.5">
+            {socketConnected ? (
+              <><Wifi className="h-3 w-3 text-emerald-500" /> Live</>
+            ) : (
+              <><WifiOff className="h-3 w-3 text-gray-400" /> Simulacija</>
+            )}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {totalOccupied}/{tables.length} zasedenih
+          </Badge>
+        </div>
       </div>
 
       {/* Legend */}
@@ -74,44 +119,49 @@ export function TablesTab() {
 
       {/* Table Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {filteredTables.map((table) => (
-          <Card
-            key={table.id}
-            className={`cursor-pointer transition-all duration-200 border-2 ${statusColors[table.status]} shadow-sm hover:shadow-md`}
-            onClick={() => setSelectedTable(table)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-lg font-bold">Miza {table.id}</span>
-                <span className={`w-3 h-3 rounded-full ${statusDot[table.status]} ${table.status === 'attention' ? 'animate-pulse' : ''}`} />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Users className="h-3.5 w-3.5" />
-                  <span>{table.status === 'free' ? '—' : `${table.pax} oseb`}</span>
+        {filteredTables.map((table) => {
+          const isFlashing = flashingTable === table.id;
+          return (
+            <Card
+              key={table.id}
+              className={`cursor-pointer transition-all duration-200 border-2 ${statusColors[table.status]} shadow-sm hover:shadow-md ${
+                isFlashing ? 'ring-4 ring-emerald-400 ring-opacity-50 scale-105' : ''
+              }`}
+              onClick={() => setSelectedTable(table)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-lg font-bold">Miza {table.id}</span>
+                  <span className={`w-3 h-3 rounded-full ${statusDot[table.status]} ${table.status === 'attention' ? 'animate-pulse' : ''}`} />
                 </div>
-                {table.occupiedSince && (
+                <div className="space-y-1">
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{table.occupiedSince} min</span>
+                    <Users className="h-3.5 w-3.5" />
+                    <span>{table.status === 'free' ? '—' : `${table.pax} oseb`}</span>
                   </div>
-                )}
-                <Badge
-                  variant="outline"
-                  className={`text-xs ${
-                    table.status === 'attention'
-                      ? 'border-red-300 text-red-700'
-                      : table.status === 'free'
-                      ? 'border-emerald-300 text-emerald-700'
-                      : 'border-amber-300 text-amber-700'
-                  }`}
-                >
-                  {statusLabel[table.status]}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  {table.occupiedSince && (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{table.occupiedSince} min</span>
+                    </div>
+                  )}
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${
+                      table.status === 'attention'
+                        ? 'border-red-300 text-red-700'
+                        : table.status === 'free'
+                        ? 'border-emerald-300 text-emerald-700'
+                        : 'border-amber-300 text-amber-700'
+                    }`}
+                  >
+                    {statusLabel[table.status]}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Table Detail Dialog */}

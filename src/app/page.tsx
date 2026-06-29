@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,8 @@ import {
   Menu,
   X,
   Clock,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/dashboard/overview-tab';
 import { TablesTab } from '@/components/dashboard/tables-tab';
@@ -43,13 +45,19 @@ const fadeVariants = {
 export default function Home() {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Apply dark mode
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
   const dateStr = now.toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className={`min-h-screen flex ${darkMode ? 'dark' : ''}`}>
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -60,7 +68,7 @@ export default function Home() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col transform transition-transform duration-300 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900 dark:bg-gray-950 text-white flex flex-col transform transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -115,8 +123,8 @@ export default function Home() {
                   <Icon className="h-4.5 w-4.5" />
                   {tab.label}
                   {tab.id === 'kitchen' && (
-                    <Badge className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0 h-5">
-                      6
+                    <Badge className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0 h-5 animate-pulse">
+                      LIVE
                     </Badge>
                   )}
                 </button>
@@ -138,9 +146,9 @@ export default function Home() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-screen flex flex-col">
+      <main className="flex-1 min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-white border-b px-4 lg:px-6 py-3 flex items-center justify-between shadow-sm">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b px-4 lg:px-6 py-3 flex items-center justify-between shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -151,12 +159,12 @@ export default function Home() {
               <Menu className="h-5 w-5" />
             </Button>
             <div>
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-lg font-semibold dark:text-white">
                 {tabs.find((t) => t.id === activeTab)?.label}
               </h2>
               <p className="text-xs text-muted-foreground hidden sm:block">
                 {activeTab === 'overview' && 'Dnevni pregled poslovanja'}
-                {activeTab === 'tables' && 'Status miz v restavraciji'}
+                {activeTab === 'tables' && 'Status miz v restavraciji — real-time posodobitve'}
                 {activeTab === 'kitchen' && 'Kuhinjska naročila v realnem času'}
                 {activeTab === 'pl' && 'Profit & Loss analiza'}
                 {activeTab === 'api' && 'URY API končne točke'}
@@ -169,6 +177,15 @@ export default function Home() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
               Online
             </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setDarkMode(!darkMode)}
+              title={darkMode ? 'Svetla tema' : 'Temna tema'}
+            >
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
           </div>
         </header>
 
@@ -191,7 +208,7 @@ export default function Home() {
           {/* Desktop Tabs (visible on large screens) */}
           <div className="hidden lg:block mb-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="bg-muted">
+              <TabsList className="bg-muted dark:bg-gray-800">
                 {tabs.map((tab) => (
                   <TabsTrigger key={tab.id} value={tab.id} className="px-4">
                     <tab.icon className="h-4 w-4 mr-1.5" />

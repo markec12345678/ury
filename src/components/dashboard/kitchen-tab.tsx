@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat, Flame, UtensilsCrossed, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
-import { kotCards, type KOTCard, type KOTStatus, type ProductionUnit } from '@/lib/mock-data';
+import { Clock, ChefHat, Flame, UtensilsCrossed, AlertTriangle, CheckCircle2, XCircle, Wifi, WifiOff, Bell } from 'lucide-react';
+import { kotCards as initialKotCards, type KOTCard, type KOTStatus, type ProductionUnit } from '@/lib/mock-data';
+import { useURYSocket } from '@/lib/use-ury-socket';
 
 const statusConfig: Record<KOTStatus, { border: string; bg: string; icon: React.ElementType; label: string; badgeClass: string }> = {
   new: { border: 'border-gray-300', bg: 'bg-white', icon: Flame, label: 'Novo', badgeClass: 'bg-gray-100 text-gray-700 border-gray-300' },
@@ -21,11 +22,78 @@ const productionUnits: ProductionUnit[] = ['Kuhinja 1', 'Kuhinja 2', 'Bar'];
 
 export function KitchenTab() {
   const [activeUnit, setActiveUnit] = useState<ProductionUnit | 'all'>('all');
-  const [cards, setCards] = useState<KOTCard[]>(kotCards);
+  const [cards, setCards] = useState<KOTCard[]>(initialKotCards);
+  const [newOrderFlash, setNewOrderFlash] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
+  const { onKOTNew, onKOTStatusChange, connected } = useURYSocket();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Real-time KOT events
+  useEffect(() => {
+    const unsubscribeNew = onKOTNew((kot) => {
+      const newCard: KOTCard = {
+        id: kot.id,
+        orderNo: kot.orderNo,
+        table: kot.table,
+        items: kot.items,
+        timePlaced: kot.timePlaced,
+        elapsed: 0,
+        status: kot.status,
+        production: kot.production as ProductionUnit,
+        kotType: kot.kotType,
+      };
+      setCards((prev) => [newCard, ...prev]);
+      setNewOrderFlash(kot.id);
+      setNotification(`Novo naročilo ${kot.orderNo} — Miza ${kot.table}`);
+
+      // Play notification sound (browser beep)
+      try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.value = 0.1;
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch {}
+
+      setTimeout(() => setNewOrderFlash(null), 3000);
+      setTimeout(() => setNotification(null), 5000);
+    });
+
+    const unsubscribeStatus = onKOTStatusChange((event) => {
+      setCards((prev) =>
+        prev.map((c) => (c.id === event.kotId ? { ...c, status: event.newStatus } : c))
+      );
+    });
+
+    // Cleanup by setting refs to null
+    return () => {
+      onKOTNew(() => {});
+      onKOTStatusChange(() => {});
+    };
+  }, [onKOTNew, onKOTStatusChange]);
+
+  // Elapsed time ticker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCards((prev) =>
+        prev.map((c) =>
+          c.status !== 'served' ? { ...c, elapsed: c.elapsed + 1 } : c
+        )
+      );
+    }, 60000); // every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const filteredCards = cards.filter(
     (c) => activeUnit === 'all' || c.production === activeUnit
   );
+
+  const activeOrders = cards.filter((c) => c.status !== 'served' && c.status !== 'cancelled');
 
   const updateStatus = (id: string, newStatus: KOTStatus) => {
     setCards((prev) =>
@@ -41,38 +109,96 @@ export function KitchenTab() {
 
   return (
     <div className="space-y-4">
-      {/* Production Unit Filter */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-sm font-medium text-muted-foreground mr-2">Proizvodna enota:</span>
-        <Button
-          variant={activeUnit === 'all' ? 'default' : 'outline'}
-          size="sm"
-          className={activeUnit === 'all' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-          onClick={() => setActiveUnit('all')}
-        >
-          Vse
-        </Button>
-        {productionUnits.map((unit) => {
-          const count = cards.filter(
-            (c) => c.production === unit && c.status !== 'served'
-          ).length;
-          return (
-            <Button
-              key={unit}
-              variant={activeUnit === unit ? 'default' : 'outline'}
-              size="sm"
-              className={activeUnit === unit ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              onClick={() => setActiveUnit(unit)}
-            >
-              {unit}
-              {count > 0 && (
-                <Badge variant="secondary" className="ml-1.5 text-xs">
-                  {count}
-                </Badge>
-              )}
-            </Button>
-          );
-        })}
+      {/* Connection Status + Notification */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-sm font-medium text-muted-foreground mr-2">Proizvodna enota:</span>
+          <Button
+            variant={activeUnit === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className={activeUnit === 'all' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+            onClick={() => setActiveUnit('all')}
+          >
+            Vse
+          </Button>
+          {productionUnits.map((unit) => {
+            const count = cards.filter(
+              (c) => c.production === unit && c.status !== 'served'
+            ).length;
+            return (
+              <Button
+                key={unit}
+                variant={activeUnit === unit ? 'default' : 'outline'}
+                size="sm"
+                className={activeUnit === unit ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                onClick={() => setActiveUnit(unit)}
+              >
+                {unit}
+                {count > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 text-xs">
+                    {count}
+                  </Badge>
+                )}
+              </Button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Real-time notification */}
+          {notification && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium animate-pulse">
+              <Bell className="h-3.5 w-3.5" />
+              {notification}
+            </div>
+          )}
+          <Badge variant="outline" className="text-xs flex items-center gap-1.5">
+            {connected ? (
+              <><Wifi className="h-3 w-3 text-emerald-500" /> Live</>
+            ) : (
+              <><WifiOff className="h-3 w-3 text-gray-400" /> Simulacija</>
+            )}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Summary Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="p-3 flex items-center gap-3">
+            <Flame className="h-5 w-5 text-amber-600" />
+            <div>
+              <p className="text-xs text-amber-600 font-medium">Na čakanju</p>
+              <p className="text-xl font-bold text-amber-800">{activeOrders.filter(c => c.status === 'new').length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-orange-50 border-orange-200">
+          <CardContent className="p-3 flex items-center gap-3">
+            <ChefHat className="h-5 w-5 text-orange-600" />
+            <div>
+              <p className="text-xs text-orange-600 font-medium">V pripravi</p>
+              <p className="text-xl font-bold text-orange-800">{activeOrders.filter(c => c.status === 'preparing').length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-emerald-50 border-emerald-200">
+          <CardContent className="p-3 flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <div>
+              <p className="text-xs text-emerald-600 font-medium">Pripravljeno</p>
+              <p className="text-xl font-bold text-emerald-800">{activeOrders.filter(c => c.status === 'ready').length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-3 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div>
+              <p className="text-xs text-red-600 font-medium">Zamuja (&gt;15min)</p>
+              <p className="text-xl font-bold text-red-800">{activeOrders.filter(c => c.elapsed > 15).length}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* KOT Cards Grid */}
@@ -80,10 +206,13 @@ export function KitchenTab() {
         {filteredCards.map((card) => {
           const config = statusConfig[card.status];
           const Icon = config.icon;
+          const isFlashing = newOrderFlash === card.id;
           return (
             <Card
               key={card.id}
-              className={`border-2 ${config.border} ${config.bg} transition-all shadow-sm hover:shadow-md`}
+              className={`border-2 ${config.border} ${config.bg} transition-all shadow-sm hover:shadow-md ${
+                isFlashing ? 'ring-4 ring-emerald-400 ring-opacity-60 scale-[1.02]' : ''
+              }`}
             >
               <CardContent className="p-4 space-y-3">
                 {/* Header */}
