@@ -148,10 +148,28 @@ export interface DashboardState {
   // Auto-refresh
   startAutoRefresh: () => void;
   stopAutoRefresh: () => void;
+
+  // Toast notifications
+  toasts: ToastMessage[];
+  addToast: (toast: Omit<ToastMessage, 'id'>) => void;
+  removeToast: (id: string) => void;
+}
+
+// ── Toast Types ──────────────────────────────────────────
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  description?: string;
+  duration?: number;
 }
 
 // ── Auto-refresh timer ──────────────────────────────────
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+// ── Toast auto-remove timer ─────────────────────────────
+const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 // ── Store ────────────────────────────────────────────────
 
@@ -195,6 +213,9 @@ export const useURYStore = create<DashboardState>((set, get) => {
     activeTab: 'overview',
     sidebarOpen: false,
     darkMode: false,
+
+    // Toast notifications
+    toasts: [],
 
     // ── Actions ────────────────────────────────────────
 
@@ -242,6 +263,8 @@ export const useURYStore = create<DashboardState>((set, get) => {
           get().refreshData();
           // Start auto-refresh
           get().startAutoRefresh();
+          // Toast notification
+          get().addToast({ type: 'success', title: 'Povezava uspešna', description: `Povezan s Frappe strežnikom${user ? ` kot ${user}` : ''}` });
           return true;
         }
         set({
@@ -249,6 +272,7 @@ export const useURYStore = create<DashboardState>((set, get) => {
           isConnecting: false,
           connectionError: 'Ne morem vzpostaviti povezave s Frappe strežnikom',
         });
+        get().addToast({ type: 'error', title: 'Povezava ni uspela', description: 'Ne morem vzpostaviti povezave s Frappe strežnikom' });
         return false;
       } catch (err) {
         set({
@@ -256,6 +280,7 @@ export const useURYStore = create<DashboardState>((set, get) => {
           isConnecting: false,
           connectionError: err instanceof Error ? err.message : 'Napaka povezave',
         });
+        get().addToast({ type: 'error', title: 'Napaka povezave', description: err instanceof Error ? err.message : 'Napaka povezave' });
         return false;
       }
     },
@@ -280,12 +305,14 @@ export const useURYStore = create<DashboardState>((set, get) => {
         get().refreshData();
         // Start auto-refresh
         get().startAutoRefresh();
+        get().addToast({ type: 'success', title: 'Prijava uspešna', description: `Dobrodošli, ${result.full_name || username}` });
         return true;
       } catch (err) {
         set({
           isConnecting: false,
           connectionError: err instanceof Error ? err.message : 'Prijava ni uspela',
         });
+        get().addToast({ type: 'error', title: 'Prijava ni uspela', description: err instanceof Error ? err.message : 'Prijava ni uspela' });
         return false;
       }
     },
@@ -428,6 +455,36 @@ export const useURYStore = create<DashboardState>((set, get) => {
               totalTables: allTables.length || 32,
             },
           });
+
+          // Compute hourly sales from invoices
+          const hourMap = new Map<string, { dineIn: number; takeaway: number }>();
+          // Initialize all hours from 11:00 to 22:00
+          for (let h = 11; h <= 22; h++) {
+            const key = `${String(h).padStart(2, '0')}:00`;
+            hourMap.set(key, { dineIn: 0, takeaway: 0 });
+          }
+          // Aggregate invoice totals by hour
+          invoices.forEach((inv: Record<string, unknown>) => {
+            const timeStr = String(inv.posting_time || '').slice(0, 5);
+            if (!timeStr) return;
+            const hour = timeStr.split(':')[0];
+            const key = `${hour}:00`;
+            const entry = hourMap.get(key);
+            if (entry) {
+              const amount = Number(inv.grand_total || 0);
+              if (inv.type === 'Takeaway' || inv.type === 'Delivery') {
+                entry.takeaway += amount;
+              } else {
+                entry.dineIn += amount;
+              }
+            }
+          });
+          const hourlyData: HourlySales[] = Array.from(hourMap.entries()).map(([hour, data]) => ({
+            hour,
+            dineIn: data.dineIn,
+            takeaway: data.takeaway,
+          }));
+          if (hourlyData.length > 0) set({ hourlySales: hourlyData });
         }
 
         // ── Process Rooms ───────────────────────────────
@@ -749,6 +806,30 @@ export const useURYStore = create<DashboardState>((set, get) => {
       if (refreshTimer) {
         clearInterval(refreshTimer);
         refreshTimer = null;
+      }
+    },
+
+    // ── Toast Notifications ──────────────────────────────
+
+    addToast: (toast) => {
+      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const duration = toast.duration ?? 5000;
+      set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
+
+      // Auto-remove after duration
+      const timer = setTimeout(() => {
+        get().removeToast(id);
+        toastTimers.delete(id);
+      }, duration);
+      toastTimers.set(id, timer);
+    },
+
+    removeToast: (id) => {
+      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+      const timer = toastTimers.get(id);
+      if (timer) {
+        clearTimeout(timer);
+        toastTimers.delete(id);
       }
     },
   };
