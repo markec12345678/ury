@@ -97,3 +97,48 @@ Stage Summary:
 - PDF export working for P&L reports
 - Socket.io dynamically connects to Frappe server or falls back to localhost
 - refreshData() properly transforms Frappe API responses to dashboard data models
+
+---
+Task ID: 4
+Agent: Super Z (main)
+Task: Socket.io Frappe room subscription, API proxy, enhanced overview & settings
+
+Work Log:
+- Upgraded use-ury-socket.ts with proper Frappe realtime room subscription
+  - Added FRAPPE_ROOMS array with 7 doctypes to subscribe to
+  - subscribeToFrappeRooms() emits 'task_subscribe' for doc: and list: rooms
+  - unsubscribeFromFrappeRooms() on disconnect
+  - Mapped Frappe doc_update events to KOT/table/invoice events with proper status mapping
+  - Added InvoiceEvent type for POS Invoice real-time updates
+  - mapFrappeKOTStatus() and mapFrappeTableStatus() helper functions
+- Created Frappe API proxy route (/api/frappe/[...path]/route.ts)
+  - Full GET/POST/PUT/DELETE proxy to Frappe backend
+  - Forwards Authorization and Cookie headers
+  - Returns proper error responses for unreachable backend
+- Enhanced environment configuration
+  - Added NEXT_PUBLIC_FRAPPE_URL, NEXT_PUBLIC_REFRESH_INTERVAL
+  - Added NEXT_PUBLIC_RESTAURANT_NAME, NEXT_PUBLIC_CURRENCY to .env and .env.example
+- Updated next.config.ts with rewrites for /api/frappe/:path* proxy and CORS headers
+- Enhanced Overview tab
+  - Quick stats row: Dine-in/Takeaway/Delivery counts + peak hour
+  - Occupancy progress bar with visual indicators
+  - Better dark mode support in all cards
+  - ComposedChart replacing AreaChart for future extensions
+  - LIVE/DEMO badge on hourly sales chart
+- Enhanced Settings page
+  - Proxy mode toggle with Switch component
+  - Real-time configuration info section
+  - Refresh button in connection status card
+  - Last refreshed timestamp display
+  - Better env variable documentation in requirements
+- Added ToastContainer component to root layout
+- Updated .gitignore to exclude tool-results/
+- Build test passed successfully
+- Pushed commit 6206193 to dashboard branch
+
+Stage Summary:
+- Socket.io now properly subscribes to Frappe realtime rooms on connect
+- API proxy route resolves CORS issues for production deployments
+- Overview tab enriched with quick stats, occupancy bar, peak hour
+- Settings page has proxy mode toggle and real-time config info
+- All changes committed and pushed to GitHub
