@@ -72,3 +72,28 @@ Stage Summary:
 - Architecture tab animiran in vizualno izboljšan
 - Vsi tabi testirani z Agent Browser, brez crashov
 - Screenshots shranjeni v /home/z/my-project/download/
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Refactor tab components to use Zustand store, add PDF export, upgrade Socket.io
+
+Work Log:
+- Analyzed all 7 tab components - found most already use Zustand store
+- Identified shift-tab.tsx as having hardcoded mockCashiers that needed store integration
+- Added CashierData and ShiftInfo interfaces to mock-data.ts with mock defaults
+- Extended Zustand store with cashiers, shiftInfo state and openShift/closeShift/transferShift actions
+- Implemented full refreshData() with Frappe-to-frontend data transformations for KOTs, tables, invoices, rooms
+- Updated testConnection() and login() to call refreshData() and reconnectSocket() after success
+- Refactored shift-tab.tsx completely: uses store cashiers/shiftInfo, added dialogs for open/close shift
+- Added PDF export to pl-tab.tsx using jsPDF + jspdf-autotable with professional formatting (2 pages, colored headers, margin indicators, daily P&L table, expense breakdown, full line items)
+- Upgraded Socket.io hook: dynamic URL based on Frappe config (connects to Frappe server when configured, localhost fallback for demo), added Frappe realtime event handlers (doc_update, list_update)
+- Added POS Opening/Closing Entry methods to Frappe client for shift management
+- Build test passed successfully
+- Pushed commit dfa4d52 to dashboard branch
+
+Stage Summary:
+- All tab components now fully integrated with Zustand store
+- PDF export working for P&L reports
+- Socket.io dynamically connects to Frappe server or falls back to localhost
+- refreshData() properly transforms Frappe API responses to dashboard data models
