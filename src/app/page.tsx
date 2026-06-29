@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,11 +15,15 @@ import {
   Code2,
   Boxes,
   Wallet,
+  Settings,
   Menu,
   X,
   Clock,
   Sun,
   Moon,
+  Wifi,
+  WifiOff,
+  User,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/dashboard/overview-tab';
 import { TablesTab } from '@/components/dashboard/tables-tab';
@@ -28,6 +32,7 @@ import { PLTab } from '@/components/dashboard/pl-tab';
 import { APIExplorerTab } from '@/components/dashboard/api-explorer-tab';
 import { ArchitectureTab } from '@/components/dashboard/architecture-tab';
 import { ShiftTab } from '@/components/dashboard/shift-tab';
+import { useURYStore } from '@/lib/ury-store';
 
 const tabs = [
   { id: 'overview', label: 'Pregled', icon: LayoutDashboard },
@@ -46,18 +51,29 @@ const fadeVariants = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const {
+    activeTab,
+    setActiveTab,
+    sidebarOpen,
+    setSidebarOpen,
+    toggleSidebar,
+    darkMode,
+    toggleDarkMode,
+    isConnected,
+    authenticatedUser,
+    restaurantName,
+  } = useURYStore();
 
-  // Apply dark mode
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update clock every minute
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, [darkMode]);
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const timeStr = currentTime.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = currentTime.toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className={`min-h-screen flex ${darkMode ? 'dark' : ''}`}>
@@ -96,10 +112,21 @@ export default function Home() {
 
         <Separator className="bg-gray-700" />
 
-        {/* Restaurant Info */}
+        {/* Restaurant Info + Connection */}
         <div className="px-5 py-3">
-          <p className="text-sm font-medium text-emerald-400">Spice Garden</p>
-          <p className="text-xs text-gray-500">Mumbai, India</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-emerald-400">{restaurantName}</p>
+            <Badge className={`text-[10px] px-1.5 py-0 h-4 ${
+              isConnected
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-600 text-gray-300'
+            }`}>
+              {isConnected ? 'LIVE' : 'DEMO'}
+            </Badge>
+          </div>
+          <p className="text-xs text-gray-500">
+            {isConnected ? 'Povezano s Frappe' : 'Simulirani podatki'}
+          </p>
         </div>
 
         <Separator className="bg-gray-700" />
@@ -134,17 +161,33 @@ export default function Home() {
               );
             })}
           </nav>
+
+          {/* Settings link */}
+          <Separator className="bg-gray-700 my-3" />
+          <a
+            href="/settings"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+          >
+            <Settings className="h-4.5 w-4.5" />
+            Nastavitve
+          </a>
         </ScrollArea>
 
         <Separator className="bg-gray-700" />
 
         {/* Footer */}
-        <div className="p-4">
+        <div className="p-4 space-y-2">
+          {isConnected && authenticatedUser && (
+            <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <User className="h-3.5 w-3.5" />
+              <span className="truncate">{authenticatedUser}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Clock className="h-3.5 w-3.5" />
             <span>{timeStr} • {dateStr}</span>
           </div>
-          <p className="text-[10px] text-gray-600 mt-2">URY v2.0 • Frappe/ERPNext</p>
+          <p className="text-[10px] text-gray-600">URY v2.0 • Frappe/ERPNext</p>
         </div>
       </aside>
 
@@ -178,14 +221,32 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs hidden sm:flex">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-              Online
+              {isConnected ? (
+                <>
+                  <Wifi className="h-3 w-3 text-emerald-500 mr-1.5" />
+                  Povezano
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-3 w-3 text-amber-500 mr-1.5" />
+                  Demo
+                </>
+              )}
             </Badge>
             <Button
               variant="ghost"
               size="icon"
               className="h-9 w-9"
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => window.location.href = '/settings'}
+              title="Nastavitve"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={toggleDarkMode}
               title={darkMode ? 'Svetla tema' : 'Temna tema'}
             >
               {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
