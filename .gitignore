@@ -36,7 +36,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -50,5 +49,24 @@ test
 prompt
 
 server.log
+
 # Skills directory
 /skills/
+
+# URY cloned repo (source analysis only)
+/ury/
+
+# Mini-services runtime
+/mini-services/ury-realtime/node_modules/
+
+# Uploads
+/upload/
+
+# Z scripts
+/.zscripts/
+
+# Prisma
+prisma/dev.db
+
+# Worklog (internal)
+worklog.md

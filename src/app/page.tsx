@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Code2,
   Boxes,
+  Wallet,
   Menu,
   X,
   Clock,
@@ -26,12 +27,14 @@ import { KitchenTab } from '@/components/dashboard/kitchen-tab';
 import { PLTab } from '@/components/dashboard/pl-tab';
 import { APIExplorerTab } from '@/components/dashboard/api-explorer-tab';
 import { ArchitectureTab } from '@/components/dashboard/architecture-tab';
+import { ShiftTab } from '@/components/dashboard/shift-tab';
 
 const tabs = [
   { id: 'overview', label: 'Pregled', icon: LayoutDashboard },
   { id: 'tables', label: 'Mize', icon: Grid3X3 },
   { id: 'kitchen', label: 'Kuhinja', icon: ChefHat },
   { id: 'pl', label: 'P&L', icon: TrendingUp },
+  { id: 'shift', label: 'Smena', icon: Wallet },
   { id: 'api', label: 'API', icon: Code2 },
   { id: 'architecture', label: 'Arhitektura', icon: Boxes },
 ];
@@ -167,6 +170,7 @@ export default function Home() {
                 {activeTab === 'tables' && 'Status miz v restavraciji — real-time posodobitve'}
                 {activeTab === 'kitchen' && 'Kuhinjska naročila v realnem času'}
                 {activeTab === 'pl' && 'Profit & Loss analiza'}
+                {activeTab === 'shift' && 'Upravljanje smen in blagajn'}
                 {activeTab === 'api' && 'URY API končne točke'}
                 {activeTab === 'architecture' && 'Sistemska arhitektura URY'}
               </p>
@@ -233,6 +237,7 @@ export default function Home() {
               {activeTab === 'tables' && <TablesTab />}
               {activeTab === 'kitchen' && <KitchenTab />}
               {activeTab === 'pl' && <PLTab />}
+              {activeTab === 'shift' && <ShiftTab />}
               {activeTab === 'api' && <APIExplorerTab />}
               {activeTab === 'architecture' && <ArchitectureTab />}
             </motion.div>
