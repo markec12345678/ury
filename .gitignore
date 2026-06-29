@@ -69,4 +69,4 @@ server.log
 prisma/dev.db
 
 # Worklog (internal)
-worklog.md
+worklog.mdtool-results/

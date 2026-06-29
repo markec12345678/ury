@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,10 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Globe,
+  Zap,
+  Info,
+  RefreshCw,
 } from 'lucide-react';
 import { useURYStore } from '@/lib/ury-store';
 
@@ -40,11 +45,14 @@ export default function SettingsPage() {
     isConnecting,
     connectionError,
     authenticatedUser,
+    lastRefreshed,
+    isRefreshing,
     setFrappeConfig,
     testConnection,
     login,
     logout,
     disconnectBackend,
+    refreshData,
   } = useURYStore();
 
   const [baseUrl, setBaseUrl] = useState(frappeConfig?.baseUrl || '');
@@ -55,6 +63,7 @@ export default function SettingsPage() {
   const [showSecret, setShowSecret] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginMode, setLoginMode] = useState<'token' | 'password'>('password');
+  const [useProxy, setUseProxy] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -67,7 +76,8 @@ export default function SettingsPage() {
   }, [frappeConfig]);
 
   const handleSaveAndTest = async () => {
-    const config = { baseUrl, apiKey: apiKey || undefined, apiSecret: apiSecret || undefined };
+    const effectiveUrl = useProxy ? '/api/frappe' : baseUrl;
+    const config = { baseUrl: useProxy ? (baseUrl || process.env.NEXT_PUBLIC_FRAPPE_URL || '') : baseUrl, apiKey: apiKey || undefined, apiSecret: apiSecret || undefined };
     setFrappeConfig(config);
     setSaveSuccess(false);
 
@@ -97,7 +107,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 p-4 lg:p-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -131,18 +141,36 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
-            {isConnected && (
-              <Badge className="bg-emerald-600 text-white">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Online
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {isConnected && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => refreshData()}
+                    disabled={isRefreshing}
+                    title="Osveži podatke"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+                  <Badge className="bg-emerald-600 text-white">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Online
+                  </Badge>
+                </>
+              )}
+            </div>
           </div>
           {isConnected && authenticatedUser && (
             <div className="mt-3 pt-3 border-t flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm">
                 <User className="h-4 w-4 text-emerald-600" />
                 <span>Prijavljen kot: <strong>{authenticatedUser}</strong></span>
+                {lastRefreshed && (
+                  <span className="text-muted-foreground ml-2">
+                    • Zadnja osvežitev: {lastRefreshed.toLocaleTimeString('sl-SI')}
+                  </span>
+                )}
               </div>
               <Button variant="outline" size="sm" onClick={logout}>
                 Odjavi se
@@ -173,12 +201,13 @@ export default function SettingsPage() {
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
                 className="flex-1"
+                disabled={useProxy}
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(baseUrl, '_blank')}
-                disabled={!baseUrl}
+                disabled={!baseUrl || useProxy}
                 title="Odpri v brskalniku"
               >
                 <ExternalLink className="h-4 w-4" />
@@ -188,6 +217,33 @@ export default function SettingsPage() {
               Poln URL do Frappe instance (brez končnega /)
             </p>
           </div>
+
+          {/* Proxy Mode Toggle */}
+          <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3">
+              <Globe className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Proxy način</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  Zahtevki gredo skozi /api/frappe/ — reši CORS težave
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={useProxy}
+              onCheckedChange={setUseProxy}
+            />
+          </div>
+
+          {useProxy && (
+            <div className="flex items-start gap-2 p-3 bg-muted rounded-lg text-sm">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="text-muted-foreground">
+                <p>V proxy načinu se vsi API zahtevki posredujejo skozi Next.js strežnik, kar odpravi CORS težave.</p>
+                <p className="mt-1">Frappe URL se prebere iz <code className="text-xs bg-muted-foreground/10 px-1 rounded">NEXT_PUBLIC_FRAPPE_URL</code> env spremenljivke ali nastavitve zgoraj.</p>
+              </div>
+            </div>
+          )}
 
           <Separator />
 
@@ -364,6 +420,46 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Real-time Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-amber-600" />
+            Real-time posodobitve
+          </CardTitle>
+          <CardDescription>
+            Socket.io konfiguracija za real-time prenos dogodkov iz Frappe
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div>
+              <p className="text-sm font-medium">Samodejna osvežitev</p>
+              <p className="text-xs text-muted-foreground">Podatki se osvežujejo vsakih 30 sekund</p>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {isConnected ? 'Aktivna' : 'Nedejavna'}
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div>
+              <p className="text-sm font-medium">Frappe Socket.io</p>
+              <p className="text-xs text-muted-foreground">
+                {isConnected
+                  ? 'Povezano — posluša dogodke URY KOT, Mize, Računi'
+                  : 'Na voljo po povezavi s Frappe'}
+              </p>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {isConnected ? 'Povezano' : 'Čaka'}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Dashboard se samodejno naroči na Frappe realtime dogodke (doc_update, list_update) za URY KOT, URY Table, POS Invoice in druge doctype-e.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Information Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
@@ -386,6 +482,10 @@ export default function SettingsPage() {
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
                 Za produkcijsko uporabo priporočamo API Token namesto gesla
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                Proxy način zahtevke posreduje varno skozi strežnik
               </li>
             </ul>
           </CardContent>
@@ -410,7 +510,11 @@ export default function SettingsPage() {
               </li>
               <li className="flex items-start gap-2">
                 <Badge variant="outline" className="text-[10px] shrink-0 mt-0.5">CORS</Badge>
-                Dashboard URL dodan v Frappe CORS nastavitve
+                Omogoči proxy način ali dodaj URL v Frappe CORS
+              </li>
+              <li className="flex items-start gap-2">
+                <Badge variant="outline" className="text-[10px] shrink-0 mt-0.5">ENV</Badge>
+                NEXT_PUBLIC_FRAPPE_URL za privzeto konfiguracijo
               </li>
             </ul>
           </CardContent>
