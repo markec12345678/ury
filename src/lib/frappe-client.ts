@@ -362,6 +362,49 @@ export class FrappeClient {
     if (date) filters['date'] = date;
     return this.getDocList({ doctype: 'URY Daily P&L', fields: ['*'], filters, limit: 30 });
   }
+
+  // ── Shift & Cashier Methods ──────────────────────────
+
+  async getPOSOpeningEntry(status?: string) {
+    const filters: Record<string, unknown> = {};
+    if (status) filters['status'] = status;
+    return this.getDocList({
+      doctype: 'POS Opening Entry',
+      fields: ['*'],
+      filters,
+      order_by: 'creation desc',
+      limit: 5,
+    });
+  }
+
+  async getPOSClosingEntry(openingEntry?: string) {
+    const filters: Record<string, unknown> = {};
+    if (openingEntry) filters['pos_opening_entry'] = openingEntry;
+    return this.getDocList({
+      doctype: 'POS Closing Entry',
+      fields: ['*'],
+      filters,
+      order_by: 'creation desc',
+      limit: 5,
+    });
+  }
+
+  async createPOSOpening(data: {
+    pos_profile: string;
+    company: string;
+    opening_balance: number;
+    [key: string]: unknown;
+  }) {
+    return this.createDoc('POS Opening Entry', data);
+  }
+
+  async createPOSClosing(data: {
+    pos_opening_entry: string;
+    closing_balance: number;
+    [key: string]: unknown;
+  }) {
+    return this.createDoc('POS Closing Entry', data);
+  }
 }
 
 // ── Singleton ────────────────────────────────────────────

@@ -20,6 +20,8 @@ import {
   infrastructureComponents,
   doctypes,
   docEventHooks,
+  mockCashiers,
+  mockShiftInfo,
   RESTAURANT_NAME,
   CURRENCY,
   type TableData,
@@ -27,6 +29,8 @@ import {
   type KOTStatus,
   type RecentOrder,
   type APIEndpoint,
+  type CashierData,
+  type ShiftInfo,
 } from '@/lib/mock-data';
 import {
   getFrappeClient,
@@ -35,12 +39,7 @@ import {
   clearConfig,
   type FrappeConfig,
 } from '@/lib/frappe-client';
-import {
-  useURYSocket,
-  type KOTNewEvent,
-  type KOTStatusChangeEvent,
-  type TableStatusChangeEvent,
-} from '@/lib/use-ury-socket';
+import { reconnectSocket } from '@/lib/use-ury-socket';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -66,6 +65,8 @@ export interface DashboardState {
   expenseBreakdown: typeof expenseBreakdown;
   plLineItems: typeof plLineItems;
   apiEndpoints: APIEndpoint[];
+  cashiers: CashierData[];
+  shiftInfo: ShiftInfo;
   frontendApps: typeof frontendApps;
   backendComponents: typeof backendComponents;
   infrastructureComponents: typeof infrastructureComponents;
@@ -91,6 +92,11 @@ export interface DashboardState {
 
   // KOT actions
   updateKOTStatus: (id: string, status: KOTStatus) => void;
+
+  // Shift actions
+  openShift: (openingBalance: number, openedBy: string) => void;
+  closeShift: () => void;
+  transferShift: (fromCashier: string, toCashier: string) => void;
 
   // Real-time listeners (called from components)
   subscribeToRealtime: () => void;
@@ -125,6 +131,8 @@ export const useURYStore = create<DashboardState>((set, get) => {
     expenseBreakdown: [...expenseBreakdown],
     plLineItems: [...plLineItems],
     apiEndpoints: [...apiEndpoints],
+    cashiers: [...mockCashiers],
+    shiftInfo: { ...mockShiftInfo },
     frontendApps: [...frontendApps],
     backendComponents: [...backendComponents],
     infrastructureComponents: [...infrastructureComponents],
@@ -176,6 +184,10 @@ export const useURYStore = create<DashboardState>((set, get) => {
             isConnecting: false,
             authenticatedUser: user,
           });
+          // Reconnect socket to Frappe server
+          reconnectSocket();
+          // Fetch real data from Frappe
+          get().refreshData();
           return true;
         }
         set({
@@ -208,6 +220,10 @@ export const useURYStore = create<DashboardState>((set, get) => {
           isConnecting: false,
           authenticatedUser: result.user || result.full_name || username,
         });
+        // Reconnect socket to Frappe server
+        reconnectSocket();
+        // Fetch real data from Frappe
+        get().refreshData();
         return true;
       } catch (err) {
         set({
@@ -241,6 +257,8 @@ export const useURYStore = create<DashboardState>((set, get) => {
         recentOrders: [...recentOrders],
         tables: [...tablesData],
         kotCards: [...kotCards],
+        cashiers: [...mockCashiers],
+        shiftInfo: { ...mockShiftInfo },
       });
     },
 
@@ -251,24 +269,83 @@ export const useURYStore = create<DashboardState>((set, get) => {
       try {
         const client = getFrappeClient();
 
-        // Fetch real data from Frappe
-        // KOT list
+        // Fetch KOT list
         const kotResult = await client.getKOTList().catch(() => null);
         if (kotResult?.data) {
-          // Transform Frappe KOT data to our format
-          // This will be customized based on actual Frappe response structure
+          const transformedKOTs: KOTCard[] = Array.isArray(kotResult.data)
+            ? kotResult.data.map((kot: Record<string, unknown>) => ({
+                id: String(kot.name || kot.id || ''),
+                orderNo: String(kot.order_no || kot.orderNo || ''),
+                table: String(kot.restaurant_table || kot.table || ''),
+                items: Array.isArray(kot.items)
+                  ? kot.items.map((item: Record<string, unknown>) => ({
+                      name: String(item.item_name || item.name || ''),
+                      qty: Number(item.qty || 1),
+                      course: item.course ? String(item.course) : undefined,
+                      comments: item.comments ? String(item.comments) : undefined,
+                    }))
+                  : [],
+                timePlaced: String(kot.time_placed || kot.timePlaced || ''),
+                elapsed: Number(kot.elapsed || 0),
+                status: (kot.status as KOTStatus) || 'new',
+                production: String(kot.production_unit || kot.production || 'Kuhinja 1') as KOTCard['production'],
+                kotType: (kot.kot_type || kot.kotType || 'New Order') as KOTCard['kotType'],
+              }))
+            : [];
+          set({ kotCards: transformedKOTs });
         }
 
-        // Tables
+        // Fetch tables
         const tablesResult = await client.getRestaurantTables().catch(() => null);
         if (tablesResult?.data) {
-          // Transform table data
+          const transformedTables: TableData[] = Array.isArray(tablesResult.data)
+            ? tablesResult.data.map((t: Record<string, unknown>) => ({
+                id: Number(t.name || t.id || 0),
+                room: String(t.room || ''),
+                status: (t.status as TableData['status']) || 'free',
+                pax: Number(t.no_of_seats || t.pax || 0),
+                occupiedSince: t.occupied_since ? String(t.occupied_since) : undefined,
+                orderItems: t.order_items ? String(t.order_items).split(', ') : undefined,
+                orderTotal: t.order_total ? Number(t.order_total) : undefined,
+                customer: t.customer ? String(t.customer) : undefined,
+              }))
+            : [];
+          set({ tables: transformedTables });
         }
 
-        // POS invoices for recent orders
+        // Fetch POS invoices for recent orders
         const invoicesResult = await client.getInvoiceForCashier('Paid', '', 10, 0).catch(() => null);
         if (invoicesResult?.data) {
-          // Transform invoice data
+          const transformedOrders: RecentOrder[] = Array.isArray(invoicesResult.data)
+            ? invoicesResult.data.map((inv: Record<string, unknown>) => ({
+                invoice: String(inv.name || ''),
+                customer: String(inv.customer || ''),
+                type: (inv.type === 'Dine-in' ? 'Dine-in' : inv.type === 'Takeaway' ? 'Takeaway' : 'Delivery') as RecentOrder['type'],
+                amount: Number(inv.grand_total || 0),
+                status: (inv.status as RecentOrder['status']) || 'Paid',
+                time: inv.posting_time ? String(inv.posting_time).slice(0, 5) : '',
+              }))
+            : [];
+          set({ recentOrders: transformedOrders });
+        }
+
+        // Fetch rooms
+        const roomsResult = await client.getRestaurantRooms().catch(() => null);
+        if (roomsResult?.data) {
+          const transformedRooms = Array.isArray(roomsResult.data)
+            ? roomsResult.data.map((r: Record<string, unknown>) => ({
+                id: String(r.name || r.id || '').toLowerCase().replace(/\s+/g, '-'),
+                name: String(r.room_name || r.name || ''),
+                tables: Number(r.no_of_tables || r.tables || 0),
+              }))
+            : [];
+          if (transformedRooms.length > 0) set({ rooms: transformedRooms });
+        }
+
+        // Fetch production units for kitchen
+        const unitsResult = await client.getProductionUnits().catch(() => null);
+        if (unitsResult?.data) {
+          // Could be used to dynamically populate production units
         }
       } catch (err) {
         console.error('Failed to refresh data:', err);
@@ -288,6 +365,44 @@ export const useURYStore = create<DashboardState>((set, get) => {
         const client = getFrappeClient();
         client.serveKOT(id, new Date().toISOString()).catch(console.error);
       }
+    },
+
+    openShift: (openingBalance, openedBy) => {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+      set((s) => ({
+        shiftInfo: {
+          status: 'open',
+          openedAt: timeStr,
+          closesAt: '23:00',
+          openedBy,
+          openingBalance,
+        },
+      }));
+
+      // If connected, call Frappe POS Opening
+      if (get().isConnected) {
+        const client = getFrappeClient();
+        client.posOpening().catch(console.error);
+      }
+    },
+
+    closeShift: () => {
+      set((s) => ({
+        shiftInfo: {
+          ...s.shiftInfo,
+          status: 'closed',
+        },
+      }));
+    },
+
+    transferShift: (fromCashier, toCashier) => {
+      // In a real system this would call Frappe API to transfer
+      set((s) => ({
+        cashiers: s.cashiers.map((c) =>
+          c.name === fromCashier ? { ...c, status: 'closing' as const } : c
+        ),
+      }));
     },
 
     subscribeToRealtime: () => {
@@ -327,6 +442,8 @@ export const useDashboardData = () =>
     expenseBreakdown: s.expenseBreakdown,
     plLineItems: s.plLineItems,
     apiEndpoints: s.apiEndpoints,
+    cashiers: s.cashiers,
+    shiftInfo: s.shiftInfo,
   }));
 
 export const useUIState = () =>

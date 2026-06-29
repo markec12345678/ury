@@ -293,7 +293,81 @@ export const plLineItems = [
   { label: "Neto dobiček / Izguba", value: 9966, bold: true },
 ];
 
-// ── Tab 5: API Explorer ──────────────────────────────────
+// ── Tab 5: Shift / Cashier ───────────────────────────────
+
+export interface CashierData {
+  name: string;
+  role: string;
+  openedAt: string;
+  status: 'active' | 'closing';
+  openingBalance: number;
+  currentTotal: number;
+  cashPayments: number;
+  cardPayments: number;
+  upiPayments: number;
+  ordersProcessed: number;
+  room: string;
+}
+
+export interface ShiftInfo {
+  status: 'open' | 'closed';
+  openedAt: string;      // HH:MM
+  closesAt: string;      // HH:MM
+  openedBy: string;
+  openingBalance: number;
+}
+
+export const mockShiftInfo: ShiftInfo = {
+  status: 'open',
+  openedAt: '09:00',
+  closesAt: '23:00',
+  openedBy: 'Ravi Kumar',
+  openingBalance: 18000,
+};
+
+export const mockCashiers: CashierData[] = [
+  {
+    name: "Amit Patel",
+    role: "URY Cashier",
+    openedAt: "09:00",
+    status: "active",
+    openingBalance: 5000,
+    currentTotal: 48250,
+    cashPayments: 22400,
+    cardPayments: 15850,
+    upiPayments: 10000,
+    ordersProcessed: 87,
+    room: "Glavna dvorana",
+  },
+  {
+    name: "Sneha Verma",
+    role: "URY Cashier",
+    openedAt: "09:00",
+    status: "active",
+    openingBalance: 3000,
+    currentTotal: 31580,
+    cashPayments: 14200,
+    cardPayments: 11380,
+    upiPayments: 6000,
+    ordersProcessed: 62,
+    room: "Terasa",
+  },
+  {
+    name: "Ravi Kumar",
+    role: "URY Manager",
+    openedAt: "08:30",
+    status: "active",
+    openingBalance: 10000,
+    currentTotal: 67800,
+    cashPayments: 31200,
+    cardPayments: 24600,
+    upiPayments: 12000,
+    ordersProcessed: 124,
+    room: "VIP + Bar",
+  },
+];
+
+// ── Tab 6: API Explorer ──────────────────────────────────
 
 export interface APIEndpoint {
   method: string;

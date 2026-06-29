@@ -23,11 +23,11 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, PieChartIcon, Download } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChartIcon, Download, FileText } from 'lucide-react';
 import { useURYStore } from '@/lib/ury-store';
 
 export function PLTab() {
-  const { plSummary, dailyPL, expenseBreakdown, plLineItems, currency } = useURYStore();
+  const { plSummary, dailyPL, expenseBreakdown, plLineItems, currency, restaurantName, isConnected } = useURYStore();
 
   const summaryCards = [
     {
@@ -77,6 +77,178 @@ export function PLTab() {
     link.download = `PL-porocilo-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(5, 150, 105); // emerald-600
+    doc.text('P&L Poročilo', 14, 22);
+
+    // Restaurant name and date
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(restaurantName, 14, 30);
+    doc.setFontSize(10);
+    doc.text(`Datum: ${new Date().toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`, 14, 36);
+    doc.text(`Vir: ${isConnected ? 'Frappe strežnik (LIVE)' : 'Simulirani podatki (DEMO)'}`, 14, 42);
+
+    // Summary cards section
+    doc.setFontSize(14);
+    doc.setTextColor(30, 30, 30);
+    doc.text('Povzetek', 14, 52);
+
+    autoTable(doc, {
+      startY: 55,
+      head: [['Postavka', 'Znesek']],
+      body: [
+        ['Bruto prodaja', `${currency}${plSummary.grossSales.toLocaleString('en-IN')}`],
+        ['COGS', `-${currency}${plSummary.cogs.toLocaleString('en-IN')}`],
+        ['Bruto dobiček', `${currency}${plSummary.grossProfit.toLocaleString('en-IN')}`],
+        ['Neto dobiček', `${currency}${plSummary.netProfit.toLocaleString('en-IN')}`],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+      bodyStyles: { fontSize: 10 },
+      alternateRowStyles: { fillColor: [240, 253, 244] },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 80 },
+        1: { halign: 'right', cellWidth: 60 },
+      },
+      didParseCell: (data) => {
+        // Highlight negative values in red
+        if (data.section === 'body' && data.column.index === 1) {
+          const text = data.cell.raw as string;
+          if (text.startsWith('-')) {
+            data.cell.styles.textColor = [220, 38, 38]; // red-600
+          }
+        }
+        // Highlight net profit in green
+        if (data.section === 'body' && data.row.index === 3) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+        }
+      },
+    });
+
+    // Margin indicators
+    const summaryEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 100;
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Bruto marža: ${grossMargin}%    |    Neto marža: ${profitMargin}%`, 14, summaryEndY + 10);
+
+    // Daily P&L section
+    doc.setFontSize(14);
+    doc.setTextColor(30, 30, 30);
+    doc.text('Dnevni P&L (7 dni)', 14, summaryEndY + 22);
+
+    autoTable(doc, {
+      startY: summaryEndY + 25,
+      head: [['Dan', 'Prihodki', 'Stroški', 'Dobiček']],
+      body: dailyPL.map((d) => [
+        d.day,
+        `${currency}${d.revenue.toLocaleString('en-IN')}`,
+        `${currency}${d.costs.toLocaleString('en-IN')}`,
+        `${currency}${(d.revenue - d.costs).toLocaleString('en-IN')}`,
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+      bodyStyles: { fontSize: 9 },
+      alternateRowStyles: { fillColor: [240, 253, 244] },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+        3: { halign: 'right', fontStyle: 'bold' },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const text = data.cell.raw as string;
+          if (text.startsWith('-')) {
+            data.cell.styles.textColor = [220, 38, 38];
+          } else {
+            data.cell.styles.textColor = [5, 150, 105];
+          }
+        }
+      },
+    });
+
+    // Expense Breakdown section (new page)
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.setTextColor(30, 30, 30);
+    doc.text('Razdelitev stroškov', 14, 22);
+
+    autoTable(doc, {
+      startY: 28,
+      head: [['Kategorija', 'Delež']],
+      body: expenseBreakdown.map((e) => [e.name, `${e.value}%`]),
+      theme: 'striped',
+      headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+      bodyStyles: { fontSize: 10 },
+      alternateRowStyles: { fillColor: [240, 253, 244] },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 80 },
+        1: { halign: 'right', cellWidth: 40 },
+      },
+    });
+
+    // Full P&L Line Items
+    const expenseEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 80;
+    doc.setFontSize(14);
+    doc.setTextColor(30, 30, 30);
+    doc.text('Podrobnosti P&L', 14, expenseEndY + 15);
+
+    autoTable(doc, {
+      startY: expenseEndY + 18,
+      head: [['Postavka', 'Znesek']],
+      body: plLineItems.map((item) => [
+        item.label,
+        `${item.value < 0 ? '-' : ''}${currency}${Math.abs(item.value).toLocaleString('en-IN')}`,
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+      bodyStyles: { fontSize: 10 },
+      alternateRowStyles: { fillColor: [240, 253, 244] },
+      columnStyles: {
+        0: { fontStyle: item.bold ? 'bold' : 'normal', cellWidth: 80 },
+        1: { halign: 'right', cellWidth: 60, fontStyle: item.bold ? 'bold' : 'normal' },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 1) {
+          const text = data.cell.raw as string;
+          if (text.startsWith('-')) {
+            data.cell.styles.textColor = [220, 38, 38]; // red for negative
+          }
+          if ((data.row.index === 2 || data.row.index === 6)) {
+            // Gross profit and Net profit lines
+            data.cell.styles.textColor = [5, 150, 105];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      },
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        `URY Dashboard — P&L Poročilo — Stran ${i} od ${pageCount}`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      );
+    }
+
+    doc.save(`PL-porocilo-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -190,10 +362,16 @@ export function PLTab() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold">Podrobnosti P&L</CardTitle>
-            <Button variant="outline" size="sm" onClick={handleExportCSV}>
-              <Download className="h-4 w-4 mr-1.5" />
-              CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                <Download className="h-4 w-4 mr-1.5" />
+                CSV
+              </Button>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleExportPDF}>
+                <FileText className="h-4 w-4 mr-1.5" />
+                PDF
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
