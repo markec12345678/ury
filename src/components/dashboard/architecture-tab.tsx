@@ -6,13 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
-import {
-  frontendApps,
-  backendComponents,
-  infrastructureComponents,
-  doctypes,
-  docEventHooks,
-} from '@/lib/mock-data';
+import { useURYStore } from '@/lib/ury-store';
 
 const frontendIcons: Record<string, string> = {
   'POS React': '⚛️',
@@ -27,6 +21,7 @@ const fadeIn = {
 
 export function ArchitectureTab() {
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
+  const { frontendApps, backendComponents, infrastructureComponents, doctypes, docEventHooks } = useURYStore();
 
   return (
     <div className="space-y-6">

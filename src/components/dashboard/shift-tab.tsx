@@ -9,16 +9,17 @@ import { Progress } from '@/components/ui/progress';
 import {
   Clock,
   User,
-  IndianRupee,
   Wallet,
   CreditCard,
   Banknote,
   Smartphone,
   CheckCircle2,
-  AlertCircle,
   Timer,
   ArrowRightLeft,
+  ShoppingCart,
+  IndianRupee,
 } from 'lucide-react';
+import { useURYStore } from '@/lib/ury-store';
 
 interface Cashier {
   name: string;
@@ -79,6 +80,7 @@ const mockCashiers: Cashier[] = [
 export function ShiftTab() {
   const [cashiers] = useState<Cashier[]>(mockCashiers);
   const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
+  const { currency } = useURYStore();
 
   const totalOpening = cashiers.reduce((sum, c) => sum + c.openingBalance, 0);
   const totalCurrent = cashiers.reduce((sum, c) => sum + c.currentTotal, 0);
@@ -124,11 +126,10 @@ export function ShiftTab() {
               <span className="text-sm font-medium text-amber-700 dark:text-amber-400">Skupni promet</span>
             </div>
             <p className="text-2xl font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
-              <IndianRupee className="h-5 w-5" />
-              {totalCurrent.toLocaleString('en-IN')}
+              {currency}{totalCurrent.toLocaleString('en-IN')}
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-              Odpiralni saldo: ₹{totalOpening.toLocaleString('en-IN')}
+              Odpiralni saldo: {currency}{totalOpening.toLocaleString('en-IN')}
             </p>
           </CardContent>
         </Card>
@@ -158,7 +159,7 @@ export function ShiftTab() {
               <Banknote className="h-8 w-8 text-green-600" />
               <div>
                 <p className="text-xs text-green-600 font-medium">Gotovina</p>
-                <p className="text-lg font-bold text-green-800 dark:text-green-300">₹{totalCash.toLocaleString('en-IN')}</p>
+                <p className="text-lg font-bold text-green-800 dark:text-green-300">{currency}{totalCash.toLocaleString('en-IN')}</p>
                 <p className="text-[10px] text-green-500">{Math.round((totalCash / totalCurrent) * 100)}%</p>
               </div>
             </div>
@@ -166,7 +167,7 @@ export function ShiftTab() {
               <CreditCard className="h-8 w-8 text-blue-600" />
               <div>
                 <p className="text-xs text-blue-600 font-medium">Kartica</p>
-                <p className="text-lg font-bold text-blue-800 dark:text-blue-300">₹{totalCard.toLocaleString('en-IN')}</p>
+                <p className="text-lg font-bold text-blue-800 dark:text-blue-300">{currency}{totalCard.toLocaleString('en-IN')}</p>
                 <p className="text-[10px] text-blue-500">{Math.round((totalCard / totalCurrent) * 100)}%</p>
               </div>
             </div>
@@ -174,7 +175,7 @@ export function ShiftTab() {
               <Smartphone className="h-8 w-8 text-purple-600" />
               <div>
                 <p className="text-xs text-purple-600 font-medium">UPI</p>
-                <p className="text-lg font-bold text-purple-800 dark:text-purple-300">₹{totalUPI.toLocaleString('en-IN')}</p>
+                <p className="text-lg font-bold text-purple-800 dark:text-purple-300">{currency}{totalUPI.toLocaleString('en-IN')}</p>
                 <p className="text-[10px] text-purple-500">{Math.round((totalUPI / totalCurrent) * 100)}%</p>
               </div>
             </div>
@@ -217,8 +218,7 @@ export function ShiftTab() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold flex items-center gap-1 dark:text-white">
-                      <IndianRupee className="h-4 w-4" />
-                      {cashier.currentTotal.toLocaleString('en-IN')}
+                      {currency}{cashier.currentTotal.toLocaleString('en-IN')}
                     </p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
@@ -233,17 +233,17 @@ export function ShiftTab() {
                       <div className="text-center p-2 bg-green-50 dark:bg-green-900/10 rounded-lg">
                         <Banknote className="h-4 w-4 text-green-600 mx-auto mb-1" />
                         <p className="text-xs text-green-600">Gotovina</p>
-                        <p className="font-bold text-green-800 dark:text-green-300">₹{cashier.cashPayments.toLocaleString('en-IN')}</p>
+                        <p className="font-bold text-green-800 dark:text-green-300">{currency}{cashier.cashPayments.toLocaleString('en-IN')}</p>
                       </div>
                       <div className="text-center p-2 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
                         <CreditCard className="h-4 w-4 text-blue-600 mx-auto mb-1" />
                         <p className="text-xs text-blue-600">Kartica</p>
-                        <p className="font-bold text-blue-800 dark:text-blue-300">₹{cashier.cardPayments.toLocaleString('en-IN')}</p>
+                        <p className="font-bold text-blue-800 dark:text-blue-300">{currency}{cashier.cardPayments.toLocaleString('en-IN')}</p>
                       </div>
                       <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/10 rounded-lg">
                         <Smartphone className="h-4 w-4 text-purple-600 mx-auto mb-1" />
                         <p className="text-xs text-purple-600">UPI</p>
-                        <p className="font-bold text-purple-800 dark:text-purple-300">₹{cashier.upiPayments.toLocaleString('en-IN')}</p>
+                        <p className="font-bold text-purple-800 dark:text-purple-300">{currency}{cashier.upiPayments.toLocaleString('en-IN')}</p>
                       </div>
                       <div className="text-center p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg">
                         <ShoppingCart className="h-4 w-4 text-amber-600 mx-auto mb-1" />
@@ -253,12 +253,12 @@ export function ShiftTab() {
                     </div>
                     <div className="mt-3 flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Odpiralni saldo</span>
-                      <span className="font-medium dark:text-white">₹{cashier.openingBalance.toLocaleString('en-IN')}</span>
+                      <span className="font-medium dark:text-white">{currency}{cashier.openingBalance.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Pričakovan zaključni saldo</span>
                       <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        ₹{(cashier.openingBalance + cashier.currentTotal).toLocaleString('en-IN')}
+                        {currency}{(cashier.openingBalance + cashier.currentTotal).toLocaleString('en-IN')}
                       </span>
                     </div>
                   </div>
@@ -289,14 +289,5 @@ export function ShiftTab() {
         </Button>
       </div>
     </div>
-  );
-}
-
-function ShoppingCart({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
-      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
-    </svg>
   );
 }

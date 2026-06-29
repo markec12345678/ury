@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Clock, ChefHat, Flame, UtensilsCrossed, AlertTriangle, CheckCircle2, XCircle, Wifi, WifiOff, Bell } from 'lucide-react';
-import { kotCards as initialKotCards, type KOTCard, type KOTStatus, type ProductionUnit } from '@/lib/mock-data';
+import { useURYStore } from '@/lib/ury-store';
 import { useURYSocket } from '@/lib/use-ury-socket';
+import type { KOTStatus, ProductionUnit } from '@/lib/mock-data';
 
 const statusConfig: Record<KOTStatus, { border: string; bg: string; icon: React.ElementType; label: string; badgeClass: string }> = {
   new: { border: 'border-gray-300', bg: 'bg-white', icon: Flame, label: 'Novo', badgeClass: 'bg-gray-100 text-gray-700 border-gray-300' },
@@ -22,27 +23,14 @@ const productionUnits: ProductionUnit[] = ['Kuhinja 1', 'Kuhinja 2', 'Bar'];
 
 export function KitchenTab() {
   const [activeUnit, setActiveUnit] = useState<ProductionUnit | 'all'>('all');
-  const [cards, setCards] = useState<KOTCard[]>(initialKotCards);
   const [newOrderFlash, setNewOrderFlash] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const { onKOTNew, onKOTStatusChange, connected } = useURYSocket();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { kotCards, updateKOTStatus, isConnected } = useURYStore();
 
-  // Real-time KOT events
+  // Real-time KOT events from Socket.io
   useEffect(() => {
     const unsubscribeNew = onKOTNew((kot) => {
-      const newCard: KOTCard = {
-        id: kot.id,
-        orderNo: kot.orderNo,
-        table: kot.table,
-        items: kot.items,
-        timePlaced: kot.timePlaced,
-        elapsed: 0,
-        status: kot.status,
-        production: kot.production as ProductionUnit,
-        kotType: kot.kotType,
-      };
-      setCards((prev) => [newCard, ...prev]);
       setNewOrderFlash(kot.id);
       setNotification(`Novo naročilo ${kot.orderNo} — Miza ${kot.table}`);
 
@@ -65,41 +53,20 @@ export function KitchenTab() {
     });
 
     const unsubscribeStatus = onKOTStatusChange((event) => {
-      setCards((prev) =>
-        prev.map((c) => (c.id === event.kotId ? { ...c, status: event.newStatus } : c))
-      );
+      updateKOTStatus(event.kotId, event.newStatus);
     });
 
-    // Cleanup by setting refs to null
     return () => {
       onKOTNew(() => {});
       onKOTStatusChange(() => {});
     };
-  }, [onKOTNew, onKOTStatusChange]);
+  }, [onKOTNew, onKOTStatusChange, updateKOTStatus]);
 
-  // Elapsed time ticker
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCards((prev) =>
-        prev.map((c) =>
-          c.status !== 'served' ? { ...c, elapsed: c.elapsed + 1 } : c
-        )
-      );
-    }, 60000); // every minute
-    return () => clearInterval(interval);
-  }, []);
-
-  const filteredCards = cards.filter(
+  const filteredCards = kotCards.filter(
     (c) => activeUnit === 'all' || c.production === activeUnit
   );
 
-  const activeOrders = cards.filter((c) => c.status !== 'served' && c.status !== 'cancelled');
-
-  const updateStatus = (id: string, newStatus: KOTStatus) => {
-    setCards((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
-    );
-  };
+  const activeOrders = kotCards.filter((c) => c.status !== 'served' && c.status !== 'cancelled');
 
   const getElapsedColor = (minutes: number) => {
     if (minutes > 30) return 'text-red-600';
@@ -122,7 +89,7 @@ export function KitchenTab() {
             Vse
           </Button>
           {productionUnits.map((unit) => {
-            const count = cards.filter(
+            const count = kotCards.filter(
               (c) => c.production === unit && c.status !== 'served'
             ).length;
             return (
@@ -152,7 +119,7 @@ export function KitchenTab() {
             </div>
           )}
           <Badge variant="outline" className="text-xs flex items-center gap-1.5">
-            {connected ? (
+            {(connected || isConnected) ? (
               <><Wifi className="h-3 w-3 text-emerald-500" /> Live</>
             ) : (
               <><WifiOff className="h-3 w-3 text-gray-400" /> Simulacija</>
@@ -289,7 +256,7 @@ export function KitchenTab() {
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs border-amber-400 text-amber-700 hover:bg-amber-100"
-                        onClick={() => updateStatus(card.id, 'preparing')}
+                        onClick={() => updateKOTStatus(card.id, 'preparing')}
                       >
                         V pripravi
                       </Button>
@@ -299,7 +266,7 @@ export function KitchenTab() {
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs border-emerald-400 text-emerald-700 hover:bg-emerald-100"
-                        onClick={() => updateStatus(card.id, 'ready')}
+                        onClick={() => updateKOTStatus(card.id, 'ready')}
                       >
                         Pripravljeno
                       </Button>
@@ -309,7 +276,7 @@ export function KitchenTab() {
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-100"
-                        onClick={() => updateStatus(card.id, 'served')}
+                        onClick={() => updateKOTStatus(card.id, 'served')}
                       >
                         Postreženo
                       </Button>

@@ -27,7 +27,7 @@ import {
   UtensilsCrossed,
   TrendingUp,
 } from 'lucide-react';
-import { kpiData, hourlySalesData, recentOrders, CURRENCY } from '@/lib/mock-data';
+import { useURYStore } from '@/lib/ury-store';
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Paid: 'default',
@@ -42,10 +42,12 @@ const typeIcon: Record<string, string> = {
 };
 
 export function OverviewTab() {
-  const kpis = [
+  const { kpis, hourlySales, recentOrders, currency } = useURYStore();
+
+  const kpiCards = [
     {
       title: 'Dnevna prodaja',
-      value: `${CURRENCY}${kpiData.dailySales.toLocaleString('en-IN')}`,
+      value: `${currency}${kpis.dailySales.toLocaleString('en-IN')}`,
       icon: IndianRupee,
       trend: '+12.5%',
       trendUp: true,
@@ -54,7 +56,7 @@ export function OverviewTab() {
     },
     {
       title: 'Skupni naročila',
-      value: kpiData.totalOrders.toString(),
+      value: kpis.totalOrders.toString(),
       icon: ShoppingCart,
       trend: '+8.3%',
       trendUp: true,
@@ -63,7 +65,7 @@ export function OverviewTab() {
     },
     {
       title: 'Povprečni račun',
-      value: `${CURRENCY}${kpiData.avgBill.toLocaleString('en-IN')}`,
+      value: `${currency}${kpis.avgBill.toLocaleString('en-IN')}`,
       icon: Receipt,
       trend: '-2.1%',
       trendUp: false,
@@ -72,7 +74,7 @@ export function OverviewTab() {
     },
     {
       title: 'Zasedene mize',
-      value: `${kpiData.occupiedTables}/${kpiData.totalTables}`,
+      value: `${kpis.occupiedTables}/${kpis.totalTables}`,
       icon: UtensilsCrossed,
       trend: '75%',
       trendUp: true,
@@ -85,7 +87,7 @@ export function OverviewTab() {
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
+        {kpiCards.map((kpi) => (
           <Card key={kpi.title} className="relative overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -117,7 +119,7 @@ export function OverviewTab() {
         <CardContent>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={hourlySalesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart data={hourlySales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorDineIn" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
@@ -132,7 +134,7 @@ export function OverviewTab() {
                 <XAxis dataKey="hour" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  formatter={(value: number) => [`${CURRENCY}${value.toLocaleString('en-IN')}`, '']}
+                  formatter={(value: number) => [`${currency}${value.toLocaleString('en-IN')}`, '']}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '13px' }}
                 />
                 <Legend />
@@ -173,7 +175,7 @@ export function OverviewTab() {
                         <span className="text-sm">{order.type}</span>
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-mono">{CURRENCY}{order.amount.toLocaleString('en-IN')}</TableCell>
+                    <TableCell className="text-right font-mono">{currency}{order.amount.toLocaleString('en-IN')}</TableCell>
                     <TableCell>
                       <Badge variant={statusVariant[order.status]}>{order.status}</Badge>
                     </TableCell>

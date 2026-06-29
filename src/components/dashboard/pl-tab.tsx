@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -22,10 +23,12 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, PieChartIcon } from 'lucide-react';
-import { plSummary, dailyPLData, expenseBreakdown, plLineItems, CURRENCY } from '@/lib/mock-data';
+import { TrendingUp, TrendingDown, DollarSign, PieChartIcon, Download } from 'lucide-react';
+import { useURYStore } from '@/lib/ury-store';
 
 export function PLTab() {
+  const { plSummary, dailyPL, expenseBreakdown, plLineItems, currency } = useURYStore();
+
   const summaryCards = [
     {
       title: 'Bruto prodaja',
@@ -60,6 +63,22 @@ export function PLTab() {
   const profitMargin = ((plSummary.netProfit / plSummary.grossSales) * 100).toFixed(1);
   const grossMargin = ((plSummary.grossProfit / plSummary.grossSales) * 100).toFixed(1);
 
+  const handleExportCSV = () => {
+    const headers = ['Postavka', 'Znesek'];
+    const rows = plLineItems.map((item) => [
+      item.label,
+      item.value < 0 ? `-${currency}${Math.abs(item.value)}` : `${currency}${item.value}`,
+    ]);
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `PL-porocilo-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -71,7 +90,7 @@ export function PLTab() {
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
                   <p className="text-2xl font-bold">
-                    {card.value < 0 ? '-' : ''}{CURRENCY}{Math.abs(card.value).toLocaleString('en-IN')}
+                    {card.value < 0 ? '-' : ''}{currency}{Math.abs(card.value).toLocaleString('en-IN')}
                   </p>
                 </div>
                 <div className={`p-3 rounded-xl ${card.bg}`}>
@@ -109,13 +128,13 @@ export function PLTab() {
           <CardContent>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyPLData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <BarChart data={dailyPL} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                   <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
                     formatter={(value: number, name: string) => [
-                      `${CURRENCY}${value.toLocaleString('en-IN')}`,
+                      `${currency}${value.toLocaleString('en-IN')}`,
                       name === 'revenue' ? 'Prihodki' : 'Stroški',
                     ]}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '13px' }}
@@ -169,14 +188,20 @@ export function PLTab() {
       {/* P&L Line Items Table */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold">Podrobnosti P&L</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Podrobnosti P&L</CardTitle>
+            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+              <Download className="h-4 w-4 mr-1.5" />
+              CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Postavka</TableHead>
-                <TableHead className="text-right">Znesek ({CURRENCY})</TableHead>
+                <TableHead className="text-right">Znesek ({currency})</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -190,7 +215,7 @@ export function PLTab() {
                       item.value < 0 ? 'text-red-600' : item.value > 0 && item.label.includes('Neto') ? 'text-emerald-600' : ''
                     }`}
                   >
-                    {item.value < 0 ? '-' : ''}{CURRENCY}{Math.abs(item.value).toLocaleString('en-IN')}
+                    {item.value < 0 ? '-' : ''}{currency}{Math.abs(item.value).toLocaleString('en-IN')}
                   </TableCell>
                 </TableRow>
               ))}

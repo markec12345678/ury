@@ -11,9 +11,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Users, ShoppingCart, IndianRupee, Wifi, WifiOff } from 'lucide-react';
-import { tablesData as initialTablesData, rooms, type TableData, type TableStatus, CURRENCY } from '@/lib/mock-data';
+import { Clock, Users, Wifi, WifiOff } from 'lucide-react';
+import { useURYStore } from '@/lib/ury-store';
 import { useURYSocket } from '@/lib/use-ury-socket';
+import type { TableStatus } from '@/lib/mock-data';
 
 const statusColors: Record<TableStatus, string> = {
   free: 'border-emerald-400 bg-emerald-50 hover:bg-emerald-100',
@@ -37,28 +38,15 @@ const statusLabel: Record<TableStatus, string> = {
 };
 
 export function TablesTab() {
-  const [activeRoom, setActiveRoom] = useState('glavna');
-  const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
-  const [tables, setTables] = useState<TableData[]>(initialTablesData);
+  const { tables, rooms, currency, updateKOTStatus, isConnected } = useURYStore();
+  const [activeRoom, setActiveRoom] = useState(rooms[0]?.id || 'glavna');
+  const [selectedTable, setSelectedTable] = useState<typeof tables[0] | null>(null);
   const [flashingTable, setFlashingTable] = useState<number | null>(null);
   const { onTableStatusChange, connected: socketConnected } = useURYSocket();
 
   // Real-time table status events
   useEffect(() => {
     const unsubscribe = onTableStatusChange((event) => {
-      setTables((prev) =>
-        prev.map((t) =>
-          t.id === event.tableId
-            ? {
-                ...t,
-                status: event.status as TableStatus,
-                pax: event.pax,
-                customer: event.customer,
-                occupiedSince: event.occupiedSince,
-              }
-            : t
-        )
-      );
       setFlashingTable(event.tableId);
       setTimeout(() => setFlashingTable(null), 2000);
     });
@@ -69,8 +57,9 @@ export function TablesTab() {
   }, [onTableStatusChange]);
 
   const filteredTables = tables.filter((t) => t.room === activeRoom);
-
   const totalOccupied = tables.filter((t) => t.status !== 'free').length;
+
+  const currencySymbol = currency === '₹' ? '₹' : currency;
 
   return (
     <div className="space-y-4">
@@ -97,7 +86,7 @@ export function TablesTab() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="text-xs flex items-center gap-1.5">
-            {socketConnected ? (
+            {(socketConnected || isConnected) ? (
               <><Wifi className="h-3 w-3 text-emerald-500" /> Live</>
             ) : (
               <><WifiOff className="h-3 w-3 text-gray-400" /> Simulacija</>
@@ -204,7 +193,7 @@ export function TablesTab() {
               </div>
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                  <ShoppingCartIcon className="h-4 w-4 text-muted-foreground" />
                   <p className="text-sm font-medium">Naročeni artikli</p>
                 </div>
                 <ul className="space-y-1">
@@ -219,9 +208,8 @@ export function TablesTab() {
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Skupaj</span>
-                <span className="text-lg font-bold flex items-center gap-1">
-                  <IndianRupee className="h-4 w-4" />
-                  {selectedTable.orderTotal?.toLocaleString('en-IN')}
+                <span className="text-lg font-bold">
+                  {currencySymbol}{selectedTable.orderTotal?.toLocaleString('en-IN')}
                 </span>
               </div>
             </div>
@@ -236,6 +224,15 @@ export function TablesTab() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function ShoppingCartIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+    </svg>
   );
 }
 

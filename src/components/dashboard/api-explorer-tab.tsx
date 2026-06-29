@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Search, ChevronDown, ChevronUp, Code, Zap } from 'lucide-react';
-import { apiEndpoints, type APIEndpoint } from '@/lib/mock-data';
+import { useURYStore } from '@/lib/ury-store';
 
 const moduleGroups = [
   { id: 'all', name: 'Vsi moduli', color: 'bg-gray-100' },
@@ -20,6 +20,7 @@ export function APIExplorerTab() {
   const [search, setSearch] = useState('');
   const [activeModule, setActiveModule] = useState('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const { apiEndpoints, isConnected } = useURYStore();
 
   const filtered = useMemo(() => {
     return apiEndpoints.filter((ep) => {
@@ -32,7 +33,7 @@ export function APIExplorerTab() {
         ep.module.toLowerCase().includes(search.toLowerCase());
       return matchesModule && matchesSearch;
     });
-  }, [search, activeModule]);
+  }, [search, activeModule, apiEndpoints]);
 
   const getModuleBadge = (module: string) => {
     if (module.includes('ury_print')) return moduleGroups[3];
@@ -80,6 +81,12 @@ export function APIExplorerTab() {
         <span>
           Prikazanih: <strong className="text-foreground">{filtered.length}</strong> / {apiEndpoints.length} končnih točk
         </span>
+        {isConnected && (
+          <Badge variant="outline" className="text-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1" />
+            Povezano s Frappe
+          </Badge>
+        )}
       </div>
 
       {/* Endpoints List */}
