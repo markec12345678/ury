@@ -127,6 +127,63 @@ export interface ShiftInfo {
   openingBalance: number;
 }
 
+// ── Menu ─────────────────────────────────────────────────
+
+export interface MenuCourse {
+  id: string;
+  name: string;
+  priority: number;
+  itemCount: number;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  nameHi?: string;        // Hindi/local name
+  course: string;          // Course category ID
+  courseName: string;      // Course display name
+  price: number;
+  image?: string;
+  description?: string;
+  isVeg: boolean;
+  isAvailable: boolean;
+  modifiers?: ItemModifier[];
+  tags?: string[];
+}
+
+export interface ItemModifier {
+  name: string;
+  options: string[];
+  required: boolean;
+}
+
+// ── Orders ───────────────────────────────────────────────
+
+export type ActiveOrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'cancelled';
+
+export interface ActiveOrder {
+  id: string;
+  invoiceNo: string;
+  table?: string;
+  customer: string;
+  type: OrderType;
+  items: OrderItem[];
+  status: ActiveOrderStatus;
+  total: number;
+  placedAt: string;
+  elapsed: number;
+  cashier: string;
+}
+
+export interface OrderItem {
+  name: string;
+  qty: number;
+  price: number;
+  course?: string;
+  comments?: string;
+  status?: 'pending' | 'preparing' | 'ready' | 'served';
+}
+
 // ── API Explorer ────────────────────────────────────────
 
 export interface APIEndpoint {

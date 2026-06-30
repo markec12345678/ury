@@ -22,12 +22,18 @@ import {
   docEventHooks,
   mockCashiers,
   mockShiftInfo,
+  menuCourses as mockMenuCourses,
+  menuItems as mockMenuItems,
+  activeOrders as mockActiveOrders,
   RESTAURANT_NAME,
   CURRENCY,
 } from '@/lib/mock-data';
 import type {
   KPIs,
   HourlySales,
+  MenuCourse,
+  MenuItem,
+  ActiveOrder,
   RecentOrder,
   TableData,
   Room,
@@ -70,6 +76,9 @@ export type {
   OrderType,
   KOTItem,
   KOTType,
+  MenuCourse,
+  MenuItem,
+  ActiveOrder,
 } from '@/lib/ury-types';
 import {
   getFrappeClient,
@@ -146,6 +155,11 @@ export interface DashboardState {
   infrastructureComponents: InfrastructureComponent[];
   doctypes: string[];
   docEventHooks: DocEventHook[];
+
+  // Menu & Orders
+  menuCourses: MenuCourse[];
+  menuItems: MenuItem[];
+  activeOrders: ActiveOrder[];
 
   // UI state
   activeTab: string;
@@ -244,6 +258,11 @@ export const useURYStore = create<DashboardState>((set, get) => {
     infrastructureComponents: [...infrastructureComponents],
     doctypes: [...doctypes],
     docEventHooks: [...docEventHooks],
+
+    // Menu & Orders
+    menuCourses: [...mockMenuCourses],
+    menuItems: [...mockMenuItems],
+    activeOrders: [...mockActiveOrders],
 
     // UI state (persisted)
     activeTab: savedPrefs.activeTab || 'overview',
@@ -391,6 +410,9 @@ export const useURYStore = create<DashboardState>((set, get) => {
         plLineItems: [...plLineItems],
         cashiers: [...mockCashiers],
         shiftInfo: { ...mockShiftInfo },
+        menuCourses: [...mockMenuCourses],
+        menuItems: [...mockMenuItems],
+        activeOrders: [...mockActiveOrders],
       });
     },
 

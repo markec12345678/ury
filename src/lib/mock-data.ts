@@ -348,6 +348,142 @@ export const mockCashiers: CashierData[] = [
   },
 ];
 
+// ── Tab: Menu ───────────────────────────────────────────
+
+export const menuCourses: import('@/lib/ury-types').MenuCourse[] = [
+  { id: 'starters', name: 'Predjedi', priority: 1, itemCount: 6 },
+  { id: 'main-course', name: 'Glavne jedi', priority: 2, itemCount: 8 },
+  { id: 'breads', name: 'Kruhovi', priority: 3, itemCount: 5 },
+  { id: 'rice', name: 'Rižote in pilafi', priority: 4, itemCount: 4 },
+  { id: 'accompaniments', name: 'Priloge', priority: 5, itemCount: 3 },
+  { id: 'desserts', name: 'Sladice', priority: 6, itemCount: 4 },
+  { id: 'beverages', name: 'Pijače', priority: 7, itemCount: 5 },
+  { id: 'snacks', name: 'Prigrizki', priority: 8, itemCount: 3 },
+];
+
+export const menuItems: import('@/lib/ury-types').MenuItem[] = [
+  // Starters
+  { id: 'MI-001', name: 'Paneer Tikka', course: 'starters', courseName: 'Predjedi', price: 320, isVeg: true, isAvailable: true, description: 'Marinated cottage cheese grilled in tandoor', tags: ['popular', 'spicy'] },
+  { id: 'MI-002', name: 'Chicken Tikka', course: 'starters', courseName: 'Predjedi', price: 380, isVeg: false, isAvailable: true, description: 'Boneless chicken marinated in yogurt spices', tags: ['popular'] },
+  { id: 'MI-003', name: 'Mixed Grill', course: 'starters', courseName: 'Predjedi', price: 580, isVeg: false, isAvailable: true, description: 'Assorted tandoori kebabs and tikka', modifiers: [{ name: 'Spice Level', options: ['Mild', 'Medium', 'Hot', 'Extra Hot'], required: false }] },
+  { id: 'MI-004', name: 'Tandoori Prawns', course: 'starters', courseName: 'Predjedi', price: 520, isVeg: false, isAvailable: true, description: 'Jumbo prawns marinated and grilled', tags: ['chef-special'] },
+  { id: 'MI-005', name: 'Veg Spring Rolls', course: 'starters', courseName: 'Predjedi', price: 240, isVeg: true, isAvailable: true, description: 'Crispy spring rolls with vegetable filling' },
+  { id: 'MI-006', name: 'Fish Amritsari', course: 'starters', courseName: 'Predjedi', price: 420, isVeg: false, isAvailable: false, description: 'Spiced fish fillets deep fried' },
+  // Main Course
+  { id: 'MI-007', name: 'Butter Chicken', course: 'main-course', courseName: 'Glavne jedi', price: 420, isVeg: false, isAvailable: true, description: 'Classic creamy tomato-based chicken curry', tags: ['bestseller'], modifiers: [{ name: 'Spice Level', options: ['Mild', 'Medium', 'Hot'], required: false }] },
+  { id: 'MI-008', name: 'Mutton Rogan Josh', course: 'main-course', courseName: 'Glavne jedi', price: 520, isVeg: false, isAvailable: true, description: 'Kashmiri-style slow-cooked mutton curry', tags: ['premium'] },
+  { id: 'MI-009', name: 'Dal Makhani', course: 'main-course', courseName: 'Glavne jedi', price: 280, isVeg: true, isAvailable: true, description: 'Black lentils slow-cooked with butter and cream', tags: ['popular'] },
+  { id: 'MI-010', name: 'Paneer Butter Masala', course: 'main-course', courseName: 'Glavne jedi', price: 320, isVeg: true, isAvailable: true, description: 'Cottage cheese in rich tomato gravy', tags: ['popular'] },
+  { id: 'MI-011', name: 'Kadai Paneer', course: 'main-course', courseName: 'Glavne jedi', price: 300, isVeg: true, isAvailable: true, description: 'Paneer cooked with bell peppers and kadai masala' },
+  { id: 'MI-012', name: 'Chicken Biryani', course: 'main-course', courseName: 'Glavne jedi', price: 380, isVeg: false, isAvailable: true, description: 'Fragrant basmati rice layered with spiced chicken', tags: ['bestseller'] },
+  { id: 'MI-013', name: 'Fish Curry', course: 'main-course', courseName: 'Glavne jedi', price: 440, isVeg: false, isAvailable: true, description: 'Coconut-based fish curry with aromatic spices' },
+  { id: 'MI-014', name: 'Lamb Keema', course: 'main-course', courseName: 'Glavne jedi', price: 460, isVeg: false, isAvailable: true, description: 'Minced lamb cooked with peas and spices' },
+  // Breads
+  { id: 'MI-015', name: 'Naan', course: 'breads', courseName: 'Kruhovi', price: 60, isVeg: true, isAvailable: true, description: 'Traditional tandoor-baked flatbread' },
+  { id: 'MI-016', name: 'Butter Naan', course: 'breads', courseName: 'Kruhovi', price: 80, isVeg: true, isAvailable: true, description: 'Naan brushed with melted butter', tags: ['popular'] },
+  { id: 'MI-017', name: 'Garlic Naan', course: 'breads', courseName: 'Kruhovi', price: 90, isVeg: true, isAvailable: true, description: 'Naan topped with garlic and coriander', tags: ['popular'] },
+  { id: 'MI-018', name: 'Kulcha', course: 'breads', courseName: 'Kruhovi', price: 80, isVeg: true, isAvailable: true, description: 'Stuffed leavened bread from tandoor' },
+  { id: 'MI-019', name: 'Tandoori Roti', course: 'breads', courseName: 'Kruhovi', price: 40, isVeg: true, isAvailable: true, description: 'Whole wheat bread baked in tandoor' },
+  // Rice
+  { id: 'MI-020', name: 'Jeera Rice', course: 'rice', courseName: 'Rižote in pilafi', price: 180, isVeg: true, isAvailable: true, description: 'Cumin-tempered basmati rice' },
+  { id: 'MI-021', name: 'Pulao', course: 'rice', courseName: 'Rižote in pilafi', price: 220, isVeg: true, isAvailable: true, description: 'Fragrant rice cooked with vegetables' },
+  { id: 'MI-022', name: 'Hyderabadi Biryani', course: 'rice', courseName: 'Rižote in pilafi', price: 420, isVeg: false, isAvailable: true, description: 'Dum-cooked biryani Hyderabadi style', tags: ['chef-special'] },
+  { id: 'MI-023', name: 'Curd Rice', course: 'rice', courseName: 'Rižote in pilafi', price: 150, isVeg: true, isAvailable: true, description: 'Yogurt rice with tempering' },
+  // Accompaniments
+  { id: 'MI-024', name: 'Raita', course: 'accompaniments', courseName: 'Priloge', price: 100, isVeg: true, isAvailable: true, description: 'Yogurt with cucumber and spices' },
+  { id: 'MI-025', name: 'Mirchi ka Salan', course: 'accompaniments', courseName: 'Priloge', price: 140, isVeg: true, isAvailable: true, description: 'Hyderabadi chili peanut curry' },
+  { id: 'MI-026', name: 'Dal Tadka', course: 'accompaniments', courseName: 'Priloge', price: 180, isVeg: true, isAvailable: true, description: 'Yellow lentils tempered with cumin and garlic' },
+  // Desserts
+  { id: 'MI-027', name: 'Gulab Jamun', course: 'desserts', courseName: 'Sladice', price: 160, isVeg: true, isAvailable: true, description: 'Deep-fried milk dumplings in rose syrup', tags: ['popular'] },
+  { id: 'MI-028', name: 'Rasmalai', course: 'desserts', courseName: 'Sladice', price: 200, isVeg: true, isAvailable: true, description: 'Cottage cheese patties in saffron milk', tags: ['chef-special'] },
+  { id: 'MI-029', name: 'Kulfi', course: 'desserts', courseName: 'Sladice', price: 140, isVeg: true, isAvailable: true, description: 'Traditional Indian ice cream', modifiers: [{ name: 'Flavor', options: ['Malai', 'Pista', 'Mango'], required: true }] },
+  { id: 'MI-030', name: 'Kheer', course: 'desserts', courseName: 'Sladice', price: 160, isVeg: true, isAvailable: false, description: 'Rice pudding with cardamom and nuts' },
+  // Beverages
+  { id: 'MI-031', name: 'Mango Lassi', course: 'beverages', courseName: 'Pijače', price: 120, isVeg: true, isAvailable: true, description: 'Mango yogurt smoothie', tags: ['popular'] },
+  { id: 'MI-032', name: 'Masala Chai', course: 'beverages', courseName: 'Pijače', price: 60, isVeg: true, isAvailable: true, description: 'Spiced Indian tea' },
+  { id: 'MI-033', name: 'Fresh Lime Soda', course: 'beverages', courseName: 'Pijače', price: 80, isVeg: true, isAvailable: true, description: 'Fresh lime with soda water', modifiers: [{ name: 'Type', options: ['Sweet', 'Salted', 'Plain'], required: true }] },
+  { id: 'MI-034', name: 'Cocktails', course: 'beverages', courseName: 'Pijače', price: 350, isVeg: true, isAvailable: true, description: 'Signature cocktails from the bar', modifiers: [{ name: 'Choice', options: ['Mojito', 'Martini', 'Old Fashioned', 'Margarita'], required: true }], tags: ['bar'] },
+  { id: 'MI-035', name: 'Beer', course: 'beverages', courseName: 'Pijače', price: 250, isVeg: true, isAvailable: true, description: 'Craft and imported beers', modifiers: [{ name: 'Type', options: ['Kingfisher', 'Budweiser', 'Heineken', 'Corona'], required: true }], tags: ['bar'] },
+  // Snacks
+  { id: 'MI-036', name: 'French Fries', course: 'snacks', courseName: 'Prigrizki', price: 180, isVeg: true, isAvailable: true, description: 'Crispy golden fries with dipping sauce' },
+  { id: 'MI-037', name: 'Chicken Wings', course: 'snacks', courseName: 'Prigrizki', price: 320, isVeg: false, isAvailable: true, description: 'Spicy buffalo wings with ranch dip', tags: ['popular'] },
+  { id: 'MI-038', name: 'Nachos', course: 'snacks', courseName: 'Prigrizki', price: 260, isVeg: true, isAvailable: true, description: 'Loaded nachos with cheese and salsa' },
+];
+
+// ── Tab: Active Orders ──────────────────────────────────
+
+export const activeOrders: import('@/lib/ury-types').ActiveOrder[] = [
+  {
+    id: 'ORD-001', invoiceNo: 'INV-2026-0187', table: 'T1', customer: 'Rajesh Sharma', type: 'Dine-in',
+    items: [
+      { name: 'Butter Chicken', qty: 2, price: 420, course: 'Main Course', status: 'preparing' },
+      { name: 'Naan', qty: 4, price: 60, course: 'Breads', status: 'ready' },
+      { name: 'Dal Makhani', qty: 1, price: 280, course: 'Main Course', status: 'preparing' },
+    ],
+    status: 'preparing', total: 1850, placedAt: '21:42', elapsed: 3, cashier: 'Amit Patel',
+  },
+  {
+    id: 'ORD-002', invoiceNo: 'INV-2026-0186', table: 'T3', customer: 'Priya Patel', type: 'Takeaway',
+    items: [
+      { name: 'Paneer Tikka', qty: 1, price: 320, course: 'Starters', status: 'ready' },
+      { name: 'Biryani', qty: 2, price: 380, course: 'Rice', status: 'preparing' },
+    ],
+    status: 'confirmed', total: 940, placedAt: '21:38', elapsed: 7, cashier: 'Sneha Verma',
+  },
+  {
+    id: 'ORD-003', invoiceNo: 'INV-2026-0185', table: 'T4', customer: 'Ananya Reddy', type: 'Dine-in',
+    items: [
+      { name: 'Mixed Grill', qty: 1, price: 580, course: 'Starters', status: 'preparing' },
+      { name: 'Butter Naan', qty: 6, price: 80, course: 'Breads', status: 'pending' },
+      { name: 'Raita', qty: 1, price: 100, course: 'Accompaniments', status: 'ready' },
+    ],
+    status: 'preparing', total: 2340, placedAt: '21:35', elapsed: 10, cashier: 'Amit Patel',
+  },
+  {
+    id: 'ORD-004', invoiceNo: 'INV-2026-0184', customer: 'Vikram Singh', type: 'Delivery',
+    items: [
+      { name: 'Chicken Biryani', qty: 2, price: 380, course: 'Rice', status: 'ready' },
+      { name: 'Raita', qty: 2, price: 100, course: 'Accompaniments', status: 'ready' },
+    ],
+    status: 'ready', total: 890, placedAt: '21:28', elapsed: 17, cashier: 'Ravi Kumar',
+  },
+  {
+    id: 'ORD-005', invoiceNo: 'INV-2026-0183', table: 'T8', customer: 'Neha Gupta', type: 'Dine-in',
+    items: [
+      { name: 'Dal Makhani', qty: 1, price: 280, course: 'Main Course', status: 'ready' },
+      { name: 'Jeera Rice', qty: 1, price: 180, course: 'Rice', status: 'ready' },
+      { name: 'Tandoori Roti', qty: 3, price: 40, course: 'Breads', status: 'served' },
+    ],
+    status: 'served', total: 870, placedAt: '21:22', elapsed: 23, cashier: 'Sneha Verma',
+  },
+  {
+    id: 'ORD-006', invoiceNo: 'INV-2026-0182', table: 'T10', customer: 'Arjun Menon', type: 'Dine-in',
+    items: [
+      { name: 'Mutton Rogan Josh', qty: 1, price: 520, course: 'Main Course', status: 'preparing' },
+      { name: 'Kulcha', qty: 2, price: 80, course: 'Breads', status: 'pending' },
+    ],
+    status: 'confirmed', total: 1560, placedAt: '21:08', elapsed: 37, cashier: 'Amit Patel',
+  },
+  {
+    id: 'ORD-007', invoiceNo: 'INV-2026-0181', table: 'T25', customer: 'Corporate - Tata Group', type: 'Dine-in',
+    items: [
+      { name: 'Royal Thali', qty: 8, price: 950, course: 'Thali', status: 'preparing' },
+      { name: 'Mango Lassi', qty: 4, price: 120, course: 'Beverages', status: 'ready' },
+      { name: 'Gulab Jamun', qty: 4, price: 160, course: 'Desserts', status: 'pending' },
+    ],
+    status: 'preparing', total: 8400, placedAt: '21:15', elapsed: 30, cashier: 'Ravi Kumar',
+  },
+  {
+    id: 'ORD-008', invoiceNo: 'INV-2026-0180', table: 'T29', customer: 'Ravi & Swati', type: 'Dine-in',
+    items: [
+      { name: 'Cocktails', qty: 4, price: 350, course: 'Beverages', status: 'ready' },
+      { name: 'French Fries', qty: 1, price: 180, course: 'Snacks', status: 'ready' },
+      { name: 'Chicken Wings', qty: 1, price: 320, course: 'Starters', status: 'ready' },
+    ],
+    status: 'ready', total: 1800, placedAt: '21:35', elapsed: 10, cashier: 'Ravi Kumar',
+  },
+];
+
 // ── Tab 6: API Explorer ──────────────────────────────────
 
 // APIEndpoint type moved to ury-types.ts

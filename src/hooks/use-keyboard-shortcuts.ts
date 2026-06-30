@@ -14,7 +14,7 @@ import { useURYStore } from '@/lib/ury-store';
 export function useKeyboardShortcuts() {
   const { setActiveTab, setSidebarOpen, toggleDarkMode, isConnected, refreshData, isRefreshing } = useURYStore();
 
-  const tabIds = ['overview', 'tables', 'kitchen', 'pl', 'shift', 'api', 'architecture'];
+  const tabIds = ['overview', 'tables', 'kitchen', 'menu', 'orders', 'pl', 'shift', 'api', 'architecture'];
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -24,8 +24,8 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Alt+1-7: Switch tabs
-      if (e.altKey && e.key >= '1' && e.key <= '7') {
+      // Alt+1-9: Switch tabs
+      if (e.altKey && e.key >= '1' && e.key <= '9') {
         e.preventDefault();
         const index = parseInt(e.key) - 1;
         if (index < tabIds.length) {

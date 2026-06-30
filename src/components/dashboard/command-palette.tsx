@@ -24,6 +24,8 @@ import {
   Moon,
   Wifi,
   ExternalLink,
+  BookOpen,
+  ShoppingCart,
 } from 'lucide-react';
 import { useURYStore } from '@/lib/ury-store';
 
@@ -31,6 +33,8 @@ const navigationItems = [
   { id: 'overview', label: 'Pregled', icon: LayoutDashboard, description: 'Dnevni pregled poslovanja' },
   { id: 'tables', label: 'Mize', icon: Grid3X3, description: 'Status miz v restavraciji' },
   { id: 'kitchen', label: 'Kuhinja', icon: ChefHat, description: 'Kuhinjska naročila v realnem času' },
+  { id: 'menu', label: 'Jedilnik', icon: BookOpen, description: 'Jedilnik s krožniki in artikli' },
+  { id: 'orders', label: 'Naročila', icon: ShoppingCart, description: 'Aktivna naročila in status tracking' },
   { id: 'pl', label: 'P&L', icon: TrendingUp, description: 'Profit & Loss analiza' },
   { id: 'shift', label: 'Smena', icon: Wallet, description: 'Upravljanje smen in blagajn' },
   { id: 'api', label: 'API Explorer', icon: Code2, description: 'URY API končne točke' },

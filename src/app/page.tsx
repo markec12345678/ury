@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -25,14 +26,19 @@ import {
   WifiOff,
   User,
   RefreshCw,
+  BookOpen,
+  ShoppingCart,
 } from 'lucide-react';
-import { OverviewTab } from '@/components/dashboard/overview-tab';
-import { TablesTab } from '@/components/dashboard/tables-tab';
-import { KitchenTab } from '@/components/dashboard/kitchen-tab';
-import { PLTab } from '@/components/dashboard/pl-tab';
-import { APIExplorerTab } from '@/components/dashboard/api-explorer-tab';
-import { ArchitectureTab } from '@/components/dashboard/architecture-tab';
-import { ShiftTab } from '@/components/dashboard/shift-tab';
+// Lazy-loaded tab components for better initial bundle size
+const OverviewTab = dynamic(() => import('@/components/dashboard/overview-tab').then(m => ({ default: m.OverviewTab })), { ssr: false });
+const TablesTab = dynamic(() => import('@/components/dashboard/tables-tab').then(m => ({ default: m.TablesTab })), { ssr: false });
+const KitchenTab = dynamic(() => import('@/components/dashboard/kitchen-tab').then(m => ({ default: m.KitchenTab })), { ssr: false });
+const PLTab = dynamic(() => import('@/components/dashboard/pl-tab').then(m => ({ default: m.PLTab })), { ssr: false });
+const APIExplorerTab = dynamic(() => import('@/components/dashboard/api-explorer-tab').then(m => ({ default: m.APIExplorerTab })), { ssr: false });
+const ArchitectureTab = dynamic(() => import('@/components/dashboard/architecture-tab').then(m => ({ default: m.ArchitectureTab })), { ssr: false });
+const ShiftTab = dynamic(() => import('@/components/dashboard/shift-tab').then(m => ({ default: m.ShiftTab })), { ssr: false });
+const MenuTab = dynamic(() => import('@/components/dashboard/menu-tab').then(m => ({ default: m.MenuTab })), { ssr: false });
+const OrdersTab = dynamic(() => import('@/components/dashboard/orders-tab').then(m => ({ default: m.OrdersTab })), { ssr: false });
 import { NotificationCenter } from '@/components/dashboard/notification-center';
 import { CommandPalette } from '@/components/dashboard/command-palette';
 import { TabErrorBoundary } from '@/components/dashboard/error-boundary';
@@ -43,6 +49,8 @@ const tabs = [
   { id: 'overview', label: 'Pregled', icon: LayoutDashboard },
   { id: 'tables', label: 'Mize', icon: Grid3X3 },
   { id: 'kitchen', label: 'Kuhinja', icon: ChefHat },
+  { id: 'menu', label: 'Jedilnik', icon: BookOpen },
+  { id: 'orders', label: 'Naročila', icon: ShoppingCart },
   { id: 'pl', label: 'P&L', icon: TrendingUp },
   { id: 'shift', label: 'Smena', icon: Wallet },
   { id: 'api', label: 'API', icon: Code2 },
@@ -87,7 +95,7 @@ export default function Home() {
 
   // ── URL ↔ Tab Sync ────────────────────────────────────
   // Reads ?tab=kitchen from URL on mount and updates URL when tab changes
-  const validTabs = ['overview', 'tables', 'kitchen', 'pl', 'shift', 'api', 'architecture'];
+  const validTabs = ['overview', 'tables', 'kitchen', 'menu', 'orders', 'pl', 'shift', 'api', 'architecture'];
 
   // Read initial tab from URL on mount
   useEffect(() => {
@@ -277,6 +285,8 @@ export default function Home() {
                 {activeTab === 'overview' && 'Dnevni pregled poslovanja'}
                 {activeTab === 'tables' && 'Status miz v restavraciji — real-time posodobitve'}
                 {activeTab === 'kitchen' && 'Kuhinjska naročila v realnem času'}
+                {activeTab === 'menu' && 'Jedilnik s krožniki in artikli'}
+                {activeTab === 'orders' && 'Aktivna naročila in status tracking'}
                 {activeTab === 'pl' && 'Profit & Loss analiza'}
                 {activeTab === 'shift' && 'Upravljanje smen in blagajn'}
                 {activeTab === 'api' && 'URY API končne točke'}
@@ -387,6 +397,8 @@ export default function Home() {
               {activeTab === 'overview' && <TabErrorBoundary tabName="Pregled"><OverviewTab /></TabErrorBoundary>}
               {activeTab === 'tables' && <TabErrorBoundary tabName="Mize"><TablesTab /></TabErrorBoundary>}
               {activeTab === 'kitchen' && <TabErrorBoundary tabName="Kuhinja"><KitchenTab /></TabErrorBoundary>}
+              {activeTab === 'menu' && <TabErrorBoundary tabName="Jedilnik"><MenuTab /></TabErrorBoundary>}
+              {activeTab === 'orders' && <TabErrorBoundary tabName="Naročila"><OrdersTab /></TabErrorBoundary>}
               {activeTab === 'pl' && <TabErrorBoundary tabName="P&L"><PLTab /></TabErrorBoundary>}
               {activeTab === 'shift' && <TabErrorBoundary tabName="Smena"><ShiftTab /></TabErrorBoundary>}
               {activeTab === 'api' && <TabErrorBoundary tabName="API"><APIExplorerTab /></TabErrorBoundary>}
