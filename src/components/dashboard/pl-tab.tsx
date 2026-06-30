@@ -307,15 +307,13 @@ export function PLTab() {
                   <Tooltip
                     formatter={(value: number, name: string) => [
                       `${currency}${value.toLocaleString('en-IN')}`,
-                      name === 'revenue' ? 'Prihodki' : 'Stroški',
+                      name,
                     ]}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '13px' }}
                   />
-                  <Legend
-                    formatter={(value) => (value === 'revenue' ? 'Prihodki' : 'Stroški')}
-                  />
-                  <Bar dataKey="revenue" stackId="a" fill="#059669" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="costs" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Legend />
+                  <Bar dataKey="revenue" name="Prihodki" stackId="a" fill="#059669" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="costs" name="Stroški" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

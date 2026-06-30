@@ -20,8 +20,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  ComposedChart,
-  Bar,
 } from 'recharts';
 import {
   IndianRupee,
@@ -32,7 +30,9 @@ import {
   TrendingDown,
   Clock,
   Users,
+  Download,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useURYStore } from '@/lib/ury-store';
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -49,6 +49,27 @@ const typeIcon: Record<string, string> = {
 
 export function OverviewTab() {
   const { kpis, hourlySales, recentOrders, currency, tables, isConnected } = useURYStore();
+
+  // CSV export for recent orders
+  const handleExportCSV = () => {
+    const headers = ['Račun #', 'Stranka', 'Tip', 'Znesek', 'Status', 'Čas'];
+    const rows = recentOrders.map((o) => [
+      o.invoice,
+      o.customer,
+      o.type,
+      o.amount.toString(),
+      o.status,
+      o.time,
+    ]);
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `naročila-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Calculate real-time occupancy rate
   const occupancyRate = kpis.totalTables > 0
@@ -228,7 +249,7 @@ export function OverviewTab() {
         <CardContent>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={hourlySales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart data={hourlySales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorDineIn" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
@@ -245,7 +266,7 @@ export function OverviewTab() {
                 <Tooltip
                   formatter={(value: number, name: string) => [
                     `${currency}${value.toLocaleString('en-IN')}`,
-                    name === 'dineIn' ? 'Dine-in' : 'Takeaway',
+                    name,
                   ]}
                   contentStyle={{
                     borderRadius: '8px',
@@ -254,13 +275,11 @@ export function OverviewTab() {
                     backgroundColor: 'rgba(255,255,255,0.95)',
                   }}
                 />
-                <Legend
-                  formatter={(value) => (value === 'dineIn' ? 'Dine-in' : 'Takeaway')}
-                />
+                <Legend />
                 <Area
                   type="monotone"
                   dataKey="dineIn"
-                  name="dineIn"
+                  name="Dine-in"
                   stroke="#059669"
                   strokeWidth={2}
                   fillOpacity={1}
@@ -269,19 +288,13 @@ export function OverviewTab() {
                 <Area
                   type="monotone"
                   dataKey="takeaway"
-                  name="takeaway"
+                  name="Takeaway"
                   stroke="#f59e0b"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorTakeaway)"
                 />
-                {/* Peak hour indicator line */}
-                <Bar
-                  dataKey={() => 0}
-                  fill="transparent"
-                  name=""
-                />
-              </ComposedChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
@@ -292,9 +305,15 @@ export function OverviewTab() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold">Zadnja naročila</CardTitle>
-            <Badge variant="secondary" className="text-xs">
-              {recentOrders.length} naročil
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                <Download className="h-3.5 w-3.5 mr-1" />
+                CSV
+              </Button>
+              <Badge variant="secondary" className="text-xs">
+                {recentOrders.length} naročil
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

@@ -35,7 +35,9 @@ import { ArchitectureTab } from '@/components/dashboard/architecture-tab';
 import { ShiftTab } from '@/components/dashboard/shift-tab';
 import { NotificationCenter } from '@/components/dashboard/notification-center';
 import { CommandPalette } from '@/components/dashboard/command-palette';
+import { TabErrorBoundary } from '@/components/dashboard/error-boundary';
 import { useURYStore } from '@/lib/ury-store';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 
 const tabs = [
   { id: 'overview', label: 'Pregled', icon: LayoutDashboard },
@@ -72,6 +74,9 @@ export default function Home() {
     tables,
   } = useURYStore();
 
+  // Keyboard shortcuts
+  useKeyboardShortcuts();
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update clock every minute
@@ -85,6 +90,14 @@ export default function Home() {
 
   return (
     <div className={`min-h-screen flex ${darkMode ? 'dark' : ''}`}>
+      {/* Skip Link for Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:bg-emerald-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium"
+      >
+        Preskoči na glavno vsebino
+      </a>
+
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -95,6 +108,8 @@ export default function Home() {
 
       {/* Sidebar */}
       <aside
+        role="navigation"
+        aria-label="Glavna navigacija"
         className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900 dark:bg-gray-950 text-white flex flex-col transform transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
@@ -205,7 +220,7 @@ export default function Home() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <main id="main-content" className="flex-1 min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         {/* Top Bar */}
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b px-4 lg:px-6 py-3 flex items-center justify-between shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3">
@@ -332,13 +347,13 @@ export default function Home() {
               exit="exit"
               transition={{ duration: 0.2, ease: 'easeInOut' }}
             >
-              {activeTab === 'overview' && <OverviewTab />}
-              {activeTab === 'tables' && <TablesTab />}
-              {activeTab === 'kitchen' && <KitchenTab />}
-              {activeTab === 'pl' && <PLTab />}
-              {activeTab === 'shift' && <ShiftTab />}
-              {activeTab === 'api' && <APIExplorerTab />}
-              {activeTab === 'architecture' && <ArchitectureTab />}
+              {activeTab === 'overview' && <TabErrorBoundary tabName="Pregled"><OverviewTab /></TabErrorBoundary>}
+              {activeTab === 'tables' && <TabErrorBoundary tabName="Mize"><TablesTab /></TabErrorBoundary>}
+              {activeTab === 'kitchen' && <TabErrorBoundary tabName="Kuhinja"><KitchenTab /></TabErrorBoundary>}
+              {activeTab === 'pl' && <TabErrorBoundary tabName="P&L"><PLTab /></TabErrorBoundary>}
+              {activeTab === 'shift' && <TabErrorBoundary tabName="Smena"><ShiftTab /></TabErrorBoundary>}
+              {activeTab === 'api' && <TabErrorBoundary tabName="API"><APIExplorerTab /></TabErrorBoundary>}
+              {activeTab === 'architecture' && <TabErrorBoundary tabName="Arhitektura"><ArchitectureTab /></TabErrorBoundary>}
             </motion.div>
           </AnimatePresence>
         </div>
