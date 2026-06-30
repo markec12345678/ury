@@ -33,6 +33,8 @@ import { PLTab } from '@/components/dashboard/pl-tab';
 import { APIExplorerTab } from '@/components/dashboard/api-explorer-tab';
 import { ArchitectureTab } from '@/components/dashboard/architecture-tab';
 import { ShiftTab } from '@/components/dashboard/shift-tab';
+import { NotificationCenter } from '@/components/dashboard/notification-center';
+import { CommandPalette } from '@/components/dashboard/command-palette';
 import { useURYStore } from '@/lib/ury-store';
 
 const tabs = [
@@ -66,6 +68,8 @@ export default function Home() {
     lastRefreshed,
     isRefreshing,
     refreshData,
+    kotCards,
+    tables,
   } = useURYStore();
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -156,9 +160,14 @@ export default function Home() {
                 >
                   <Icon className="h-4.5 w-4.5" />
                   {tab.label}
-                  {tab.id === 'kitchen' && (
-                    <Badge className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0 h-5 animate-pulse">
-                      LIVE
+                  {tab.id === 'kitchen' && kotCards.filter(k => k.status !== 'served' && k.status !== 'cancelled').length > 0 && (
+                    <Badge className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0 h-5">
+                      {kotCards.filter(k => k.status !== 'served' && k.status !== 'cancelled').length}
+                    </Badge>
+                  )}
+                  {tab.id === 'tables' && tables.filter(t => t.status !== 'free').length > 0 && (
+                    <Badge className="ml-auto bg-amber-500 text-white text-[10px] px-1.5 py-0 h-5">
+                      {tables.filter(t => t.status !== 'free').length}/{tables.length}
                     </Badge>
                   )}
                 </button>
@@ -237,6 +246,18 @@ export default function Home() {
                 </>
               )}
             </Badge>
+            <Badge
+              variant="outline"
+              className="text-xs hidden lg:flex cursor-pointer hover:bg-muted/80 transition-colors"
+              onClick={() => {
+                // Trigger command palette via keyboard event
+                const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+                document.dispatchEvent(event);
+              }}
+              title="Odpri ukazno paleto (⌘K)"
+            >
+              <span className="text-muted-foreground mr-1">⌘</span>K
+            </Badge>
             {isConnected && (
               <Button
                 variant="ghost"
@@ -249,6 +270,7 @@ export default function Home() {
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
             )}
+            <NotificationCenter />
             <Button
               variant="ghost"
               size="icon"
@@ -321,6 +343,9 @@ export default function Home() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette />
     </div>
   );
 }

@@ -81,7 +81,37 @@ import {
 import { reconnectSocket } from '@/lib/use-ury-socket';
 
 // ── Auto-refresh interval (ms) ──────────────────────────
-const REFRESH_INTERVAL = 30_000; // 30 seconds
+const REFRESH_INTERVAL = typeof window !== 'undefined'
+  ? Number(process.env.NEXT_PUBLIC_REFRESH_INTERVAL) || 30_000
+  : 30_000;
+
+// ── UI Preference Persistence ────────────────────────────
+const UI_PREFS_KEY = 'ury_ui_prefs';
+
+interface UIPreferences {
+  darkMode: boolean;
+  activeTab: string;
+}
+
+function loadUIPrefs(): Partial<UIPreferences> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(UI_PREFS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveUIPrefs(prefs: Partial<UIPreferences>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 // ── Types ────────────────────────────────────────────────
 
@@ -176,6 +206,12 @@ const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
 export const useURYStore = create<DashboardState>((set, get) => {
   // Load saved config
   const savedConfig = typeof window !== 'undefined' ? loadConfig() : null;
+  const savedPrefs = loadUIPrefs();
+
+  // Apply dark mode on load
+  if (savedPrefs.darkMode && typeof document !== 'undefined') {
+    document.documentElement.classList.add('dark');
+  }
 
   return {
     // Connection
@@ -188,8 +224,8 @@ export const useURYStore = create<DashboardState>((set, get) => {
     isRefreshing: false,
 
     // Data (mock defaults)
-    restaurantName: RESTAURANT_NAME,
-    currency: CURRENCY,
+    restaurantName: process.env.NEXT_PUBLIC_RESTAURANT_NAME || RESTAURANT_NAME,
+    currency: process.env.NEXT_PUBLIC_CURRENCY || CURRENCY,
     kpis: { ...kpiData },
     hourlySales: [...hourlySalesData],
     recentOrders: [...recentOrders],
@@ -209,17 +245,20 @@ export const useURYStore = create<DashboardState>((set, get) => {
     doctypes: [...doctypes],
     docEventHooks: [...docEventHooks],
 
-    // UI state
-    activeTab: 'overview',
+    // UI state (persisted)
+    activeTab: savedPrefs.activeTab || 'overview',
     sidebarOpen: false,
-    darkMode: false,
+    darkMode: savedPrefs.darkMode || false,
 
     // Toast notifications
     toasts: [],
 
     // ── Actions ────────────────────────────────────────
 
-    setActiveTab: (tab) => set({ activeTab: tab }),
+    setActiveTab: (tab) => {
+      set({ activeTab: tab });
+      saveUIPrefs({ activeTab: tab });
+    },
 
     toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
 
@@ -230,6 +269,7 @@ export const useURYStore = create<DashboardState>((set, get) => {
       if (typeof document !== 'undefined') {
         document.documentElement.classList.toggle('dark', newDark);
       }
+      saveUIPrefs({ darkMode: newDark });
       return { darkMode: newDark };
     }),
 
