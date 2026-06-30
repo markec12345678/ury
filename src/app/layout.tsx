@@ -22,6 +22,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "URY Dashboard — Restaurant Management Evaluation",
     description: "Comprehensive evaluation dashboard for URY restaurant management system",
@@ -31,6 +32,13 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "URY Dashboard — Restaurant Management Evaluation",
     description: "Comprehensive evaluation dashboard for URY restaurant management system",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "URY Dashboard",
+    "theme-color": "#059669",
   },
 };
 

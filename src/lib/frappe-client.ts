@@ -70,13 +70,125 @@ export function clearConfig(): void {
   localStorage.removeItem(CONFIG_KEY);
 }
 
+// ── Retry Configuration ──────────────────────────────────
+
+export interface RetryConfig {
+  maxRetries: number;       // Maximum number of retry attempts (default: 3)
+  baseDelay: number;        // Base delay in ms before first retry (default: 1000)
+  maxDelay: number;         // Maximum delay cap in ms (default: 10000)
+  backoffFactor: number;    // Exponential multiplier (default: 2)
+  retryableStatuses: number[]; // HTTP status codes that trigger retry (default: [408, 429, 500, 502, 503, 504])
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  baseDelay: 1000,
+  maxDelay: 10000,
+  backoffFactor: 2,
+  retryableStatuses: [408, 429, 500, 502, 503, 504],
+};
+
+/**
+ * Sleep for a given number of milliseconds.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Calculate delay for retry attempt with exponential backoff + jitter.
+ * Formula: min(maxDelay, baseDelay * backoffFactor^attempt) + random jitter
+ */
+function getRetryDelay(attempt: number, config: RetryConfig): number {
+  const exponentialDelay = config.baseDelay * Math.pow(config.backoffFactor, attempt);
+  const cappedDelay = Math.min(config.maxDelay, exponentialDelay);
+  // Add jitter: random 0-30% of the delay to prevent thundering herd
+  const jitter = cappedDelay * 0.3 * Math.random();
+  return cappedDelay + jitter;
+}
+
+/**
+ * Determines if an error/response should trigger a retry.
+ * Retries on: network errors, 408 (timeout), 429 (rate limit), 5xx (server errors).
+ * Does NOT retry on: 4xx client errors (400, 401, 403, 404, etc.).
+ */
+function isRetryable(status: number | null, error: unknown): boolean {
+  // Network error (no status code)
+  if (status === null && error !== null) return true;
+  if (status === null) return false;
+  return DEFAULT_RETRY_CONFIG.retryableStatuses.includes(status);
+}
+
+/**
+ * Fetch with automatic retry and exponential backoff.
+ * Only retries on transient failures (network errors, rate limits, server errors).
+ * Idempotent methods (GET) are always safe to retry.
+ * Non-idempotent methods (POST, PUT, DELETE) only retry on network errors,
+ * not on server errors, to avoid duplicate operations.
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retryConfig: Partial<RetryConfig> = {},
+): Promise<Response> {
+  const config = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
+  const isIdempotent = !options.method || options.method === 'GET' || options.method === 'HEAD';
+  let lastError: unknown = null;
+  let lastStatus: number | null = null;
+
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // If response is OK or a non-retryable client error, return immediately
+      if (response.ok || !isRetryable(response.status, null)) {
+        return response;
+      }
+
+      // For non-idempotent methods, don't retry server errors (avoid duplicates)
+      if (!isIdempotent && response.status >= 500) {
+        return response;
+      }
+
+      lastStatus = response.status;
+      lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+    } catch (err) {
+      lastError = err;
+      lastStatus = null;
+    }
+
+    // Don't wait after the last attempt
+    if (attempt < config.maxRetries) {
+      const delay = getRetryDelay(attempt, config);
+      console.warn(
+        `[FrappeClient] Retry ${attempt + 1}/${config.maxRetries} after ${Math.round(delay)}ms ` +
+        `(${lastStatus ? `HTTP ${lastStatus}` : 'network error'}): ${url}`
+      );
+      await sleep(delay);
+    }
+  }
+
+  // All retries exhausted — throw the last error
+  if (lastStatus !== null) {
+    // Re-fetch to get the actual response object for the caller to handle
+    try {
+      return await fetch(url, options);
+    } catch {
+      throw lastError;
+    }
+  }
+  throw lastError;
+}
+
 // ── Client ───────────────────────────────────────────────
 
 export class FrappeClient {
   private config: FrappeConfig;
+  private retryConfig: Partial<RetryConfig>;
 
-  constructor(config: FrappeConfig) {
+  constructor(config: FrappeConfig, retryConfig?: Partial<RetryConfig>) {
     this.config = config;
+    this.retryConfig = retryConfig ?? {};
   }
 
   updateConfig(config: FrappeConfig) {
@@ -108,10 +220,10 @@ export class FrappeClient {
 
   async ping(): Promise<boolean> {
     try {
-      const res = await fetch(`${this.getBaseUrl()}/api/method/ping`, {
+      const res = await fetchWithRetry(`${this.getBaseUrl()}/api/method/ping`, {
         headers: this.getHeaders(),
         credentials: 'include',
-      });
+      }, { maxRetries: 1, baseDelay: 500, ...this.retryConfig });
       return res.ok;
     } catch {
       return false;
@@ -119,12 +231,12 @@ export class FrappeClient {
   }
 
   async login(username: string, password: string): Promise<FrappeLoginResponse> {
-    const res = await fetch(`${this.getBaseUrl()}/api/method/login`, {
+    const res = await fetchWithRetry(`${this.getBaseUrl()}/api/method/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ usr: username, pwd: password }),
-    });
+    }, { maxRetries: 1, ...this.retryConfig }); // Login: only 1 retry to avoid lockouts
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Login failed' }));
@@ -136,10 +248,10 @@ export class FrappeClient {
 
   async getLoggedInUser(): Promise<string | null> {
     try {
-      const res = await fetch(`${this.getBaseUrl()}/api/method/frappe.auth.get_logged_user`, {
+      const res = await fetchWithRetry(`${this.getBaseUrl()}/api/method/frappe.auth.get_logged_user`, {
         headers: this.getHeaders(),
         credentials: 'include',
-      });
+      }, this.retryConfig);
       if (!res.ok) return null;
       const data = await res.json();
       return data.message;
@@ -151,12 +263,12 @@ export class FrappeClient {
   // ── Frappe Call (whitelisted API) ─────────────────────
 
   async call<T = unknown>(params: FrappeCallParams): Promise<FrappeResponse<T>> {
-    const res = await fetch(`${this.getBaseUrl()}/api/method/${params.method}`, {
+    const res = await fetchWithRetry(`${this.getBaseUrl()}/api/method/${params.method}`, {
       method: 'POST',
       headers: this.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(params.args || {}),
-    });
+    }, this.retryConfig);
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: `API call failed: ${params.method}` }));
@@ -188,12 +300,13 @@ export class FrappeClient {
       queryParams.set('limit_start', String(params.limit_start));
     }
 
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${this.getBaseUrl()}/api/resource/${params.doctype}?${queryParams.toString()}`,
       {
         headers: this.getHeaders(),
         credentials: 'include',
-      }
+      },
+      this.retryConfig
     );
 
     if (!res.ok) {
@@ -204,12 +317,13 @@ export class FrappeClient {
   }
 
   async getDoc<T = unknown>(doctype: string, name: string): Promise<FrappeResponse<T>> {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${this.getBaseUrl()}/api/resource/${doctype}/${name}`,
       {
         headers: this.getHeaders(),
         credentials: 'include',
-      }
+      },
+      this.retryConfig
     );
 
     if (!res.ok) {
@@ -220,14 +334,15 @@ export class FrappeClient {
   }
 
   async createDoc<T = unknown>(doctype: string, data: Partial<T>): Promise<FrappeResponse<T>> {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${this.getBaseUrl()}/api/resource/${doctype}`,
       {
         method: 'POST',
         headers: this.getHeaders(),
         credentials: 'include',
         body: JSON.stringify(data),
-      }
+      },
+      { maxRetries: 1, ...this.retryConfig } // Create: only 1 retry to avoid duplicates
     );
 
     if (!res.ok) {
@@ -239,14 +354,15 @@ export class FrappeClient {
   }
 
   async updateDoc<T = unknown>(doctype: string, name: string, data: Partial<T>): Promise<FrappeResponse<T>> {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${this.getBaseUrl()}/api/resource/${doctype}/${name}`,
       {
         method: 'PUT',
         headers: this.getHeaders(),
         credentials: 'include',
         body: JSON.stringify(data),
-      }
+      },
+      { maxRetries: 1, ...this.retryConfig } // Update: only 1 retry to avoid duplicates
     );
 
     if (!res.ok) {
@@ -257,13 +373,14 @@ export class FrappeClient {
   }
 
   async deleteDoc(doctype: string, name: string): Promise<void> {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${this.getBaseUrl()}/api/resource/${doctype}/${name}`,
       {
         method: 'DELETE',
         headers: this.getHeaders(),
         credentials: 'include',
-      }
+      },
+      { maxRetries: 1, ...this.retryConfig } // Delete: only 1 retry to avoid duplicates
     );
 
     if (!res.ok) {

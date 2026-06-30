@@ -85,6 +85,43 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  // ── URL ↔ Tab Sync ────────────────────────────────────
+  // Reads ?tab=kitchen from URL on mount and updates URL when tab changes
+  const validTabs = ['overview', 'tables', 'kitchen', 'pl', 'shift', 'api', 'architecture'];
+
+  // Read initial tab from URL on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const urlTab = params.get('tab');
+    if (urlTab && validTabs.includes(urlTab) && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, []);
+
+  // Update URL when tab changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (activeTab && activeTab !== 'overview') {
+      url.searchParams.set('tab', activeTab);
+    } else {
+      url.searchParams.delete('tab');
+    }
+    // Use replaceState to avoid polluting browser history
+    window.history.replaceState({}, '', url.toString());
+  }, [activeTab]);
+
+  // ── Service Worker Registration ────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // SW registration failed — non-critical
+      });
+    }
+  }, []);
+
   const timeStr = currentTime.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
   const dateStr = currentTime.toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
