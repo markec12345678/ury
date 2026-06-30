@@ -142,3 +142,47 @@ Stage Summary:
 - Overview tab enriched with quick stats, occupancy bar, peak hour
 - Settings page has proxy mode toggle and real-time config info
 - All changes committed and pushed to GitHub
+
+---
+Task ID: 5
+Agent: Super Z (main)
+Task: Notification center, command palette, Docker setup, UI persistence
+
+Work Log:
+- Created NotificationCenter component
+  - Bell icon with animated unread badge counter in top bar
+  - Popover with scrollable notification list (max 50)
+  - Auto-generates notifications for new KOTs and shift status changes
+  - Click notification to navigate to relevant tab
+  - Mark as read / Mark all as read / Clear all functionality
+  - Persisted in localStorage (ury_notifications key)
+- Created CommandPalette component (⌘K / Ctrl+K shortcut)
+  - Navigate to any tab with fuzzy search
+  - Quick actions: refresh data, toggle theme, open settings
+  - Quick links: URY GitHub, Frappe backend
+  - ⌘K shortcut badge in top bar
+- Enhanced sidebar with live count badges
+  - Kitchen tab: red badge showing active KOT count
+  - Tables tab: amber badge showing occupied/total ratio
+- Zustand store UI preference persistence
+  - Dark mode preference saved to localStorage (ury_ui_prefs)
+  - Active tab restored on reload
+  - Dark mode class applied on document before first render
+  - Environment variables for restaurant name & currency
+  - Dynamic refresh interval from NEXT_PUBLIC_REFRESH_INTERVAL
+- Docker production setup
+  - Multi-stage Dockerfile (node:20-alpine, non-root user)
+  - docker-compose.yml with optional Frappe service section
+  - .dockerignore for minimal build context
+  - .env.production template with all variables
+  - Health check on container
+- Build test passed successfully
+- Pushed commit b52d940 to dashboard branch
+
+Stage Summary:
+- Notification center fully functional with auto-generation from store changes
+- Command palette enables keyboard-driven navigation
+- Sidebar shows live counts for kitchen and tables
+- User preferences persist across sessions
+- Docker setup ready for production deployment
+- All changes committed and pushed to GitHub
