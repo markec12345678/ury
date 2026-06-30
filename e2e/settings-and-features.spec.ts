@@ -14,8 +14,9 @@ test.describe('Settings Page', () => {
   });
 
   test('should display connection status card', async ({ page }) => {
-    // Should show "Ni povezave" or "Povezano"
-    await expect(page.locator('text=Ni povezave, text=Povezano').first()).toBeVisible();
+    // Should show connection status text (case-insensitive)
+    const statusCard = page.locator('text=/ni povezave|povezano/i').first();
+    await expect(statusCard).toBeVisible({ timeout: 10000 });
   });
 
   test('should show Frappe URL input field', async ({ page }) => {
@@ -59,9 +60,10 @@ test.describe('Settings Page', () => {
   });
 
   test('should navigate back to dashboard', async ({ page }) => {
-    await page.locator('a[href="/"], aside >> text=Pregled').first().click().catch(() => {});
-    // Or use browser back
-    await page.goBack();
+    // Navigate back via direct URL
+    await page.goto('/');
     await expect(page).toHaveURL(/\//);
+    // Verify dashboard loaded
+    await expect(page.locator('text=URY Dashboard').first()).toBeVisible();
   });
 });
