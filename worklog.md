@@ -1,4 +1,36 @@
 ---
+Task ID: 8
+Agent: Super Z (main)
+Task: Recharts popravki, Error Boundaries, keyboard shortcuts, health API, CSV export, accessibility
+
+Work Log:
+- Popravil Recharts name property warninge: dodal name="Dine-in"/"Takeaway"/"Prihodki"/"Stroški"
+- Odstranil nepotreben transparent Bar komponent iz overview charta
+- Zamenjal ComposedChart z AreaChart v overview (enostavnejši, brez warningov)
+- Ustvaril ErrorBoundary in TabErrorBoundary komponenti za graceful error handling
+- Zavil vsi 7 tabov s TabErrorBoundary (prikaže slovensko napako + retry/reload gumb)
+- Ustvaril useKeyboardShortcuts hook:
+  - Alt+1-7: preklop med tabi
+  - Alt+R: osvežitev podatkov
+  - Alt+D: preklop dark mode
+  - Escape: zapri sidebar na mobilnem
+- Ustvaril /api/health endpoint za monitoring (status, checks, version, responseTime)
+- Dodal CSV export gumb v Recent Orders tabelo (Overview tab)
+- Dodal skip link za accessibility ("Preskoči na glavno vsebino")
+- Dodal ARIA labele: sidebar role="navigation" aria-label, main id="main-content"
+- Build ✅ lint ✅ 26/26 unit ✅ 74/74 E2E ✅
+- Health API vrača: {"status":"healthy","version":"2.0.0","checks":{"dashboard":"ok"}}
+- Commit f1d620d pushan na dashboard branch
+
+Stage Summary:
+- Recharts warningi odpravljeni
+- Error Boundaries za vsak tab
+- Keyboard shortcuts za hitro navigacijo
+- Health API endpoint za monitoring
+- CSV export za Recent Orders
+- Accessibility: skip link + ARIA labels
+
+---
 Task ID: 7
 Agent: Super Z (main)
 Task: E2E test verifikacija, popravki in git push
