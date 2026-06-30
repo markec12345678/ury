@@ -1,23 +1,87 @@
-:81 {
-	@transform_port_query {
-		query XTransformPort=*
-	}
+# URY Dashboard — Caddy Production Reverse Proxy
+# Place this file alongside docker-compose.prod.yml
+# Caddy auto-manages HTTPS via Let's Encrypt
 
-	handle @transform_port_query {
-		reverse_proxy localhost:{query.XTransformPort} {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
-
-	handle {
-		reverse_proxy localhost:3000 {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+{
+    # Global options
+    email admin@myrestaurant.com
+    auto_https on
 }
+
+# ── Dashboard (HTTPS) ─────────────────────────────────────
+dashboard.myrestaurant.com {
+    reverse_proxy dashboard:3000 {
+        header_up Host {host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+
+        # WebSocket support for Socket.io
+        header_up Upgrade {>Upgrade}
+        header_up Connection {>Connection}
+
+        # Timeouts
+        transport http {
+            read_timeout 300s
+            write_timeout 300s
+            dial_timeout 30s
+        }
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # Static asset caching (Next.js /_next/)
+    handle_path /_next/static/* {
+        reverse_proxy dashboard:3000
+        header Cache-Control "public, max-age=31536000, immutable"
+    }
+
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Access logs
+    log {
+        output file /var/log/caddy/dashboard-access.log {
+            roll_size 100mb
+            roll_keep 10
+        }
+    }
+}
+
+# ── Frappe Backend (HTTPS, optional) ──────────────────────
+# Uncomment if Frappe is deployed alongside the dashboard
+#
+# erp.myrestaurant.com {
+#     reverse_proxy frappe:8000 {
+#         header_up Host {host}
+#         header_up X-Forwarded-For {remote_host}
+#         header_up X-Forwarded-Proto {scheme}
+#         header_up X-Real-IP {remote_host}
+#
+#         # Frappe Socket.io
+#         handle /socket.io/* {
+#             reverse_proxy frappe:9000 {
+#                 header_up Upgrade {>Upgrade}
+#                 header_up Connection {>Connection}
+#             }
+#         }
+#     }
+#
+#     encode gzip zstd
+#
+#     log {
+#         output file /var/log/caddy/frappe-access.log
+#     }
+# }

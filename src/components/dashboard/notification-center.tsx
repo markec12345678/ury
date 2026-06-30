@@ -87,6 +87,20 @@ export function NotificationCenter() {
     setNotifications(loadNotifications());
   }, []);
 
+  function addNotification(partial: Omit<Notification, 'id' | 'timestamp' | 'read'>) {
+    const notification: Notification = {
+      ...partial,
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: new Date(),
+      read: false,
+    };
+    setNotifications((prev) => {
+      const updated = [notification, ...prev].slice(0, 50);
+      saveNotifications(updated);
+      return updated;
+    });
+  }
+
   // Watch for KOT changes — new orders trigger notification
   useEffect(() => {
     const prevCount = prevKotCountRef.current;
@@ -119,20 +133,6 @@ export function NotificationCenter() {
     }
     prevShiftStatusRef.current = shiftInfo.status;
   }, [shiftInfo.status]);
-
-  function addNotification(partial: Omit<Notification, 'id' | 'timestamp' | 'read'>) {
-    const notification: Notification = {
-      ...partial,
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      timestamp: new Date(),
-      read: false,
-    };
-    setNotifications((prev) => {
-      const updated = [notification, ...prev].slice(0, 50);
-      saveNotifications(updated);
-      return updated;
-    });
-  }
 
   function markAsRead(id: string) {
     setNotifications((prev) => {
