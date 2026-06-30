@@ -284,3 +284,37 @@ Stage Summary:
 - User preferences persist across sessions
 - Docker setup ready for production deployment
 - All changes committed and pushed to GitHub
+
+---
+Task ID: 9
+Agent: Super Z (main)
+Task: Interactive E2E tests, Frappe client retry, URL routing, PWA support
+
+Work Log:
+- Created 5 new interactive E2E test suites (42 new tests total):
+  - kitchen-interactive: 9 tests — KOT status flow (Novo→V pripravi→Pripravljeno→Postreženo), production unit filters, summary stats, elapsed time, order types
+  - shift-interactive: 8 tests — open/close dialogs, cashier selection, payment breakdown, revenue/orders
+  - tables-interactive: 7 tests — occupied/free table dialogs, room filtering, legend, occupancy badge, Escape close
+  - pl-interactive: 8 tests — summary cards, margins, bar/donut charts, line items table, CSV/PDF export
+  - notifications-palette: 10 tests — bell notification center, command palette (Ctrl+K), tab navigation, dark mode toggle, Alt shortcuts
+- Implemented FrappeClient exponential backoff retry:
+  - fetchWithRetry function with configurable maxRetries, baseDelay, maxDelay, backoffFactor
+  - Jitter (0-30%) to prevent thundering herd
+  - Smart retry: GET retries on 5xx/429/408, POST only on network errors (avoid duplicates)
+  - Login/create/update/delete: limited to 1 retry
+  - Added 19 unit tests for FrappeClient (config persistence, singleton, retry logic, URY methods)
+- Added URL-based tab routing:
+  - Read ?tab=kitchen from URL on page mount
+  - Update URL via replaceState when tab changes (no history pollution)
+  - Supports all 7 tabs
+- Added PWA support:
+  - manifest.json with emerald theme color, standalone display, Slovenian lang
+  - Service Worker (sw.js) with network-first for API, cache-first for _next/static
+  - Offline fallback with JSON error response
+  - Apple/mobile web app meta tags in layout.tsx
+  - SW registration in page.tsx
+
+Stage Summary:
+- Total tests: 115 E2E ✅, 45 unit ✅
+- Lint: clean ✅, Build: successful ✅
+- Git push: main branch (commit 9d4c6f4)
