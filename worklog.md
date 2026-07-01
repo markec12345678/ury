@@ -162,3 +162,31 @@ Stage Summary:
 - Zero TypeScript errors, clean production build
 - 8 new components, 5 enhanced components, 3 store updates, 3 API updates
 - Full Slovenian (sl) language support with 100+ new keys
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: GitHub sync, retry SDK migration, test infrastructure, API dedup
+
+Work Log:
+- Updated GitHub remote URLs with new API token
+- Merged fork/develop (19 bug fix commits) into local develop with conflict resolution
+- Resolved all merge conflicts (47 files): accepted fork's bug fixes for API/store, kept our new features
+- Pushed merged code to fork/develop successfully
+- Extended frappe-sdk-retry.ts with db wrapper (getDocList, getDoc, getValue, getCount)
+- Migrated all 12 API files from frappe-sdk to frappe-sdk-retry
+- Added vitest + jsdom + @testing-library/jest-dom to devDependencies
+- Added test/test:watch/test:coverage scripts to package.json
+- Created frappe-sdk-retry.test.ts (15 tests)
+- Created error-utils.test.ts (9 tests)
+- Created logger.test.ts (8 tests)
+- Created api-dedup.ts (request dedup + response caching with TTL)
+- Created api-dedup.test.ts (14 tests)
+- All 102 tests passing, TypeScript clean, Vite build successful
+- 3 commits pushed to fork/develop
+
+Stage Summary:
+- Full GitHub sync completed (fork/develop up to date)
+- All API files now use retry SDK with exponential backoff
+- Test infrastructure fully operational (102 tests)
+- API dedup/caching layer ready for integration
