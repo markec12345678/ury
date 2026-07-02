@@ -1,0 +1,1116 @@
+     1→=== src/store/slices/app-slice.ts ===
+     2→import { StateCreator } from 'zustand';
+     3→import { storage } from '../../lib/storage';
+     4→import { getCurrencyInfo, type PosProfileCombined, getCombinedPosProfile } from '../../lib/pos-profile-api';
+     5→import { getPaymentModes } from '../../lib/payment-api';
+     6→import { DEFAULT_ORDER_TYPE } from '../../data/order-types';
+     7→import type { POSSliceAll } from './combined';
+     8→
+     9→// --- Types ---
+    10→
+    11→export interface AppState {
+    12→  isInitializing: boolean;
+    13→  loading: boolean;
+    14→  profileLoading: boolean;
+    15→  error: string | null;
+    16→  posProfile: PosProfileCombined | null;
+    17→  currency: string;
+    18→  currencySymbol: string | null;
+    19→  paymentModes: string[];
+    20→}
+    21→
+    22→export interface AppActions {
+    23→  initializeApp: () => Promise<void>;
+    24→  fetchPosProfile: () => Promise<void>;
+    25→  fetchCurrencySymbol: () => Promise<void>;
+    26→  fetchPaymentModes: () => Promise<void>;
+    27→  resetOrderState: () => void;
+    28→  isMenuInteractionDisabled: () => boolean;
+    29→  isOrderInteractionDisabled: () => boolean;
+    30→}
+    31→
+    32→export type AppSlice = AppState & AppActions;
+    33→
+    34→// --- Slice ---
+    35→
+    36→export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set, get) => ({
+    37→  isInitializing: true,
+    38→  loading: false,
+    39→  profileLoading: false,
+    40→  error: null,
+    41→  posProfile: null,
+    42→  currency: storage.getItem('currency') || 'INR',
+    43→  currencySymbol: storage.getItem('currencySymbol') || null,
+    44→  paymentModes: ['Cash'],
+    45→
+    46→  initializeApp: async () => {
+    47→    try {
+    48→      set({ isInitializing: true, error: null });
+    49→
+    50→      const [profileResult, menuResult, categoriesResult, paymentModesResult] = await Promise.allSettled([
+    51→        get().fetchPosProfile(),
+    52→        get().fetchMenuItems(),
+    53→        get().fetchCategories(),
+    54→        get().fetchPaymentModes(),
+    55→      ]);
+    56→
+    57→      if (
+    58→        profileResult.status === 'rejected' ||
+    59→        menuResult.status === 'rejected' ||
+    60→        categoriesResult.status === 'rejected' ||
+    61→        paymentModesResult.status === 'rejected'
+    62→      ) {
+    63→        set({
+    64→          error: 'Failed to initialize app. Please refresh the page.',
+    65→          isInitializing: false,
+    66→        });
+    67→        return;
+    68→      }
+    69→
+    70→      set({ isInitializing: false });
+    71→    } catch {
+    72→      set({
+    73→        error: 'Failed to initialize app. Please refresh the page.',
+    74→        isInitializing: false,
+    75→      });
+    76→    }
+    77→  },
+    78→
+    79→  fetchPosProfile: async () => {
+    80→    try {
+    81→      const cached = sessionStorage.getItem('posProfile');
+    82→      if (cached) {
+    83→        try {
+    84→          const profile = JSON.parse(cached);
+    85→          set({
+    86→            posProfile: profile,
+    87→            profileLoading: false,
+    88→            currency: profile.currency || 'INR',
+    89→          });
+    90→          if (!storage.getItem('currencySymbol')) {
+    91→            await get().fetchCurrencySymbol();
+    92→          }
+    93→          return;
+    94→        } catch {
+    95→          sessionStorage.removeItem('posProfile');
+    96→        }
+    97→      }
+    98→
+    99→      set({ profileLoading: true, error: null });
+   100→      const combinedProfile = await getCombinedPosProfile();
+   101→
+   102→      sessionStorage.setItem('posProfile', JSON.stringify(combinedProfile));
+   103→      set({
+   104→        posProfile: combinedProfile,
+   105→        profileLoading: false,
+   106→        currency: combinedProfile.currency || 'INR',
+   107→      });
+   108→
+   109→      if (!storage.getItem('currencySymbol')) {
+   110→        await get().fetchCurrencySymbol();
+   111→      }
+   112→    } catch (error) {
+   113→      if (import.meta.env.DEV) console.error('Error fetching POS profile:', error);
+   114→      set({
+   115→        error: 'Failed to fetch POS profile',
+   116→        profileLoading: false,
+   117→      });
+   118→    }
+   119→  },
+   120→
+   121→  fetchCurrencySymbol: async () => {
+   122→    try {
+   123→      const currency = get().currency;
+   124→      const response = await getCurrencyInfo(currency);
+   125→      const { symbol } = response;
+   126→
+   127→      set({ currencySymbol: symbol });
+   128→      storage.setItem('currencySymbol', symbol);
+   129→    } catch (error) {
+   130→      if (import.meta.env.DEV) console.error('Error fetching currency symbol:', error);
+   131→      set({ currencySymbol: get().currency });
+   132→      storage.setItem('currencySymbol', get().currency);
+   133→    }
+   134→  },
+   135→
+   136→  fetchPaymentModes: async () => {
+   137→    try {
+   138→      const modes = await getPaymentModes();
+   139→      set({ paymentModes: modes });
+   140→    } catch (error) {
+   141→      if (import.meta.env.DEV) console.error('Failed to fetch payment modes:', error);
+   142→    }
+   143→  },
+   144→
+   145→  resetOrderState: () => {
+   146→    set({
+   147→      selectedCustomer: null,
+   148→      selectedTable: null,
+   149→      selectedRoom: null,
+   150→      selectedAggregator: null,
+   151→      isUpdatingOrder: false,
+   152→      orderId: null,
+   153→      activeOrders: [],
+   154→      selectedItem: null,
+   155→      orderLoading: false,
+   156→      error: null,
+   157→      selectedOrderType: DEFAULT_ORDER_TYPE,
+   158→      orderComment: '',
+   159→    });
+   160→
+   161→    get().fetchMenuItems();
+   162→  },
+   163→
+   164→  isMenuInteractionDisabled: () => {
+   165→    const state = get();
+   166→    return state.menuLoading || state.profileLoading;
+   167→  },
+   168→
+   169→  isOrderInteractionDisabled: () => {
+   170→    return get().orderLoading;
+   171→  },
+   172→});
+   173→=== src/store/slices/auth-slice.ts ===
+   174→import { StateCreator } from 'zustand';
+   175→import { getLoggedUser, getUserRoles } from '../../lib/auth-api';
+   176→import { getErrorMessage } from '../../lib/error-utils';
+   177→
+   178→export interface User {
+   179→  name: string; // This stores the user ID
+   180→  roles: string[];
+   181→  full_name?: string;
+   182→}
+   183→
+   184→export interface AuthState {
+   185→  user: User | null;
+   186→  isLoading: boolean;
+   187→  error: string | null;
+   188→}
+   189→
+   190→export interface AuthActions {
+   191→  checkAuth: () => Promise<void>;
+   192→  setUser: (user: User | null) => void;
+   193→  clearAuth: () => void;
+   194→}
+   195→
+   196→export type AuthSlice = AuthState & AuthActions;
+   197→
+   198→const initialState: AuthState = {
+   199→  user: null,
+   200→  isLoading: false,
+   201→  error: null,
+   202→};
+   203→
+   204→export const createAuthSlice: StateCreator<AuthSlice> = (set, get) => ({
+   205→  ...initialState,
+   206→
+   207→  checkAuth: async () => {
+   208→    try {
+   209→      set({ isLoading: true, error: null });
+   210→      const response = await getLoggedUser();
+   211→      
+   212→      if (!response) {
+   213→        // If no user is logged in, redirect to login
+   214→        window.location.href = '/login?redirect-to=%2Fpos';
+   215→        return;
+   216→      }
+   217→
+   218→      // Get user roles
+   219→      const roles = await getUserRoles(response);
+   220→
+   221→      set({
+   222→        user: {
+   223→          name: response, // Store the user ID in name field
+   224→          full_name: roles.full_name,
+   225→          roles: roles.roles,
+   226→        },
+   227→        isLoading: false,
+   228→      });
+   229→    } catch (error) {
+   230→      set({ 
+   231→        error: getErrorMessage(error),
+   232→        isLoading: false,
+   233→        user: null,
+   234→      });
+   235→      // Redirect to login on error
+   236→      window.location.href = '/login?redirect-to=%2Fpos';
+   237→    }
+   238→  },
+   239→
+   240→  setUser: (user) => {
+   241→    set({ user });
+   242→  },
+   243→
+   244→  clearAuth: () => {
+   245→    set(initialState);
+   246→  },
+   247→}); 
+   248→=== src/store/slices/cart-slice.ts ===
+   249→import { StateCreator } from 'zustand';
+   250→import { v4 as uuidv4 } from 'uuid';
+   251→import type { OrderItem, MenuItem, CartTotals } from './types';
+   252→import { CartError, MAX_QUANTITY, MIN_QUANTITY } from './types';
+   253→import { generateUniqueId, calculateItemPrice } from './helpers';
+   254→import type { POSSliceAll } from './combined';
+   255→
+   256→// --- Types ---
+   257→
+   258→export interface CartState {
+   259→  activeOrders: OrderItem[];
+   260→  cartId: string | null;
+   261→}
+   262→
+   263→export interface CartActions {
+   264→  addToOrder: (item: OrderItem) => Promise<void>;
+   265→  removeFromOrder: (uniqueId: string) => Promise<void>;
+   266→  updateQuantity: (uniqueId: string, quantity: number) => Promise<void>;
+   267→  clearOrder: () => Promise<void>;
+   268→  initializeCart: () => Promise<void>;
+   269→  getCartTotals: () => CartTotals;
+   270→  itemExistsInCart: (uniqueId: string) => boolean;
+   271→  validateQuantity: (quantity: number) => boolean;
+   272→  getItemPrice: (item: OrderItem) => number;
+   273→  getItemQuantityFromCart: (item: MenuItem) => number;
+   274→}
+   275→
+   276→export type CartSlice = CartState & CartActions;
+   277→
+   278→// --- Slice ---
+   279→
+   280→export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (set, get) => ({
+   281→  activeOrders: [],
+   282→  cartId: null,
+   283→
+   284→  initializeCart: async () => {
+   285→    set({ cartId: uuidv4() });
+   286→  },
+   287→
+   288→  addToOrder: async (item: OrderItem) => {
+   289→    try {
+   290→      if (!get().validateQuantity(item.quantity)) {
+   291→        throw new CartError(`Quantity must be between ${MIN_QUANTITY} and ${MAX_QUANTITY}`);
+   292→      }
+   293→
+   294→      const uniqueId = generateUniqueId(item);
+   295→      const existingItemIndex = get().activeOrders.findIndex(orderItem => orderItem.uniqueId === uniqueId);
+   296→
+   297→      if (existingItemIndex !== -1) {
+   298→        const existingItem = get().activeOrders[existingItemIndex];
+   299→        const newQuantity = existingItem.quantity + item.quantity;
+   300→        const newComment = item.comment !== undefined ? item.comment : existingItem?.comment || '';
+   301→
+   302→        if (!get().validateQuantity(newQuantity)) {
+   303→          throw new CartError(`Cannot add item. Total quantity would exceed ${MAX_QUANTITY}`);
+   304→        }
+   305→
+   306→        const newOrders = [...get().activeOrders];
+   307→        newOrders[existingItemIndex] = {
+   308→          ...existingItem,
+   309→          quantity: newQuantity,
+   310→          comment: newComment,
+   311→        };
+   312→
+   313→        set({ activeOrders: newOrders });
+   314→      } else {
+   315→        const newOrders = [...get().activeOrders, { ...item, uniqueId }];
+   316→        set({ activeOrders: newOrders });
+   317→      }
+   318→    } catch (error) {
+   319→      if (error instanceof CartError) {
+   320→        set({ error: error.message });
+   321→      } else {
+   322→        set({ error: 'Failed to add item to cart' });
+   323→      }
+   324→    }
+   325→  },
+   326→
+   327→  removeFromOrder: async (uniqueId: string) => {
+   328→    try {
+   329→      const newOrders = get().activeOrders.filter(item => item.uniqueId !== uniqueId);
+   330→      set({ activeOrders: newOrders });
+   331→    } catch {
+   332→      set({ error: 'Failed to remove item from cart' });
+   333→    }
+   334→  },
+   335→
+   336→  updateQuantity: async (uniqueId: string, quantity: number) => {
+   337→    try {
+   338→      if (!get().validateQuantity(quantity)) {
+   339→        throw new CartError(`Quantity must be between ${MIN_QUANTITY} and ${MAX_QUANTITY}`);
+   340→      }
+   341→
+   342→      const newOrders = get().activeOrders.map(item =>
+   343→        item.uniqueId === uniqueId ? { ...item, quantity } : item
+   344→      );
+   345→      set({ activeOrders: newOrders });
+   346→    } catch (error) {
+   347→      if (error instanceof CartError) {
+   348→        set({ error: error.message });
+   349→      } else {
+   350→        set({ error: 'Failed to update quantity' });
+   351→      }
+   352→    }
+   353→  },
+   354→
+   355→  clearOrder: async () => {
+   356→    try {
+   357→      set({ activeOrders: [] });
+   358→    } catch {
+   359→      set({ error: 'Failed to clear cart' });
+   360→    }
+   361→  },
+   362→
+   363→  getCartTotals: (): CartTotals => {
+   364→    const items = get().activeOrders;
+   365→    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+   366→
+   367→    const subtotal = items.reduce((sum, item) => {
+   368→      const itemPrice = calculateItemPrice(item);
+   369→      return sum + (itemPrice * item.quantity);
+   370→    }, 0);
+   371→
+   372→    const tax = items.reduce((sum, item) => {
+   373→      const itemPrice = calculateItemPrice(item);
+   374→      const taxRate = item.tax_rate || 0;
+   375→      return sum + (itemPrice * item.quantity * (taxRate / 100));
+   376→    }, 0);
+   377→
+   378→    return { subtotal, tax, total: subtotal + tax, itemCount };
+   379→  },
+   380→
+   381→  itemExistsInCart: (uniqueId: string): boolean => {
+   382→    return get().activeOrders.some(item => item.uniqueId === uniqueId);
+   383→  },
+   384→
+   385→  validateQuantity: (quantity: number): boolean => {
+   386→    return !isNaN(quantity) && quantity >= MIN_QUANTITY && quantity <= MAX_QUANTITY;
+   387→  },
+   388→
+   389→  getItemPrice: (item: OrderItem): number => {
+   390→    return calculateItemPrice(item);
+   391→  },
+   392→
+   393→  getItemQuantityFromCart: (item: MenuItem): number => {
+   394→    const uniqueId = generateUniqueId(item as OrderItem);
+   395→    const cartItem = get().activeOrders.find(orderItem => orderItem.uniqueId === uniqueId);
+   396→    return cartItem?.quantity || 0;
+   397→  },
+   398→});
+   399→=== src/store/slices/combined.ts ===
+   400→// Forward-declared combined type for cross-slice access.
+   401→// Uses `import type` to avoid circular runtime dependencies.
+   402→import type { MenuSlice } from './menu-slice';
+   403→import type { CartSlice } from './cart-slice';
+   404→import type { SelectionSlice } from './selection-slice';
+   405→import type { AppSlice } from './app-slice';
+   406→
+   407→export type POSSliceAll = MenuSlice & CartSlice & SelectionSlice & AppSlice;
+   408→=== src/store/slices/config-slice.ts ===
+   409→import { StateCreator } from 'zustand';
+   410→import { AuthSlice } from './auth-slice';
+   411→import { getCombinedPosProfile, PosProfileCombined } from '../../lib/pos-profile-api';
+   412→import type { RolePermission } from '../../lib/pos-profile-api';
+   413→import { getErrorMessage } from '../../lib/error-utils';
+   414→
+   415→export interface ConfigState {
+   416→  allowedRoles: string[];
+   417→  isLoading: boolean;
+   418→  error: string | null;
+   419→  hasAccess: boolean;
+   420→  posProfile: PosProfileCombined | null;
+   421→}
+   422→
+   423→export interface ConfigActions {
+   424→  checkAccess: () => void;
+   425→  setAllowedRoles: (roles: string[]) => void;
+   426→  fetchPosProfile: (forceRefresh?: boolean) => Promise<void>;
+   427→}
+   428→
+   429→export type ConfigSlice = ConfigState & ConfigActions;
+   430→
+   431→const initialState: ConfigState = {
+   432→  allowedRoles: [],
+   433→  isLoading: false,
+   434→  error: null,
+   435→  hasAccess: false,
+   436→  posProfile: null,
+   437→};
+   438→
+   439→export const createConfigSlice: StateCreator<
+   440→  ConfigSlice & AuthSlice,
+   441→  [],
+   442→  [],
+   443→  ConfigSlice
+   444→> = (set, get) => ({
+   445→  ...initialState,
+   446→
+   447→  fetchPosProfile: async (forceRefresh = false) => {
+   448→    try {
+   449→      set({ isLoading: true, error: null });
+   450→
+   451→      // Check session storage first if not forcing refresh
+   452→      const cached = sessionStorage.getItem('posProfile');
+   453→      if (cached && !forceRefresh) {
+   454→        try {
+   455→          const profile = JSON.parse(cached);
+   456→          set({ posProfile: profile });
+   457→          // Extract and set allowed roles from the profile
+   458→          const allowedRoles = profile.role_allowed_for_billing?.map((role: RolePermission) => role.role) || [];
+   459→          get().setAllowedRoles(allowedRoles);
+   460→          set({ isLoading: false });
+   461→          return;
+   462→        } catch {
+   463→          sessionStorage.removeItem('posProfile');
+   464→        }
+   465→      }
+   466→
+   467→      // If not in cache or forcing refresh, fetch from API
+   468→      const profile = await getCombinedPosProfile();
+   469→      
+   470→      // Cache the profile
+   471→      sessionStorage.setItem('posProfile', JSON.stringify(profile));
+   472→      set({ posProfile: profile });
+   473→
+   474→      // Extract and set allowed roles from the profile
+   475→      const allowedRoles = profile.role_allowed_for_billing?.map((role: RolePermission) => role.role) || [];
+   476→      get().setAllowedRoles(allowedRoles);
+   477→      set({ isLoading: false });
+   478→    } catch (error) {
+   479→      set({ 
+   480→        error: getErrorMessage(error),
+   481→        isLoading: false,
+   482→      });
+   483→    }
+   484→  },
+   485→
+   486→  checkAccess: () => {
+   487→    const { user } = get();
+   488→    const { allowedRoles } = get();
+   489→
+   490→    if (!user || !user.roles || !allowedRoles.length) {
+   491→      set({ hasAccess: false });
+   492→      return;
+   493→    }
+   494→
+   495→    // Check if user has any of the allowed roles
+   496→    const hasAccess = user.name === 'Administrator' || user.roles.some(role => allowedRoles.includes(role));
+   497→    set({ hasAccess });
+   498→
+   499→    // Note: AuthGuard handles the no-access UI via !hasAccess check with proper i18n
+   500→  },
+   501→
+   502→  setAllowedRoles: (roles) => {
+   503→    set({ allowedRoles: roles });
+   504→    // After setting new roles, recheck access
+   505→    get().checkAccess();
+   506→  },
+   507→}); 
+   508→=== src/store/slices/helpers.ts ===
+   509→import type { OrderItem } from './types';
+   510→
+   511→export const generateUniqueId = (item: OrderItem): string => {
+   512→  const variantId = item.selectedVariant?.id || 'default';
+   513→  const addonIds = item.selectedAddons?.map(addon => addon.id).sort().join('-') || 'no-addons';
+   514→  return `${item.id}-${variantId}-${addonIds}`;
+   515→};
+   516→
+   517→export const calculateItemPrice = (item: OrderItem): number => {
+   518→  const basePrice = item.selectedVariant?.price || item.price;
+   519→  const addonsTotal = item.selectedAddons?.reduce((sum, addon) => sum + addon.price, 0) || 0;
+   520→  return basePrice + addonsTotal;
+   521→};
+   522→=== src/store/slices/menu-slice.ts ===
+   523→import { StateCreator } from 'zustand';
+   524→import { getRestaurantMenu, getAggregatorMenu } from '../../lib/menu-api';
+   525→import { getMenuCourses } from '../../lib/menu-course-api';
+   526→import { getCustomerGroups, getCustomerTerritories } from '../../lib/customer-api';
+   527→import type { MenuItem, Category } from './types';
+   528→import type { POSSliceAll } from './combined';
+   529→
+   530→// --- Types ---
+   531→
+   532→export interface MenuState {
+   533→  menuItems: MenuItem[];
+   534→  categories: Category[];
+   535→  menuLoading: boolean;
+   536→  customerGroups: string[];
+   537→  territories: string[];
+   538→}
+   539→
+   540→export interface MenuActions {
+   541→  fetchMenuItems: () => Promise<void>;
+   542→  fetchAggregatorMenu: (aggregator: string) => Promise<void>;
+   543→  fetchCategories: () => Promise<void>;
+   544→  fetchCustomerGroups: () => Promise<void>;
+   545→  fetchTerritories: () => Promise<void>;
+   546→}
+   547→
+   548→export type MenuSlice = MenuState & MenuActions;
+   549→
+   550→// --- Slice ---
+   551→
+   552→export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (set, get) => ({
+   553→  menuItems: [],
+   554→  categories: [],
+   555→  menuLoading: false,
+   556→  customerGroups: [],
+   557→  territories: [],
+   558→
+   559→  fetchMenuItems: async () => {
+   560→    const { posProfile, selectedRoom, selectedOrderType } = get();
+   561→    if (!posProfile?.restaurant) return;
+   562→
+   563→    try {
+   564→      set({ menuLoading: true, error: null });
+   565→      const items = await getRestaurantMenu(posProfile.name, selectedRoom, selectedOrderType);
+   566→
+   567→      const menuItems: MenuItem[] = items.map(item => ({
+   568→        id: item.item,
+   569→        name: item.item_name,
+   570→        image: item.item_image || null,
+   571→        price: typeof item.rate === 'string' ? (parseFloat(item.rate) || 0) : (item.rate || 0),
+   572→        item: item.item,
+   573→        item_name: item.item_name,
+   574→        item_image: item.item_image,
+   575→        course: item.course,
+   576→        course_label: item.course_label || item.course,
+   577→        description: item.description || '',
+   578→        special_dish: item.special_dish || 0,
+   579→        tax_rate: 0,
+   580→      }));
+   581→
+   582→      set({ menuItems });
+   583→    } catch (error) {
+   584→      set({ error: 'Failed to load menu items' });
+   585→      if (import.meta.env.DEV) console.error('Error loading menu items:', error);
+   586→    } finally {
+   587→      set({ menuLoading: false });
+   588→    }
+   589→  },
+   590→
+   591→  fetchAggregatorMenu: async (aggregator: string) => {
+   592→    try {
+   593→      set({ menuLoading: true, error: null });
+   594→      const items = await getAggregatorMenu(aggregator);
+   595→
+   596→      const menuItems: MenuItem[] = items.map(item => ({
+   597→        ...item,
+   598→        id: item.item,
+   599→        name: item.item_name,
+   600→        image: item.item_image || null,
+   601→        price: typeof item.rate === 'string' ? (parseFloat(item.rate) || 0) : (item.rate || 0),
+   602→      }));
+   603→
+   604→      set({ menuItems, menuLoading: false });
+   605→    } catch (error) {
+   606→      set({ error: 'Failed to load aggregator menu', menuLoading: false });
+   607→      if (import.meta.env.DEV) console.error('Error loading aggregator menu:', error);
+   608→    }
+   609→  },
+   610→
+   611→  fetchCategories: async () => {
+   612→    try {
+   613→      const cached = sessionStorage.getItem('menuCategories');
+   614→      if (cached) {
+   615→        try {
+   616→          const categories = JSON.parse(cached);
+   617→          set({ categories });
+   618→          return;
+   619→        } catch {
+   620→          sessionStorage.removeItem('menuCategories');
+   621→        }
+   622→      }
+   623→
+   624→      const courses = await getMenuCourses();
+   625→      sessionStorage.setItem('menuCategories', JSON.stringify(courses));
+   626→      set({ categories: courses });
+   627→    } catch (error) {
+   628→      set({ error: 'Failed to load menu categories' });
+   629→    }
+   630→  },
+   631→
+   632→  fetchCustomerGroups: async () => {
+   633→    const cached = sessionStorage.getItem('customerGroups');
+   634→    if (cached) {
+   635→      try {
+   636→        set({ customerGroups: JSON.parse(cached) });
+   637→        return;
+   638→      } catch {
+   639→        sessionStorage.removeItem('customerGroups');
+   640→      }
+   641→    }
+   642→    try {
+   643→      const groups = await getCustomerGroups();
+   644→      const names = groups.map((g: { name: string }) => g.name);
+   645→      set({ customerGroups: names });
+   646→      sessionStorage.setItem('customerGroups', JSON.stringify(names));
+   647→    } catch (error) {
+   648→      set({ error: 'Failed to load customer groups' });
+   649→    }
+   650→  },
+   651→
+   652→  fetchTerritories: async () => {
+   653→    const cached = sessionStorage.getItem('territories');
+   654→    if (cached) {
+   655→      try {
+   656→        set({ territories: JSON.parse(cached) });
+   657→        return;
+   658→      } catch {
+   659→        sessionStorage.removeItem('territories');
+   660→      }
+   661→    }
+   662→    try {
+   663→      const terrs = await getCustomerTerritories();
+   664→      const names = terrs.map((t: { name: string }) => t.name);
+   665→      set({ territories: names });
+   666→      sessionStorage.setItem('territories', JSON.stringify(names));
+   667→    } catch (error) {
+   668→      set({ error: 'Failed to load territories' });
+   669→    }
+   670→  },
+   671→});
+   672→=== src/store/slices/orders-slice.ts ===
+   673→import { StateCreator } from 'zustand';
+   674→import { call } from '../../lib/frappe-sdk';
+   675→import { getPOSInvoices, getPOSInvoiceItems, searchPosInvoice, POSInvoiceItem, POSInvoiceTax } from '../../lib/invoice-api';
+   676→import type { POSInvoice } from '../../lib/invoice-api';
+   677→import { getErrorMessage } from '../../lib/error-utils';
+   678→
+   679→export interface OrdersState {
+   680→  orders: POSInvoice[];
+   681→  orderLoading: boolean;
+   682→  error: string | null;
+   683→  pagination: {
+   684→    currentPage: number;
+   685→    hasNextPage: boolean;
+   686→    itemsPerPage: number;
+   687→  };
+   688→  selectedStatus: 'Draft' | 'Unbilled' | 'Recently Paid' | 'Paid' | 'Consolidated' | 'Return';
+   689→  selectedOrder: POSInvoice | null;
+   690→  selectedOrderItems: POSInvoiceItem[];
+   691→  selectedOrderTaxes: POSInvoiceTax[];
+   692→  selectedOrderLoading: boolean;
+   693→  selectedOrderError: string | null;
+   694→  orderSearchQuery: string;
+   695→}
+   696→
+   697→export interface OrdersActions {
+   698→  fetchOrders: (page?: number) => Promise<void>;
+   699→  updateOrderStatus: (orderId: string, status: POSInvoice['status']) => Promise<void>;
+   700→  goToNextPage: () => Promise<void>;
+   701→  goToPreviousPage: () => Promise<void>;
+   702→  setSelectedStatus: (status: POSInvoice['status']) => Promise<void>;
+   703→  selectOrder: (order: POSInvoice) => Promise<void>;
+   704→  clearSelectedOrder: () => void;
+   705→  setOrderSearchQuery: (query: string) => void;
+   706→}
+   707→
+   708→export type OrdersSlice = OrdersState & OrdersActions;
+   709→
+   710→const ITEMS_PER_PAGE = 10;
+   711→
+   712→export const createOrdersSlice: StateCreator<
+   713→  OrdersSlice,
+   714→  [],
+   715→  [],
+   716→  OrdersSlice
+   717→> = (set, get) => ({
+   718→  // Initial state
+   719→  orders: [],
+   720→  orderLoading: false,
+   721→  error: null,
+   722→  pagination: {
+   723→    currentPage: 1,
+   724→    hasNextPage: false,
+   725→    itemsPerPage: ITEMS_PER_PAGE,
+   726→  },
+   727→  selectedStatus: 'Draft',
+   728→  selectedOrder: null,
+   729→  selectedOrderItems: [],
+   730→  selectedOrderTaxes: [],
+   731→  selectedOrderLoading: false,
+   732→  selectedOrderError: null,
+   733→  orderSearchQuery: '',
+   734→
+   735→  // Actions
+   736→  fetchOrders: async (page = 1) => {
+   737→    try {
+   738→      set({ orderLoading: true, error: null });
+   739→      const { orderSearchQuery, selectedStatus } = get();
+   740→      
+   741→      // Get POS profile to access paid_limit
+   742→      const posProfile = sessionStorage.getItem('posProfile');
+   743→      let paidLimit: number | undefined;
+   744→      if (posProfile) {
+   745→        try {
+   746→          const profile = JSON.parse(posProfile);
+   747→          paidLimit = profile?.paid_limit;
+   748→        } catch {
+   749→          sessionStorage.removeItem('posProfile');
+   750→        }
+   751→      }
+   752→      
+   753→      if (orderSearchQuery && orderSearchQuery.trim()) {
+   754→        // Use search API
+   755→        const res = await searchPosInvoice(orderSearchQuery, selectedStatus);
+   756→        set({
+   757→          orders: res.data || [],
+   758→          pagination: {
+   759→            currentPage: 1,
+   760→            hasNextPage: false,
+   761→            itemsPerPage: ITEMS_PER_PAGE,
+   762→          },
+   763→          orderLoading: false
+   764→        });
+   765→        return;
+   766→      }
+   767→      // Default fetch
+   768→      const limitStart = (page - 1) * ITEMS_PER_PAGE;
+   769→      const status = selectedStatus;
+   770→      const { invoices, hasMore } = await getPOSInvoices({
+   771→        status,
+   772→        limit: ITEMS_PER_PAGE,
+   773→        limit_start: limitStart,
+   774→        paid_limit: paidLimit
+   775→      });
+   776→      set({ 
+   777→        orders: invoices,
+   778→        pagination: {
+   779→          currentPage: page,
+   780→          hasNextPage: hasMore,
+   781→          itemsPerPage: ITEMS_PER_PAGE,
+   782→        },
+   783→        orderLoading: false 
+   784→      });
+   785→    } catch (error) {
+   786→      set({ 
+   787→        error: getErrorMessage(error),
+   788→        orderLoading: false 
+   789→      });
+   790→    }
+   791→  },
+   792→
+   793→  goToNextPage: async () => {
+   794→    const { pagination, orderLoading } = get();
+   795→    if (!orderLoading && pagination.hasNextPage) {
+   796→      await get().fetchOrders(pagination.currentPage + 1);
+   797→    }
+   798→  },
+   799→
+   800→  goToPreviousPage: async () => {
+   801→    const { pagination, orderLoading } = get();
+   802→    if (!orderLoading && pagination.currentPage > 1) {
+   803→      await get().fetchOrders(pagination.currentPage - 1);
+   804→    }
+   805→  },
+   806→
+   807→  setSelectedStatus: async (status) => {
+   808→    set({ selectedStatus: status });
+   809→    // Clear selected order when status changes
+   810→    get().clearSelectedOrder();
+   811→    await get().fetchOrders(1); // Reset to first page when status changes
+   812→  },
+   813→
+   814→  selectOrder: async (order) => {
+   815→    try {
+   816→      set({ 
+   817→        selectedOrder: order,
+   818→        selectedOrderLoading: true, 
+   819→        selectedOrderError: null 
+   820→      });
+   821→
+   822→      const { items, taxes } = await getPOSInvoiceItems(order.name);
+   823→      
+   824→      set({ 
+   825→        selectedOrderItems: items,
+   826→        selectedOrderTaxes: taxes,
+   827→        selectedOrderLoading: false 
+   828→      });
+   829→    } catch (error) {
+   830→      set({ 
+   831→        selectedOrderError: getErrorMessage(error),
+   832→        selectedOrderLoading: false 
+   833→      });
+   834→    }
+   835→  },
+   836→
+   837→  clearSelectedOrder: () => {
+   838→    set({ 
+   839→      selectedOrder: null,
+   840→      selectedOrderItems: [],
+   841→      selectedOrderTaxes: [],
+   842→      selectedOrderError: null 
+   843→    });
+   844→  },
+   845→
+   846→  updateOrderStatus: async (orderId: string, status: POSInvoice['status']) => {
+   847→    try {
+   848→      set({ orderLoading: true, error: null });
+   849→
+   850→      await call.post('ury.ury_pos.api.updatePosInvoiceStatus', {
+   851→        invoice: orderId,
+   852→        status,
+   853→      });
+   854→
+   855→      // Refresh the orders list after status update
+   856→      await get().fetchOrders(get().pagination.currentPage);
+   857→      
+   858→      set({ orderLoading: false });
+   859→    } catch (error) {
+   860→      set({ 
+   861→        error: getErrorMessage(error),
+   862→        orderLoading: false 
+   863→      });
+   864→    }
+   865→  },
+   866→
+   867→  setOrderSearchQuery: (query) => set({ orderSearchQuery: query }),
+   868→}); 
+   869→=== src/store/slices/selection-slice.ts ===
+   870→import { StateCreator } from 'zustand';
+   871→import { getTableOrder, type TableOrder } from '../../lib/order-api';
+   872→import { DEFAULT_ORDER_TYPE, type OrderType } from '../../data/order-types';
+   873→import type { Customer, Aggregator, OrderItem, MenuItem } from './types';
+   874→import { generateUniqueId } from './helpers';
+   875→import type { POSSliceAll } from './combined';
+   876→
+   877→// --- Types ---
+   878→
+   879→export interface SelectionState {
+   880→  selectedCategory: string;
+   881→  searchQuery: string;
+   882→  selectedCustomer: Customer | null;
+   883→  selectedTable: string | null;
+   884→  selectedRoom: string | null;
+   885→  selectedOrderType: OrderType;
+   886→  quickFilter: 'all' | 'special';
+   887→  selectedItem: MenuItem | null;
+   888→  selectedAggregator: Aggregator | null;
+   889→  orderComment: string;
+   890→  tableOrder: TableOrder | null;
+   891→  isUpdatingOrder: boolean;
+   892→  orderId: string | null;
+   893→  orderLoading: boolean;
+   894→}
+   895→
+   896→export interface SelectionActions {
+   897→  setSelectedCategory: (category: string) => void;
+   898→  setSearchQuery: (query: string) => void;
+   899→  setSelectedCustomer: (customer: Customer | null) => void;
+   900→  setSelectedTable: (table: string | null, room: string | null, doNotLoadOrder?: boolean) => void;
+   901→  setSelectedOrderType: (type: OrderType) => void;
+   902→  setQuickFilter: (filter: 'all' | 'special') => void;
+   903→  setSelectedItem: (item: MenuItem | null) => void;
+   904→  setSelectedAggregator: (aggregator: Aggregator | null) => void;
+   905→  setOrderComment: (comment: string) => void;
+   906→  loadTableOrder: (table: string) => Promise<void>;
+   907→  clearTableOrder: () => void;
+   908→  setOrderForUpdate: (orderId: string | null) => void;
+   909→}
+   910→
+   911→export type SelectionSlice = SelectionState & SelectionActions;
+   912→
+   913→// --- Slice ---
+   914→
+   915→export const createSelectionSlice: StateCreator<POSSliceAll, [], [], SelectionSlice> = (set, get) => ({
+   916→  selectedCategory: '',
+   917→  searchQuery: '',
+   918→  selectedCustomer: null,
+   919→  selectedTable: null,
+   920→  selectedRoom: null,
+   921→  selectedOrderType: DEFAULT_ORDER_TYPE as OrderType,
+   922→  quickFilter: 'all',
+   923→  selectedItem: null,
+   924→  selectedAggregator: null,
+   925→  orderComment: '',
+   926→  tableOrder: null,
+   927→  isUpdatingOrder: false,
+   928→  orderId: null,
+   929→  orderLoading: false,
+   930→
+   931→  setSelectedCategory: (category) => set({ selectedCategory: category }),
+   932→  setSearchQuery: (query) => set({ searchQuery: query }),
+   933→  setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
+   934→  setQuickFilter: (filter) => set({ quickFilter: filter }),
+   935→  setSelectedItem: (item) => set({ selectedItem: item }),
+   936→  setSelectedAggregator: (aggregator) => set({ selectedAggregator: aggregator }),
+   937→  setOrderComment: (comment: string) => set({ orderComment: comment }),
+   938→
+   939→  setSelectedTable: (table: string | null, room: string | null, doNotLoadOrder = false) => {
+   940→    set({ selectedTable: table, selectedRoom: room });
+   941→    if (table) {
+   942→      if (!doNotLoadOrder) get().loadTableOrder(table);
+   943→    } else {
+   944→      get().clearTableOrder();
+   945→    }
+   946→    if (room) {
+   947→      get().fetchMenuItems();
+   948→    }
+   949→  },
+   950→
+   951→  setSelectedOrderType: (type) => {
+   952→    get().clearOrder();
+   953→    set({
+   954→      selectedOrderType: type,
+   955→      isUpdatingOrder: false,
+   956→      orderId: null,
+   957→    });
+   958→
+   959→    if (type !== 'Aggregators') {
+   960→      get().fetchMenuItems();
+   961→    }
+   962→  },
+   963→
+   964→  loadTableOrder: async (table: string) => {
+   965→    try {
+   966→      set({ orderLoading: true, error: null });
+   967→      const response = await getTableOrder(table);
+   968→      const order = response.message;
+   969→      if (order && order.name && order.items && order.items.length > 0) {
+   970→        const orderItems: OrderItem[] = order.items.map(item => {
+   971→          const orderItem = {
+   972→            id: item.item_code,
+   973→            name: item.item_name,
+   974→            price: item.rate,
+   975→            quantity: item.qty,
+   976→            amount: item.amount,
+   977→            image: item.image || null,
+   978→            item: item.item_code,
+   979→            item_name: item.item_name,
+   980→            item_image: null,
+   981→            course: '',
+   982→            description: item.description || '',
+   983→            special_dish: 0 as 0 | 1,
+   984→            tax_rate: 0,
+   985→            comment: item.comment || '',
+   986→          };
+   987→          return {
+   988→            ...orderItem,
+   989→            uniqueId: generateUniqueId(orderItem as OrderItem),
+   990→          } as OrderItem;
+   991→        });
+   992→
+   993→        set({
+   994→          tableOrder: response,
+   995→          activeOrders: orderItems,
+   996→          selectedCustomer: order.customer ? {
+   997→            id: order.customer,
+   998→            name: order.customer_name,
+   999→            phone: order.mobile_number,
+  1000→          } : null,
+  1001→          isUpdatingOrder: true,
+  1002→          orderId: order.name,
+  1003→        });
+  1004→      } else {
+  1005→        set({
+  1006→          tableOrder: null,
+  1007→          activeOrders: [],
+  1008→          selectedCustomer: null,
+  1009→          isUpdatingOrder: false,
+  1010→          orderId: null,
+  1011→        });
+  1012→      }
+  1013→    } catch {
+  1014→      set({
+  1015→        error: 'Failed to load table order',
+  1016→        tableOrder: null,
+  1017→        activeOrders: [],
+  1018→        selectedCustomer: null,
+  1019→        isUpdatingOrder: false,
+  1020→        orderId: null,
+  1021→      });
+  1022→    } finally {
+  1023→      set({ orderLoading: false });
+  1024→    }
+  1025→  },
+  1026→
+  1027→  clearTableOrder: () => {
+  1028→    set({
+  1029→      tableOrder: null,
+  1030→      activeOrders: [],
+  1031→      selectedCustomer: null,
+  1032→      isUpdatingOrder: false,
+  1033→      orderId: null,
+  1034→    });
+  1035→  },
+  1036→
+  1037→  setOrderForUpdate: (orderId: string | null) => {
+  1038→    set({
+  1039→      isUpdatingOrder: orderId !== null,
+  1040→      orderId,
+  1041→    });
+  1042→  },
+  1043→});
+  1044→=== src/store/slices/types.ts ===
+  1045→import type { MenuItem as APIMenuItem } from '../../lib/menu-api';
+  1046→import type { PosProfileCombined } from '../../lib/pos-profile-api';
+  1047→import type { TableOrder } from '../../lib/order-api';
+  1048→import type { OrderType } from '../../data/order-types';
+  1049→
+  1050→// Constants
+  1051→export const MAX_QUANTITY = 99;
+  1052→export const MIN_QUANTITY = 0;
+  1053→
+  1054→// Custom error class for cart operations
+  1055→export class CartError extends Error {
+  1056→  constructor(message: string) {
+  1057→    super(message);
+  1058→    this.name = 'CartError';
+  1059→  }
+  1060→}
+  1061→
+  1062→// Extend the API MenuItem to include UI-specific properties
+  1063→export interface MenuItem extends Omit<APIMenuItem, 'rate' | 'item_image'> {
+  1064→  id: string;
+  1065→  name: string;
+  1066→  image: string | null;
+  1067→  price: number;
+  1068→  quantity?: number;
+  1069→  description?: string;
+  1070→  special_dish?: 1 | 0;
+  1071→  variants?: Array<{ id: string; name: string; price: number }>;
+  1072→  addons?: Array<{ id: string; name: string; price: number; category: 'sides' | 'drinks' | 'desserts' }>;
+  1073→  selectedVariant?: { id: string; name: string; price: number };
+  1074→  selectedAddons?: Array<{ id: string; name: string; price: number }>;
+  1075→  uniqueId?: string;
+  1076→  tax_rate?: number;
+  1077→}
+  1078→
+  1079→export interface Customer {
+  1080→  id: string;
+  1081→  name: string;
+  1082→  phone: string;
+  1083→}
+  1084→
+  1085→export interface OrderItem extends MenuItem {
+  1086→  quantity: number;
+  1087→  selectedVariant?: { id: string; name: string; price: number };
+  1088→  selectedAddons?: { id: string; name: string; price: number }[];
+  1089→  uniqueId?: string;
+  1090→  comment?: string;
+  1091→}
+  1092→
+  1093→export interface PaymentMode {
+  1094→  id: string;
+  1095→  name: string;
+  1096→  enabled: boolean;
+  1097→}
+  1098→
+  1099→export interface Category {
+  1100→  name: string;
+  1101→  label: string;
+  1102→}
+  1103→
+  1104→export interface CartTotals {
+  1105→  subtotal: number;
+  1106→  tax: number;
+  1107→  total: number;
+  1108→  itemCount: number;
+  1109→}
+  1110→
+  1111→export interface Aggregator {
+  1112→  customer: string;
+  1113→}
+  1114→
+  1115→// Re-export types needed by slices from external modules
+  1116→export type { PosProfileCombined, TableOrder, OrderType };
