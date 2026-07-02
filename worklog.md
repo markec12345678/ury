@@ -210,3 +210,23 @@ Stage Summary:
 - CategorySalesChart.test.tsx: 14 tests (existing, passing)
 - PeriodComparison.test.tsx: 19 tests (existing, passing)
 - All 136 dashboard tests across 8 files passing
+
+---
+Task ID: 11
+Agent: Main Agent + Subagents
+Task: Menu-management and Reports component tests
+
+Work Log:
+- Read all 6 menu-management components (AddItemDialog, EditItemDialog, BatchPriceUpdateDialog, BulkActionsToolbar, CourseManager, MenuItemsList)
+- Read all 5 reports components (SalesReportView, ExpenseReportView, ProfitLossView, InventoryReportView, PeriodComparisonView)
+- Read store files (menu-management-store.ts, reports-store.ts) and API types
+- Created 6 menu-management test files via subagent (120 tests)
+- Created 5 reports test files via subagent (130 tests)
+- Full test suite run: 967 tests across 61 files — ALL PASSING
+
+Stage Summary:
+- Menu-management tests: 120 tests (6 files)
+  - AddItemDialog: 19, EditItemDialog: 21, BatchPriceUpdateDialog: 20, BulkActionsToolbar: 15, CourseManager: 20, MenuItemsList: 25
+- Reports tests: 130 tests (5 files)
+  - SalesReportView: 35, ExpenseReportView: 22, ProfitLossView: 25, InventoryReportView: 26, PeriodComparisonView: 22
+- Total test suite: 967 tests, 61 files, all green
