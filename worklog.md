@@ -190,3 +190,23 @@ Stage Summary:
 - All API files now use retry SDK with exponential backoff
 - Test infrastructure fully operational (102 tests)
 - API dedup/caching layer ready for integration
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Dashboard component tests - OrderTypeChart, CategorySalesChart, PeriodComparison
+
+Work Log:
+- Read actual component source files to understand real data structures
+- OrderTypeChart uses BarChart (not PieChart), reads from summary.order_type_breakdown
+- CategorySalesChart uses PieChart, reads from categorySales.data with total_amount/total_qty fields
+- PeriodComparison reads from summary + previousSummary, shows metrics in grid with trend indicators
+- CategorySalesChart.test.tsx and PeriodComparison.test.tsx already existed and were correct (33 tests passing)
+- Created OrderTypeChart.test.tsx with 20 tests matching actual component structure
+- Tests cover: title rendering, empty states, chart rendering, data length, bar components, axis/grid/tooltip/legend, data transformation, predefined colors, styling, edge cases
+
+Stage Summary:
+- OrderTypeChart.test.tsx: 20 tests (new)
+- CategorySalesChart.test.tsx: 14 tests (existing, passing)
+- PeriodComparison.test.tsx: 19 tests (existing, passing)
+- All 136 dashboard tests across 8 files passing
