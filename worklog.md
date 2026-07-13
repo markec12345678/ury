@@ -317,3 +317,30 @@ Stage Summary:
 - All core Zustand store slices now fully tested
 - Total: 1548 tests, 88 files, all green
 - npm audit: 0 vulnerabilities
+
+---
+Task ID: 16
+Agent: Main Agent + Subagent
+Task: AI Insights module — OpenAI-compatible report analysis
+
+Work Log:
+- Created ai-service.ts: OpenAI-compatible API client with configurable provider (base_url), timeout, system prompts enriched with report data context, truncation for large data
+- Created ai-store.ts: Zustand store with conversation history, token usage tracking, quick insight generation, panel open/close state, report context sync
+- Created AIInsightsPanel.tsx: Floating chat panel with quick action buttons (Analyze Report, Top Items, Trends), markdown-like rendering, auto-scroll, keyboard Enter support, error display, loading state
+- Integrated into Reports.tsx: lazy-loaded via React.lazy(), only rendered when VITE_AI_BASE_URL + VITE_AI_API_KEY are set
+- Added 18 i18n keys in en.json + sl.json for AI module
+- Added ai-module chunk in vite.config.ts for code splitting
+- Added .env.example with AI configuration documentation
+- Created ai-service.test.ts: 33 tests (config, sendAIChatRequest, buildReportContext, askAboutReport, generateInsight)
+- Created ai-store.test.ts: 38 tests (initial state, panel toggle, report context, sendMessage, generateQuickInsight, error handling, token tracking)
+- Full test suite: 1619 tests across 90 files — ALL PASSING
+- Production build: successful (12.27s, ai-module chunk is lazy-loaded = 0 bytes in main bundle when disabled)
+- Git commit: 6a824ae
+
+Stage Summary:
+- AI Insights module complete: service + store + UI + tests
+- Provider-agnostic (Puter, OpenAI, any OpenAI-compatible API)
+- Feature-flagged: zero impact when env vars not set
+- Lazy-loaded: separate chunk, not in main bundle
+- 71 new AI tests (33 service + 38 store)
+- Total: 1619 tests, 90 files, all green
