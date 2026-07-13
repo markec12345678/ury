@@ -295,3 +295,25 @@ Stage Summary:
 - ESLint: 64→0 errors across 22 source files
 - Security: 18→0 vulnerabilities
 - Total: 1440 tests, 85 files, all green
+
+---
+Task ID: 15
+Agent: Main Agent + Subagents
+Task: App-slice, menu-slice, selection-slice tests + npm audit verification
+
+Work Log:
+- Created app-slice.test.ts with 35 tests via subagent
+  - Initial state (8), fetchPosProfile (8), fetchCurrencySymbol (4), fetchPaymentModes (2), resetOrderState (2), isMenuInteractionDisabled (4), isOrderInteractionDisabled (2), initializeApp (5)
+- Created menu-slice.test.ts with 37 tests via subagent
+  - Initial state (5), fetchMenuItems (12), fetchAggregatorMenu (5), fetchCategories (5), fetchCustomerGroups (5), fetchTerritories (5)
+- Created selection-slice.test.ts with 36 tests via subagent
+  - Initial state (1), setSelectedCategory (2), setSearchQuery (2), setSelectedCustomer (2), setQuickFilter (2), setSelectedItem (2), setSelectedAggregator (2), setOrderComment (2), setSelectedTable (5), setSelectedOrderType (4), loadTableOrder (9), clearTableOrder (1), setOrderForUpdate (2)
+- npm audit: 0 vulnerabilities (already clean)
+- Full test suite: 1548 tests across 88 files — ALL PASSING
+- Git commit: 5c7ae3d
+
+Stage Summary:
+- 108 new tests across 3 slice test files (app-slice: 35, menu-slice: 37, selection-slice: 36)
+- All core Zustand store slices now fully tested
+- Total: 1548 tests, 88 files, all green
+- npm audit: 0 vulnerabilities
