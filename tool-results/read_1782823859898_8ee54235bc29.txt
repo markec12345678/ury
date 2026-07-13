@@ -1,0 +1,599 @@
+     1→// URY Restaurant Management Evaluation Dashboard - Mock Data
+     2→// Restaurant: Spice Garden (Indian Restaurant)
+     3→
+     4→export type {
+     5→  OrderStatus,
+     6→  OrderType,
+     7→  RecentOrder,
+     8→  TableStatus,
+     9→  TableData,
+    10→  KOTStatus,
+    11→  ProductionUnit,
+    12→  KOTItem,
+    13→  KOTCard,
+    14→  CashierData,
+    15→  ShiftInfo,
+    16→  APIEndpoint,
+    17→  KPIs,
+    18→  HourlySales,
+    19→  PLSummary,
+    20→  DailyPL,
+    21→  ExpenseBreakdown,
+    22→  PLLineItem,
+    23→  Room,
+    24→  FrontendApp,
+    25→  BackendComponent,
+    26→  InfrastructureComponent,
+    27→  DocEventHook,
+    28→} from '@/lib/ury-types';
+    29→
+    30→// Re-export types for backward compatibility
+    31→import type {
+    32→  RecentOrder,
+    33→  TableData,
+    34→  KOTStatus,
+    35→  ProductionUnit,
+    36→  KOTItem,
+    37→  KOTCard,
+    38→  CashierData,
+    39→  ShiftInfo,
+    40→  APIEndpoint,
+    41→  HourlySales,
+    42→  ExpenseBreakdown,
+    43→  PLLineItem,
+    44→} from '@/lib/ury-types';
+    45→
+    46→export const RESTAURANT_NAME = "Spice Garden";
+    47→export const CURRENCY = "₹";
+    48→
+    49→// ── Tab 1: Overview ──────────────────────────────────────
+    50→
+    51→export const kpiData = {
+    52→  dailySales: 124580,
+    53→  totalOrders: 187,
+    54→  avgBill: 667,
+    55→  occupiedTables: 24,
+    56→  totalTables: 32,
+    57→};
+    58→
+    59→export const hourlySalesData = [
+    60→  { hour: "11:00", dineIn: 2400, takeaway: 800 },
+    61→  { hour: "12:00", dineIn: 5600, takeaway: 2100 },
+    62→  { hour: "13:00", dineIn: 8900, takeaway: 3400 },
+    63→  { hour: "14:00", dineIn: 7200, takeaway: 2800 },
+    64→  { hour: "15:00", dineIn: 3400, takeaway: 1200 },
+    65→  { hour: "16:00", dineIn: 1800, takeaway: 600 },
+    66→  { hour: "17:00", dineIn: 2200, takeaway: 900 },
+    67→  { hour: "18:00", dineIn: 6100, takeaway: 2500 },
+    68→  { hour: "19:00", dineIn: 9800, takeaway: 4200 },
+    69→  { hour: "20:00", dineIn: 11200, takeaway: 5100 },
+    70→  { hour: "21:00", dineIn: 8400, takeaway: 3800 },
+    71→  { hour: "22:00", dineIn: 4600, takeaway: 1900 },
+    72→];
+    73→
+    74→// Types moved to ury-types.ts — re-exported above
+    75→
+    76→export const recentOrders: RecentOrder[] = [
+    77→  { invoice: "INV-2026-0187", customer: "Rajesh Sharma", type: "Dine-in", amount: 1850, status: "Paid", time: "21:42" },
+    78→  { invoice: "INV-2026-0186", customer: "Priya Patel", type: "Takeaway", amount: 620, status: "Paid", time: "21:38" },
+    79→  { invoice: "INV-2026-0185", customer: "Ananya Reddy", type: "Dine-in", amount: 2340, status: "Draft", time: "21:35" },
+    80→  { invoice: "INV-2026-0184", customer: "Vikram Singh", type: "Delivery", amount: 890, status: "Paid", time: "21:28" },
+    81→  { invoice: "INV-2026-0183", customer: "Neha Gupta", type: "Dine-in", amount: 1560, status: "Draft", time: "21:22" },
+    82→  { invoice: "INV-2026-0182", customer: "Arjun Menon", type: "Takeaway", amount: 440, status: "Paid", time: "21:15" },
+    83→  { invoice: "INV-2026-0181", customer: "Deepa Nair", type: "Dine-in", amount: 3100, status: "Paid", time: "21:08" },
+    84→  { invoice: "INV-2026-0180", customer: "Suresh Kumar", type: "Delivery", amount: 720, status: "Cancelled", time: "21:02" },
+    85→];
+    86→
+    87→// ── Tab 2: Tables ────────────────────────────────────────
+    88→
+    89→// TableData type moved to ury-types.ts
+    90→
+    91→export const rooms = [
+    92→  { id: "glavna", name: "Glavna dvorana", tables: 16 },
+    93→  { id: "terasa", name: "Terasa", tables: 8 },
+    94→  { id: "vip", name: "VIP", tables: 4 },
+    95→  { id: "bar", name: "Bar", tables: 4 },
+    96→];
+    97→
+    98→export const tablesData: TableData[] = [
+    99→  // Glavna dvorana (16 tables)
+   100→  { id: 1, room: "glavna", status: "occupied", pax: 4, occupiedSince: "45", customer: "Rajesh Sharma", orderItems: ["Butter Chicken", "Naan x4", "Dal Makhani"], orderTotal: 1850 },
+   101→  { id: 2, room: "glavna", status: "free", pax: 0 },
+   102→  { id: 3, room: "glavna", status: "occupied", pax: 2, occupiedSince: "20", customer: "Priya Patel", orderItems: ["Paneer Tikka", "Biryani x2"], orderTotal: 940 },
+   103→  { id: 4, room: "glavna", status: "attention", pax: 6, occupiedSince: "55", customer: "Vikram Singh", orderItems: ["Mixed Grill", "Butter Naan x6", "Raita"], orderTotal: 3200 },
+   104→  { id: 5, room: "glavna", status: "free", pax: 0 },
+   105→  { id: 6, room: "glavna", status: "occupied", pax: 4, occupiedSince: "15", customer: "Ananya Reddy", orderItems: ["Chicken Biryani x2", "Raita x2"], orderTotal: 1340 },
+   106→  { id: 7, room: "glavna", status: "free", pax: 0 },
+   107→  { id: 8, room: "glavna", status: "occupied", pax: 3, occupiedSince: "30", customer: "Neha Gupta", orderItems: ["Dal Makhani", "Jeera Rice", "Tandoori Roti x3"], orderTotal: 870 },
+   108→  { id: 9, room: "glavna", status: "free", pax: 0 },
+   109→  { id: 10, room: "glavna", status: "occupied", pax: 2, occupiedSince: "10", customer: "Arjun Menon", orderItems: ["Mutton Rogan Josh", "Kulcha x2"], orderTotal: 1560 },
+   110→  { id: 11, room: "glavna", status: "free", pax: 0 },
+   111→  { id: 12, room: "glavna", status: "attention", pax: 4, occupiedSince: "38", customer: "Deepa Nair", orderItems: ["Fish Curry", "Appam x4", "Curd Rice"], orderTotal: 2100 },
+   112→  { id: 13, room: "glavna", status: "occupied", pax: 2, occupiedSince: "25", customer: "Suresh Kumar", orderItems: ["Kadai Paneer", "Garlic Naan x2"], orderTotal: 780 },
+   113→  { id: 14, room: "glavna", status: "free", pax: 0 },
+   114→  { id: 15, room: "glavna", status: "occupied", pax: 5, occupiedSince: "35", customer: "Meera Iyer", orderItems: ["Butter Chicken x2", "Dal Tadka", "Naan x5", "Jeera Rice"], orderTotal: 2890 },
+   115→  { id: 16, room: "glavna", status: "free", pax: 0 },
+   116→  // Terasa (8 tables)
+   117→  { id: 17, room: "terasa", status: "occupied", pax: 4, occupiedSince: "22", customer: "Kiran Rao", orderItems: ["Tandoori Platter", "Naan x4", "Mango Lassi x4"], orderTotal: 2450 },
+   118→  { id: 18, room: "terasa", status: "free", pax: 0 },
+   119→  { id: 19, room: "terasa", status: "occupied", pax: 2, occupiedSince: "18", customer: "Pooja Desai", orderItems: ["Paneer Butter Masala", "Pulao x2"], orderTotal: 920 },
+   120→  { id: 20, room: "terasa", status: "attention", pax: 6, occupiedSince: "42", customer: "Amit Joshi", orderItems: ["Hyderabadi Biryani x3", "Mirchi ka Salan", "Raita x3"], orderTotal: 3600 },
+   121→  { id: 21, room: "terasa", status: "free", pax: 0 },
+   122→  { id: 22, room: "terasa", status: "occupied", pax: 3, occupiedSince: "12", customer: "Ritu Saxena", orderItems: ["Chicken Tikka", "Roomali Roti x3"], orderTotal: 1100 },
+   123→  { id: 23, room: "terasa", status: "free", pax: 0 },
+   124→  { id: 24, room: "terasa", status: "occupied", pax: 2, occupiedSince: "28", customer: "Sanjay Verma", orderItems: ["Lamb Keema", "Paratha x2"], orderTotal: 1050 },
+   125→  // VIP (4 tables)
+   126→  { id: 25, room: "vip", status: "occupied", pax: 8, occupiedSince: "50", customer: "Corporate - Tata Group", orderItems: ["Royal Thali x8", "Mango Lassi x4", "Gulab Jamun x4"], orderTotal: 8400 },
+   127→  { id: 26, room: "vip", status: "occupied", pax: 6, occupiedSince: "32", customer: "Family - Kapoor", orderItems: ["Special Dinner for 6"], orderTotal: 5600 },
+   128→  { id: 27, room: "vip", status: "free", pax: 0 },
+   129→  { id: 28, room: "vip", status: "attention", pax: 4, occupiedSince: "60", customer: "Mr. Bhatia", orderItems: ["Chef's Special x4", "Wine Pairing"], orderTotal: 7200 },
+   130→  // Bar (4 tables)
+   131→  { id: 29, room: "bar", status: "occupied", pax: 2, occupiedSince: "15", customer: "Ravi & Swati", orderItems: ["Cocktails x4", "French Fries", "Chicken Wings"], orderTotal: 1800 },
+   132→  { id: 30, room: "bar", status: "free", pax: 0 },
+   133→  { id: 31, room: "bar", status: "occupied", pax: 3, occupiedSince: "25", customer: "Nikhil & Friends", orderItems: ["Beer x6", "Paneer Tikka", "Nachos"], orderTotal: 2400 },
+   134→  { id: 32, room: "bar", status: "free", pax: 0 },
+   135→];
+   136→
+   137→// ── Tab 3: Kitchen / KOT ─────────────────────────────────
+   138→
+   139→// KOT types moved to ury-types.ts
+   140→
+   141→export const kotCards: KOTCard[] = [
+   142→  {
+   143→    id: "KOT-0247",
+   144→    orderNo: "#042",
+   145→    table: "T1",
+   146→    items: [
+   147→      { name: "Butter Chicken", qty: 2, course: "Main Course" },
+   148→      { name: "Naan", qty: 4, course: "Breads" },
+   149→      { name: "Dal Makhani", qty: 1, course: "Main Course" },
+   150→    ],
+   151→    timePlaced: "21:42",
+   152→    elapsed: 3,
+   153→    status: "new",
+   154→    production: "Kuhinja 1",
+   155→    kotType: "New Order",
+   156→  },
+   157→  {
+   158→    id: "KOT-0246",
+   159→    orderNo: "#041",
+   160→    table: "T4",
+   161→    items: [
+   162→      { name: "Mixed Grill", qty: 1, course: "Starters" },
+   163→      { name: "Butter Naan", qty: 6, course: "Breads" },
+   164→      { name: "Raita", qty: 1, course: "Accompaniments" },
+   165→    ],
+   166→    timePlaced: "21:35",
+   167→    elapsed: 10,
+   168→    status: "preparing",
+   169→    production: "Kuhinja 1",
+   170→    kotType: "New Order",
+   171→  },
+   172→  {
+   173→    id: "KOT-0245",
+   174→    orderNo: "#040",
+   175→    table: "T3",
+   176→    items: [
+   177→      { name: "Paneer Tikka", qty: 1, course: "Starters", comments: "Extra spicy" },
+   178→      { name: "Biryani", qty: 2, course: "Rice" },
+   179→    ],
+   180→    timePlaced: "21:38",
+   181→    elapsed: 7,
+   182→    status: "modified",
+   183→    production: "Kuhinja 2",
+   184→    kotType: "Order Modified",
+   185→  },
+   186→  {
+   187→    id: "KOT-0244",
+   188→    orderNo: "#039",
+   189→    table: "T17",
+   190→    items: [
+   191→      { name: "Tandoori Platter", qty: 1, course: "Starters" },
+   192→      { name: "Naan", qty: 4, course: "Breads" },
+   193→      { name: "Mango Lassi", qty: 4, course: "Beverages" },
+   194→    ],
+   195→    timePlaced: "21:22",
+   196→    elapsed: 23,
+   197→    status: "ready",
+   198→    production: "Kuhinja 1",
+   199→    kotType: "New Order",
+   200→  },
+   201→  {
+   202→    id: "KOT-0243",
+   203→    orderNo: "#038",
+   204→    table: "Takeaway",
+   205→    items: [
+   206→      { name: "Chicken Biryani", qty: 3, course: "Rice" },
+   207→      { name: "Raita", qty: 3, course: "Accompaniments" },
+   208→    ],
+   209→    timePlaced: "21:28",
+   210→    elapsed: 17,
+   211→    status: "preparing",
+   212→    production: "Kuhinja 2",
+   213→    kotType: "New Order",
+   214→  },
+   215→  {
+   216→    id: "KOT-0242",
+   217→    orderNo: "#037",
+   218→    table: "T25",
+   219→    items: [
+   220→      { name: "Royal Thali", qty: 8, course: "Thali" },
+   221→      { name: "Gulab Jamun", qty: 4, course: "Desserts" },
+   222→    ],
+   223→    timePlaced: "21:15",
+   224→    elapsed: 30,
+   225→    status: "ready",
+   226→    production: "Kuhinja 1",
+   227→    kotType: "New Order",
+   228→  },
+   229→  {
+   230→    id: "KOT-0241",
+   231→    orderNo: "#036",
+   232→    table: "T29",
+   233→    items: [
+   234→      { name: "Cocktails", qty: 4, course: "Beverages" },
+   235→      { name: "French Fries", qty: 1, course: "Snacks" },
+   236→      { name: "Chicken Wings", qty: 1, course: "Starters" },
+   237→    ],
+   238→    timePlaced: "21:35",
+   239→    elapsed: 10,
+   240→    status: "new",
+   241→    production: "Bar",
+   242→    kotType: "New Order",
+   243→  },
+   244→  {
+   245→    id: "KOT-0240",
+   246→    orderNo: "#035",
+   247→    table: "T6",
+   248→    items: [
+   249→      { name: "Mutton Rogan Josh", qty: 1, course: "Main Course" },
+   250→      { name: "Kulcha", qty: 2, course: "Breads" },
+   251→    ],
+   252→    timePlaced: "21:08",
+   253→    elapsed: 37,
+   254→    status: "cancelled",
+   255→    production: "Kuhinja 1",
+   256→    kotType: "Partially cancelled",
+   257→  },
+   258→];
+   259→
+   260→// ── Tab 4: P&L ───────────────────────────────────────────
+   261→
+   262→export const plSummary = {
+   263→  grossSales: 124580,
+   264→  cogs: 56061,
+   265→  grossProfit: 68519,
+   266→  netProfit: 9966,
+   267→};
+   268→
+   269→export const dailyPLData = [
+   270→  { day: "Pon", revenue: 98500, costs: 74200 },
+   271→  { day: "Tor", revenue: 112000, costs: 81200 },
+   272→  { day: "Sre", revenue: 89600, costs: 68400 },
+   273→  { day: "Čet", revenue: 105400, costs: 76800 },
+   274→  { day: "Pet", revenue: 132800, costs: 92400 },
+   275→  { day: "Sob", revenue: 145200, costs: 98600 },
+   276→  { day: "Ned", revenue: 124580, costs: 89614 },
+   277→];
+   278→
+   279→export const expenseBreakdown = [
+   280→  { name: "COGS", value: 45, color: "#ef4444" },
+   281→  { name: "Direktni stroški", value: 15, color: "#f97316" },
+   282→  { name: "Stroški zaposlenih", value: 20, color: "#eab308" },
+   283→  { name: "Neposredni stroški", value: 12, color: "#8b5cf6" },
+   284→  { name: "Neto dobiček", value: 8, color: "#10b981" },
+   285→];
+   286→
+   287→export const plLineItems = [
+   288→  { label: "Bruto prodaja", value: 124580, bold: true },
+   289→  { label: "COGS", value: -56061, bold: false },
+   290→  { label: "Bruto dobiček", value: 68519, bold: true },
+   291→  { label: "Stroški zaposlenih", value: -24916, bold: false },
+   292→  { label: "Direktni stroški", value: -18687, bold: false },
+   293→  { label: "Neposredni stroški", value: -14950, bold: false },
+   294→  { label: "Neto dobiček / Izguba", value: 9966, bold: true },
+   295→];
+   296→
+   297→// ── Tab 5: Shift / Cashier ───────────────────────────────
+   298→
+   299→// CashierData & ShiftInfo types moved to ury-types.ts
+   300→
+   301→export const mockShiftInfo: ShiftInfo = {
+   302→  status: 'open',
+   303→  openedAt: '09:00',
+   304→  closesAt: '23:00',
+   305→  openedBy: 'Ravi Kumar',
+   306→  openingBalance: 18000,
+   307→};
+   308→
+   309→export const mockCashiers: CashierData[] = [
+   310→  {
+   311→    name: "Amit Patel",
+   312→    role: "URY Cashier",
+   313→    openedAt: "09:00",
+   314→    status: "active",
+   315→    openingBalance: 5000,
+   316→    currentTotal: 48250,
+   317→    cashPayments: 22400,
+   318→    cardPayments: 15850,
+   319→    upiPayments: 10000,
+   320→    ordersProcessed: 87,
+   321→    room: "Glavna dvorana",
+   322→  },
+   323→  {
+   324→    name: "Sneha Verma",
+   325→    role: "URY Cashier",
+   326→    openedAt: "09:00",
+   327→    status: "active",
+   328→    openingBalance: 3000,
+   329→    currentTotal: 31580,
+   330→    cashPayments: 14200,
+   331→    cardPayments: 11380,
+   332→    upiPayments: 6000,
+   333→    ordersProcessed: 62,
+   334→    room: "Terasa",
+   335→  },
+   336→  {
+   337→    name: "Ravi Kumar",
+   338→    role: "URY Manager",
+   339→    openedAt: "08:30",
+   340→    status: "active",
+   341→    openingBalance: 10000,
+   342→    currentTotal: 67800,
+   343→    cashPayments: 31200,
+   344→    cardPayments: 24600,
+   345→    upiPayments: 12000,
+   346→    ordersProcessed: 124,
+   347→    room: "VIP + Bar",
+   348→  },
+   349→];
+   350→
+   351→// ── Tab: Menu ───────────────────────────────────────────
+   352→
+   353→export const menuCourses: import('@/lib/ury-types').MenuCourse[] = [
+   354→  { id: 'starters', name: 'Predjedi', priority: 1, itemCount: 6 },
+   355→  { id: 'main-course', name: 'Glavne jedi', priority: 2, itemCount: 8 },
+   356→  { id: 'breads', name: 'Kruhovi', priority: 3, itemCount: 5 },
+   357→  { id: 'rice', name: 'Rižote in pilafi', priority: 4, itemCount: 4 },
+   358→  { id: 'accompaniments', name: 'Priloge', priority: 5, itemCount: 3 },
+   359→  { id: 'desserts', name: 'Sladice', priority: 6, itemCount: 4 },
+   360→  { id: 'beverages', name: 'Pijače', priority: 7, itemCount: 5 },
+   361→  { id: 'snacks', name: 'Prigrizki', priority: 8, itemCount: 3 },
+   362→];
+   363→
+   364→export const menuItems: import('@/lib/ury-types').MenuItem[] = [
+   365→  // Starters
+   366→  { id: 'MI-001', name: 'Paneer Tikka', course: 'starters', courseName: 'Predjedi', price: 320, isVeg: true, isAvailable: true, description: 'Marinated cottage cheese grilled in tandoor', tags: ['popular', 'spicy'] },
+   367→  { id: 'MI-002', name: 'Chicken Tikka', course: 'starters', courseName: 'Predjedi', price: 380, isVeg: false, isAvailable: true, description: 'Boneless chicken marinated in yogurt spices', tags: ['popular'] },
+   368→  { id: 'MI-003', name: 'Mixed Grill', course: 'starters', courseName: 'Predjedi', price: 580, isVeg: false, isAvailable: true, description: 'Assorted tandoori kebabs and tikka', modifiers: [{ name: 'Spice Level', options: ['Mild', 'Medium', 'Hot', 'Extra Hot'], required: false }] },
+   369→  { id: 'MI-004', name: 'Tandoori Prawns', course: 'starters', courseName: 'Predjedi', price: 520, isVeg: false, isAvailable: true, description: 'Jumbo prawns marinated and grilled', tags: ['chef-special'] },
+   370→  { id: 'MI-005', name: 'Veg Spring Rolls', course: 'starters', courseName: 'Predjedi', price: 240, isVeg: true, isAvailable: true, description: 'Crispy spring rolls with vegetable filling' },
+   371→  { id: 'MI-006', name: 'Fish Amritsari', course: 'starters', courseName: 'Predjedi', price: 420, isVeg: false, isAvailable: false, description: 'Spiced fish fillets deep fried' },
+   372→  // Main Course
+   373→  { id: 'MI-007', name: 'Butter Chicken', course: 'main-course', courseName: 'Glavne jedi', price: 420, isVeg: false, isAvailable: true, description: 'Classic creamy tomato-based chicken curry', tags: ['bestseller'], modifiers: [{ name: 'Spice Level', options: ['Mild', 'Medium', 'Hot'], required: false }] },
+   374→  { id: 'MI-008', name: 'Mutton Rogan Josh', course: 'main-course', courseName: 'Glavne jedi', price: 520, isVeg: false, isAvailable: true, description: 'Kashmiri-style slow-cooked mutton curry', tags: ['premium'] },
+   375→  { id: 'MI-009', name: 'Dal Makhani', course: 'main-course', courseName: 'Glavne jedi', price: 280, isVeg: true, isAvailable: true, description: 'Black lentils slow-cooked with butter and cream', tags: ['popular'] },
+   376→  { id: 'MI-010', name: 'Paneer Butter Masala', course: 'main-course', courseName: 'Glavne jedi', price: 320, isVeg: true, isAvailable: true, description: 'Cottage cheese in rich tomato gravy', tags: ['popular'] },
+   377→  { id: 'MI-011', name: 'Kadai Paneer', course: 'main-course', courseName: 'Glavne jedi', price: 300, isVeg: true, isAvailable: true, description: 'Paneer cooked with bell peppers and kadai masala' },
+   378→  { id: 'MI-012', name: 'Chicken Biryani', course: 'main-course', courseName: 'Glavne jedi', price: 380, isVeg: false, isAvailable: true, description: 'Fragrant basmati rice layered with spiced chicken', tags: ['bestseller'] },
+   379→  { id: 'MI-013', name: 'Fish Curry', course: 'main-course', courseName: 'Glavne jedi', price: 440, isVeg: false, isAvailable: true, description: 'Coconut-based fish curry with aromatic spices' },
+   380→  { id: 'MI-014', name: 'Lamb Keema', course: 'main-course', courseName: 'Glavne jedi', price: 460, isVeg: false, isAvailable: true, description: 'Minced lamb cooked with peas and spices' },
+   381→  // Breads
+   382→  { id: 'MI-015', name: 'Naan', course: 'breads', courseName: 'Kruhovi', price: 60, isVeg: true, isAvailable: true, description: 'Traditional tandoor-baked flatbread' },
+   383→  { id: 'MI-016', name: 'Butter Naan', course: 'breads', courseName: 'Kruhovi', price: 80, isVeg: true, isAvailable: true, description: 'Naan brushed with melted butter', tags: ['popular'] },
+   384→  { id: 'MI-017', name: 'Garlic Naan', course: 'breads', courseName: 'Kruhovi', price: 90, isVeg: true, isAvailable: true, description: 'Naan topped with garlic and coriander', tags: ['popular'] },
+   385→  { id: 'MI-018', name: 'Kulcha', course: 'breads', courseName: 'Kruhovi', price: 80, isVeg: true, isAvailable: true, description: 'Stuffed leavened bread from tandoor' },
+   386→  { id: 'MI-019', name: 'Tandoori Roti', course: 'breads', courseName: 'Kruhovi', price: 40, isVeg: true, isAvailable: true, description: 'Whole wheat bread baked in tandoor' },
+   387→  // Rice
+   388→  { id: 'MI-020', name: 'Jeera Rice', course: 'rice', courseName: 'Rižote in pilafi', price: 180, isVeg: true, isAvailable: true, description: 'Cumin-tempered basmati rice' },
+   389→  { id: 'MI-021', name: 'Pulao', course: 'rice', courseName: 'Rižote in pilafi', price: 220, isVeg: true, isAvailable: true, description: 'Fragrant rice cooked with vegetables' },
+   390→  { id: 'MI-022', name: 'Hyderabadi Biryani', course: 'rice', courseName: 'Rižote in pilafi', price: 420, isVeg: false, isAvailable: true, description: 'Dum-cooked biryani Hyderabadi style', tags: ['chef-special'] },
+   391→  { id: 'MI-023', name: 'Curd Rice', course: 'rice', courseName: 'Rižote in pilafi', price: 150, isVeg: true, isAvailable: true, description: 'Yogurt rice with tempering' },
+   392→  // Accompaniments
+   393→  { id: 'MI-024', name: 'Raita', course: 'accompaniments', courseName: 'Priloge', price: 100, isVeg: true, isAvailable: true, description: 'Yogurt with cucumber and spices' },
+   394→  { id: 'MI-025', name: 'Mirchi ka Salan', course: 'accompaniments', courseName: 'Priloge', price: 140, isVeg: true, isAvailable: true, description: 'Hyderabadi chili peanut curry' },
+   395→  { id: 'MI-026', name: 'Dal Tadka', course: 'accompaniments', courseName: 'Priloge', price: 180, isVeg: true, isAvailable: true, description: 'Yellow lentils tempered with cumin and garlic' },
+   396→  // Desserts
+   397→  { id: 'MI-027', name: 'Gulab Jamun', course: 'desserts', courseName: 'Sladice', price: 160, isVeg: true, isAvailable: true, description: 'Deep-fried milk dumplings in rose syrup', tags: ['popular'] },
+   398→  { id: 'MI-028', name: 'Rasmalai', course: 'desserts', courseName: 'Sladice', price: 200, isVeg: true, isAvailable: true, description: 'Cottage cheese patties in saffron milk', tags: ['chef-special'] },
+   399→  { id: 'MI-029', name: 'Kulfi', course: 'desserts', courseName: 'Sladice', price: 140, isVeg: true, isAvailable: true, description: 'Traditional Indian ice cream', modifiers: [{ name: 'Flavor', options: ['Malai', 'Pista', 'Mango'], required: true }] },
+   400→  { id: 'MI-030', name: 'Kheer', course: 'desserts', courseName: 'Sladice', price: 160, isVeg: true, isAvailable: false, description: 'Rice pudding with cardamom and nuts' },
+   401→  // Beverages
+   402→  { id: 'MI-031', name: 'Mango Lassi', course: 'beverages', courseName: 'Pijače', price: 120, isVeg: true, isAvailable: true, description: 'Mango yogurt smoothie', tags: ['popular'] },
+   403→  { id: 'MI-032', name: 'Masala Chai', course: 'beverages', courseName: 'Pijače', price: 60, isVeg: true, isAvailable: true, description: 'Spiced Indian tea' },
+   404→  { id: 'MI-033', name: 'Fresh Lime Soda', course: 'beverages', courseName: 'Pijače', price: 80, isVeg: true, isAvailable: true, description: 'Fresh lime with soda water', modifiers: [{ name: 'Type', options: ['Sweet', 'Salted', 'Plain'], required: true }] },
+   405→  { id: 'MI-034', name: 'Cocktails', course: 'beverages', courseName: 'Pijače', price: 350, isVeg: true, isAvailable: true, description: 'Signature cocktails from the bar', modifiers: [{ name: 'Choice', options: ['Mojito', 'Martini', 'Old Fashioned', 'Margarita'], required: true }], tags: ['bar'] },
+   406→  { id: 'MI-035', name: 'Beer', course: 'beverages', courseName: 'Pijače', price: 250, isVeg: true, isAvailable: true, description: 'Craft and imported beers', modifiers: [{ name: 'Type', options: ['Kingfisher', 'Budweiser', 'Heineken', 'Corona'], required: true }], tags: ['bar'] },
+   407→  // Snacks
+   408→  { id: 'MI-036', name: 'French Fries', course: 'snacks', courseName: 'Prigrizki', price: 180, isVeg: true, isAvailable: true, description: 'Crispy golden fries with dipping sauce' },
+   409→  { id: 'MI-037', name: 'Chicken Wings', course: 'snacks', courseName: 'Prigrizki', price: 320, isVeg: false, isAvailable: true, description: 'Spicy buffalo wings with ranch dip', tags: ['popular'] },
+   410→  { id: 'MI-038', name: 'Nachos', course: 'snacks', courseName: 'Prigrizki', price: 260, isVeg: true, isAvailable: true, description: 'Loaded nachos with cheese and salsa' },
+   411→];
+   412→
+   413→// ── Tab: Active Orders ──────────────────────────────────
+   414→
+   415→export const activeOrders: import('@/lib/ury-types').ActiveOrder[] = [
+   416→  {
+   417→    id: 'ORD-001', invoiceNo: 'INV-2026-0187', table: 'T1', customer: 'Rajesh Sharma', type: 'Dine-in',
+   418→    items: [
+   419→      { name: 'Butter Chicken', qty: 2, price: 420, course: 'Main Course', status: 'preparing' },
+   420→      { name: 'Naan', qty: 4, price: 60, course: 'Breads', status: 'ready' },
+   421→      { name: 'Dal Makhani', qty: 1, price: 280, course: 'Main Course', status: 'preparing' },
+   422→    ],
+   423→    status: 'preparing', total: 1850, placedAt: '21:42', elapsed: 3, cashier: 'Amit Patel',
+   424→  },
+   425→  {
+   426→    id: 'ORD-002', invoiceNo: 'INV-2026-0186', table: 'T3', customer: 'Priya Patel', type: 'Takeaway',
+   427→    items: [
+   428→      { name: 'Paneer Tikka', qty: 1, price: 320, course: 'Starters', status: 'ready' },
+   429→      { name: 'Biryani', qty: 2, price: 380, course: 'Rice', status: 'preparing' },
+   430→    ],
+   431→    status: 'confirmed', total: 940, placedAt: '21:38', elapsed: 7, cashier: 'Sneha Verma',
+   432→  },
+   433→  {
+   434→    id: 'ORD-003', invoiceNo: 'INV-2026-0185', table: 'T4', customer: 'Ananya Reddy', type: 'Dine-in',
+   435→    items: [
+   436→      { name: 'Mixed Grill', qty: 1, price: 580, course: 'Starters', status: 'preparing' },
+   437→      { name: 'Butter Naan', qty: 6, price: 80, course: 'Breads', status: 'pending' },
+   438→      { name: 'Raita', qty: 1, price: 100, course: 'Accompaniments', status: 'ready' },
+   439→    ],
+   440→    status: 'preparing', total: 2340, placedAt: '21:35', elapsed: 10, cashier: 'Amit Patel',
+   441→  },
+   442→  {
+   443→    id: 'ORD-004', invoiceNo: 'INV-2026-0184', customer: 'Vikram Singh', type: 'Delivery',
+   444→    items: [
+   445→      { name: 'Chicken Biryani', qty: 2, price: 380, course: 'Rice', status: 'ready' },
+   446→      { name: 'Raita', qty: 2, price: 100, course: 'Accompaniments', status: 'ready' },
+   447→    ],
+   448→    status: 'ready', total: 890, placedAt: '21:28', elapsed: 17, cashier: 'Ravi Kumar',
+   449→  },
+   450→  {
+   451→    id: 'ORD-005', invoiceNo: 'INV-2026-0183', table: 'T8', customer: 'Neha Gupta', type: 'Dine-in',
+   452→    items: [
+   453→      { name: 'Dal Makhani', qty: 1, price: 280, course: 'Main Course', status: 'ready' },
+   454→      { name: 'Jeera Rice', qty: 1, price: 180, course: 'Rice', status: 'ready' },
+   455→      { name: 'Tandoori Roti', qty: 3, price: 40, course: 'Breads', status: 'served' },
+   456→    ],
+   457→    status: 'served', total: 870, placedAt: '21:22', elapsed: 23, cashier: 'Sneha Verma',
+   458→  },
+   459→  {
+   460→    id: 'ORD-006', invoiceNo: 'INV-2026-0182', table: 'T10', customer: 'Arjun Menon', type: 'Dine-in',
+   461→    items: [
+   462→      { name: 'Mutton Rogan Josh', qty: 1, price: 520, course: 'Main Course', status: 'preparing' },
+   463→      { name: 'Kulcha', qty: 2, price: 80, course: 'Breads', status: 'pending' },
+   464→    ],
+   465→    status: 'confirmed', total: 1560, placedAt: '21:08', elapsed: 37, cashier: 'Amit Patel',
+   466→  },
+   467→  {
+   468→    id: 'ORD-007', invoiceNo: 'INV-2026-0181', table: 'T25', customer: 'Corporate - Tata Group', type: 'Dine-in',
+   469→    items: [
+   470→      { name: 'Royal Thali', qty: 8, price: 950, course: 'Thali', status: 'preparing' },
+   471→      { name: 'Mango Lassi', qty: 4, price: 120, course: 'Beverages', status: 'ready' },
+   472→      { name: 'Gulab Jamun', qty: 4, price: 160, course: 'Desserts', status: 'pending' },
+   473→    ],
+   474→    status: 'preparing', total: 8400, placedAt: '21:15', elapsed: 30, cashier: 'Ravi Kumar',
+   475→  },
+   476→  {
+   477→    id: 'ORD-008', invoiceNo: 'INV-2026-0180', table: 'T29', customer: 'Ravi & Swati', type: 'Dine-in',
+   478→    items: [
+   479→      { name: 'Cocktails', qty: 4, price: 350, course: 'Beverages', status: 'ready' },
+   480→      { name: 'French Fries', qty: 1, price: 180, course: 'Snacks', status: 'ready' },
+   481→      { name: 'Chicken Wings', qty: 1, price: 320, course: 'Starters', status: 'ready' },
+   482→    ],
+   483→    status: 'ready', total: 1800, placedAt: '21:35', elapsed: 10, cashier: 'Ravi Kumar',
+   484→  },
+   485→];
+   486→
+   487→// ── Tab 6: API Explorer ──────────────────────────────────
+   488→
+   489→// APIEndpoint type moved to ury-types.ts
+   490→
+   491→export const apiEndpoints: APIEndpoint[] = [
+   492→  // POS API
+   493→  { method: "getRestaurantMenu", module: "ury_pos/api.py", httpMethod: "POST", parameters: "pos_profile, room?, order_type?", description: "Fetches restaurant menu items with images, rates, and courses based on POS profile, room, or order type", paramDetails: [{ name: "pos_profile", type: "string", required: true, description: "Name of the POS Profile" }, { name: "room", type: "string", required: false, description: "Room name for room-wise menu" }, { name: "order_type", type: "string", required: false, description: "Order type for type-wise menu" }], exampleResponse: '{ "items": [...], "modified_time": "2026-01-01 12:00:00", "name": "Spice Garden Menu" }' },
+   494→  { method: "getMenuCourses", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Returns all available menu courses (categories) from URY Menu Course doctype" },
+   495→  { method: "getBranch", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Gets the branch name associated with the current logged-in user via URY User mapping" },
+   496→  { method: "getBranchRoom", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Returns branch and room details for the current user" },
+   497→  { method: "getRoom", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Returns all rooms assigned to the current user across branches" },
+   498→  { method: "getModeOfPayment", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Fetches available modes of payment configured in the POS Profile" },
+   499→  { method: "getInvoiceForCashier", module: "ury_pos/api.py", httpMethod: "POST", parameters: "status, cashier, limit, limit_start", description: "Gets POS invoices filtered by status for a specific cashier with pagination", paramDetails: [{ name: "status", type: "string", required: true, description: "Draft / Unbilled / Recently Paid / Paid" }, { name: "cashier", type: "string", required: true, description: "Cashier user ID" }, { name: "limit", type: "int", required: true, description: "Page size" }, { name: "limit_start", type: "int", required: true, description: "Offset for pagination" }] },
+   500→  { method: "getPosInvoice", module: "ury_pos/api.py", httpMethod: "POST", parameters: "status, limit, limit_start", description: "Gets POS invoices filtered by status for the current branch with pagination" },
+   501→  { method: "searchPosInvoice", module: "ury_pos/api.py", httpMethod: "POST", parameters: "query, status", description: "Searches POS invoices by name, customer, or mobile number with status filter" },
+   502→  { method: "get_select_field_options", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Returns order type options from POS Invoice doctype metadata" },
+   503→  { method: "fav_items", module: "ury_pos/api.py", httpMethod: "POST", parameters: "customer", description: "Returns frequently ordered items for a specific customer based on past invoices", paramDetails: [{ name: "customer", type: "string", required: true, description: "Customer name" }] },
+   504→  { method: "getCashier", module: "ury_pos/api.py", httpMethod: "POST", parameters: "room", description: "Returns the cashier user assigned to a specific room from POS Opening Entry" },
+   505→  { method: "getPosProfile", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Returns full POS profile configuration including printer settings, cashier, QZ config, and feature flags" },
+   506→  { method: "getPosInvoiceItems", module: "ury_pos/api.py", httpMethod: "POST", parameters: "invoice", description: "Returns item details and tax breakdown for a specific POS Invoice" },
+   507→  { method: "posOpening", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Checks if a POS Opening Entry exists and is open for the current branch" },
+   508→  { method: "getAggregator", module: "ury_pos/api.py", httpMethod: "POST", parameters: "none", description: "Returns aggregator settings (Swiggy, Zomato etc.) configured for the branch" },
+   509→  { method: "getAggregatorItem", module: "ury_pos/api.py", httpMethod: "POST", parameters: "aggregator", description: "Returns menu items with prices for a specific aggregator's price list" },
+   510→  { method: "getAggregatorMOP", module: "ury_pos/api.py", httpMethod: "POST", parameters: "aggregator", description: "Returns mode of payment configured for a specific aggregator" },
+   511→  { method: "create_customer", module: "ury_pos/api.py", httpMethod: "POST", parameters: "customer_name, mobile_number, customer_group?, territory?", description: "Creates a new customer with phone validation", paramDetails: [{ name: "customer_name", type: "string", required: true, description: "Customer name" }, { name: "mobile_number", type: "string", required: true, description: "Valid mobile number" }, { name: "customer_group", type: "string", required: false, description: "Default: Individual" }, { name: "territory", type: "string", required: false, description: "Default: India" }] },
+   512→  { method: "validate_pos_close", module: "ury_pos/api.py", httpMethod: "POST", parameters: "pos_profile", description: "Validates if previous day's POS opening has been properly closed before allowing new operations" },
+   513→  // KOT API
+   514→  { method: "kot_execute", module: "ury/api/ury_kot_generate.py", httpMethod: "POST", parameters: "invoice_id, customer, restaurant_table?, current_items, previous_items, comments?", description: "Main KOT generation endpoint - compares current vs previous items, creates new/modified/cancel KOTs per production unit", paramDetails: [{ name: "invoice_id", type: "string", required: true, description: "POS Invoice ID" }, { name: "customer", type: "string", required: true, description: "Customer name" }, { name: "restaurant_table", type: "string", required: false, description: "Table ID" }, { name: "current_items", type: "JSON", required: true, description: "Current order items" }, { name: "previous_items", type: "JSON", required: true, description: "Previous order items for diff" }, { name: "comments", type: "string", required: false, description: "Order comments" }] },
+   515→  { method: "get_kot_list", module: "ury/api/ury_kot_display.py", httpMethod: "POST", parameters: "none", description: "Returns active KOT list for KDS display with production unit filtering and order type support" },
+   516→  { method: "serve_kot", module: "ury/api/ury_kot_display.py", httpMethod: "POST", parameters: "name, time", description: "Marks a KOT as served with production time tracking", paramDetails: [{ name: "name", type: "string", required: true, description: "KOT document name" }, { name: "time", type: "string", required: true, description: "Serve timestamp" }] },
+   517→  { method: "confirm_kot", module: "ury/api/ury_kot_display.py", httpMethod: "POST", parameters: "name, user", description: "Confirms/verifies a cancelled KOT by an authorized user" },
+   518→  { method: "get_production_units", module: "ury/api/ury_kot_display.py", httpMethod: "POST", parameters: "none", description: "Returns all production units for the current branch" },
+   519→  { method: "ury_kot_reprint", module: "ury/api/ury_kot_reprint.py", httpMethod: "POST", parameters: "invoice_number", description: "Reprints a KOT for a given invoice if enabled in POS Profile settings" },
+   520→  { method: "order_delay_notification", module: "ury/api/ury_kot_notification.py", httpMethod: "POST", parameters: "id", description: "Sends delay notification to configured recipients when a KOT exceeds the warning time threshold" },
+   521→  { method: "kotValidationThread", module: "ury/api/ury_kot_validation.py", httpMethod: "POST", parameters: "none", description: "Scheduled task (cron) that validates and auto-generates missing KOTs for invoices created in the last 5 minutes" },
+   522→  { method: "validate_priority", module: "ury/api/ury_menu_course_validation.py", httpMethod: "POST", parameters: "none", description: "Validates that serving priority is unique across menu courses" },
+   523→  { method: "cancel_check", module: "ury/api/button_permission.py", httpMethod: "POST", parameters: "none", description: "Checks if the current user has permission to cancel POS Invoices" },
+   524→  { method: "overrided_past_order_list", module: "ury/api/pos_extend.py", httpMethod: "POST", parameters: "search_term, status, limit?", description: "Overrides the default past order list with branch and room filtering for URY users" },
+   525→  // Print API
+   526→  { method: "network_printing", module: "ury/api/ury_print.py", httpMethod: "POST", parameters: "doctype, name, printer_setting, print_format?, doc?, no_letterhead?, file_path?", description: "Sends a document to a network printer via CUPS, handles invoice_printed and table status updates" },
+   527→  { method: "select_network_printer", module: "ury/api/ury_print.py", httpMethod: "POST", parameters: "pos_profile, invoice_id", description: "Selects the appropriate network printer (room-based or POS profile-based) for printing an invoice" },
+   528→  { method: "qz_print_update", module: "ury/api/ury_print.py", httpMethod: "POST", parameters: "invoice", description: "Updates invoice_printed status and table occupancy after QZ Tray printing" },
+   529→  { method: "print_pos_page", module: "ury/api/ury_print.py", httpMethod: "POST", parameters: "doctype, name, print_format", description: "Publishes print job via Frappe realtime (WebSocket) channel for browser-based printing" },
+   530→  { method: "qz_certificate", module: "ury/api/ury_print.py", httpMethod: "POST", parameters: "none", description: "Returns the QZ Tray certificate from site config for secure printing" },
+   531→  { method: "signature_promise", module: "ury/api/ury_print.py", httpMethod: "POST", parameters: "none", description: "Returns the QZ Tray private key from site config for signing print requests" },
+   532→];
+   533→
+   534→// ── Tab 6: Architecture ──────────────────────────────────
+   535→
+   536→export const frontendApps = [
+   537→  { name: "POS React", tech: "React + Vite", path: "ury/pos/", description: "Modern POS interface built with React, TypeScript, and Vite" },
+   538→  { name: "KOT Mosaic Vue", tech: "Vue 3 + Vite", path: "ury/URYMosaic/", description: "Kitchen Display System (KDS) built with Vue 3 for real-time KOT management" },
+   539→  { name: "POS v1 Vue", tech: "Vue 3 + Vite", path: "ury/urypos/", description: "Legacy POS interface built with Vue 3 for order management" },
+   540→];
+   541→
+   542→export const backendComponents = [
+   543→  { name: "Frappe/ERPNext", description: "Core backend framework providing REST API, database ORM, authentication, and doctype management" },
+   544→];
+   545→
+   546→export const infrastructureComponents = [
+   547→  { name: "MariaDB", description: "Primary database for all Frappe/ERPNext data" },
+   548→  { name: "Socket.io", description: "Real-time communication for KOT updates and print jobs" },
+   549→  { name: "QZ Tray", description: "Desktop utility for direct thermal printer communication" },
+   550→];
+   551→
+   552→export const doctypes = [
+   553→  "URY Restaurant",
+   554→  "URY Room",
+   555→  "URY Table",
+   556→  "URY Menu",
+   557→  "URY Menu Item",
+   558→  "URY Menu Course",
+   559→  "URY Order",
+   560→  "URY Order Item",
+   561→  "URY KOT",
+   562→  "URY KOT Items",
+   563→  "URY KOT Error Log",
+   564→  "URY Production Unit",
+   565→  "URY Production Item Groups",
+   566→  "URY User",
+   567→  "URY Printer Settings",
+   568→  "URY Daily P&L",
+   569→  "URY P&L Breakup",
+   570→  "URY Cost of Goods",
+   571→  "URY Materials",
+   572→  "URY P&L Materials",
+   573→  "URY Fixed Expenses",
+   574→  "URY Variable Expenses",
+   575→  "URY Report Settings",
+   576→  "URY Notification Recipient",
+   577→  "Aggregator Settings",
+   578→  "Item Add On",
+   579→  "Menu for Room",
+   580→  "Multiple Rooms",
+   581→  "Order Type Menu",
+   582→  "POS Item Variants",
+   583→  "Role Permitted",
+   584→  "Sub POS Invoices",
+   585→  "Sub POS Closing",
+   586→  "Sub POS Closing Payment",
+   587→  "KDS Order Type",
+   588→];
+   589→
+   590→export const docEventHooks = [
+   591→  { doctype: "POS Invoice", events: ["before_insert", "validate", "after_insert", "before_submit", "on_cancel", "on_trash"] },
+   592→  { doctype: "POS Profile", events: ["validate"] },
+   593→  { doctype: "Sales Invoice", events: ["before_insert", "on_update"] },
+   594→  { doctype: "Item", events: ["validate"] },
+   595→  { doctype: "POS Opening Entry", events: ["validate", "before_save", "before_insert"] },
+   596→  { doctype: "POS Closing Entry", events: ["before_save", "validate"] },
+   597→  { doctype: "URY Menu Course", events: ["validate"] },
+   598→];
+   599→

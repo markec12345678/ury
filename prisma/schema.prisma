@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MenuCategory {
+  id        String     @id @default(cuid())
+  name      String
+  priority  Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id          String       @id @default(cuid())
+  name        String
+  nameLocal   String?
+  price       Float
+  description String?
+  isVeg       Boolean      @default(true)
+  isAvailable Boolean      @default(true)
+  image       String?
+  tags        String?      // JSON string of tags array
+  modifiers   String?      // JSON string of modifiers array
+  category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// ── Restaurant Tables ──────────────────────────────────
+
+model Room {
+  id        String   @id @default(cuid())
+  name      String
+  tables    Table[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Table {
+  id             String   @id @default(cuid())
+  tableNumber    Int      @unique
+  room           Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId         String
+  status         String   @default("free") // free, occupied, attention, active
+  pax            Int      @default(0)
+  occupiedSince  String?  // minutes as string
+  customer       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ── Orders & Invoices ─────────────────────────────────
+
+model Order {
+  id           String       @id @default(cuid())
+  invoiceNo    String       @unique
+  table        String?      // Table reference (e.g. "Miza 5")
+  customer     String
+  type         String       @default("Dine-in") // Dine-in, Takeaway, Delivery
+  status       String       @default("pending") // pending, confirmed, preparing, ready, served, cancelled
+  total        Float
+  cashier      String?
+  items        OrderItem[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  name      String
+  qty       Int      @default(1)
+  price     Float
+  course    String?
+  comments  String?
+  status    String   @default("pending") // pending, preparing, ready, served
+  createdAt DateTime @default(now())
+}

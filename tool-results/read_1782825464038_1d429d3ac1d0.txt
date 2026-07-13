@@ -1,0 +1,738 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useMemo } from 'react';
+     4→     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+     5→     5→import { Button } from '@/components/ui/button';
+     6→     6→import { Badge } from '@/components/ui/badge';
+     7→     7→import { Input } from '@/components/ui/input';
+     8→     8→import { Label } from '@/components/ui/label';
+     9→     9→import { Switch } from '@/components/ui/switch';
+    10→    10→import { Separator } from '@/components/ui/separator';
+    11→    11→import {
+    12→    12→  Dialog,
+    13→    13→  DialogContent,
+    14→    14→  DialogDescription,
+    15→    15→  DialogFooter,
+    16→    16→  DialogHeader,
+    17→    17→  DialogTitle,
+    18→    18→  DialogTrigger,
+    19→    19→} from '@/components/ui/dialog';
+    20→    20→import {
+    21→    21→  AlertDialog,
+    22→    22→  AlertDialogAction,
+    23→    23→  AlertDialogCancel,
+    24→    24→  AlertDialogContent,
+    25→    25→  AlertDialogDescription,
+    26→    26→  AlertDialogFooter,
+    27→    27→  AlertDialogHeader,
+    28→    28→  AlertDialogTitle,
+    29→    29→} from '@/components/ui/alert-dialog';
+    30→    30→import {
+    31→    31→  Select,
+    32→    32→  SelectContent,
+    33→    33→  SelectItem,
+    34→    34→  SelectTrigger,
+    35→    35→  SelectValue,
+    36→    36→} from '@/components/ui/select';
+    37→    37→import {
+    38→    38→  Table,
+    39→    39→  TableBody,
+    40→    40→  TableCell,
+    41→    41→  TableHead,
+    42→    42→  TableHeader,
+    43→    43→  TableRow,
+    44→    44→} from '@/components/ui/table';
+    45→    45→import { Textarea } from '@/components/ui/textarea';
+    46→    46→import {
+    47→    47→  BookOpen,
+    48→    48→  Search,
+    49→    49→  Leaf,
+    50→    50→  Plus,
+    51→    51→  Pencil,
+    52→    52→  Trash2,
+    53→    53→  X,
+    54→    54→  Tag,
+    55→    55→  GripVertical,
+    56→    56→  ArrowUpDown,
+    57→    57→  Eye,
+    58→    58→  EyeOff,
+    59→    59→  SlidersHorizontal,
+    60→    60→} from 'lucide-react';
+    61→    61→import { useURYStore } from '@/lib/ury-store';
+    62→    62→import type { MenuItem, MenuCourse, MenuFormData, CourseFormData } from '@/lib/ury-types';
+    63→    63→
+    64→    64→export function MenuManagementTab() {
+    65→    65→  const {
+    66→    66→    menuCourses,
+    67→    67→    menuItems,
+    68→    68→    currency,
+    69→    69→    addMenuItem,
+    70→    70→    updateMenuItem,
+    71→    71→    deleteMenuItem,
+    72→    72→    toggleMenuItemAvailability,
+    73→    73→    addMenuCourse,
+    74→    74→    updateMenuCourse,
+    75→    75→    deleteMenuCourse,
+    76→    76→  } = useURYStore();
+    77→    77→
+    78→    78→  const [searchQuery, setSearchQuery] = useState('');
+    79→    79→  const [activeCourse, setActiveCourse] = useState<string>('all');
+    80→    80→  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+    81→    81→
+    82→    82→  // Menu Item Dialog state
+    83→    83→  const [menuItemDialogOpen, setMenuItemDialogOpen] = useState(false);
+    84→    84→  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+    85→    85→  const [menuItemForm, setMenuItemForm] = useState<MenuFormData>({
+    86→    86→    name: '',
+    87→    87→    nameLocal: '',
+    88→    88→    course: '',
+    89→    89→    price: 0,
+    90→    90→    description: '',
+    91→    91→    isVeg: true,
+    92→    92→    isAvailable: true,
+    93→    93→    tags: [],
+    94→    94→  });
+    95→    95→  const [tagInput, setTagInput] = useState('');
+    96→    96→
+    97→    97→  // Course Dialog state
+    98→    98→  const [courseDialogOpen, setCourseDialogOpen] = useState(false);
+    99→    99→  const [editingCourse, setEditingCourse] = useState<MenuCourse | null>(null);
+   100→   100→  const [courseForm, setCourseForm] = useState<CourseFormData>({
+   101→   101→    name: '',
+   102→   102→    priority: 0,
+   103→   103→  });
+   104→   104→
+   105→   105→  // Delete confirmation
+   106→   106→  const [deleteTarget, setDeleteTarget] = useState<{ type: 'item' | 'course'; id: string; name: string } | null>(null);
+   107→   107→
+   108→   108→  // Filter items
+   109→   109→  const filteredItems = useMemo(() => {
+   110→   110→    let items = menuItems;
+   111→   111→    if (activeCourse !== 'all') {
+   112→   112→      items = items.filter((item) => item.course === activeCourse);
+   113→   113→    }
+   114→   114→    if (searchQuery.trim()) {
+   115→   115→      const q = searchQuery.toLowerCase();
+   116→   116→      items = items.filter(
+   117→   117→        (item) =>
+   118→   118→          item.name.toLowerCase().includes(q) ||
+   119→   119→          item.courseName.toLowerCase().includes(q) ||
+   120→   120→          item.description?.toLowerCase().includes(q) ||
+   121→   121→          item.tags?.some((t) => t.toLowerCase().includes(q))
+   122→   122→      );
+   123→   123→    }
+   124→   124→    return items;
+   125→   125→  }, [menuItems, activeCourse, searchQuery]);
+   126→   126→
+   127→   127→  // Stats
+   128→   128→  const totalItems = menuItems.length;
+   129→   129→  const availableItems = menuItems.filter((i) => i.isAvailable).length;
+   130→   130→  const vegItems = menuItems.filter((i) => i.isVeg).length;
+   131→   131→  const avgPrice = totalItems > 0
+   132→   132→    ? Math.round(menuItems.reduce((sum, i) => sum + i.price, 0) / totalItems)
+   133→   133→    : 0;
+   134→   134→
+   135→   135→  // ── Menu Item CRUD handlers ─────────────────────────────
+   136→   136→
+   137→   137→  const openCreateItemDialog = () => {
+   138→   138→    setEditingItem(null);
+   139→   139→    setMenuItemForm({
+   140→   140→      name: '',
+   141→   141→      nameLocal: '',
+   142→   142→      course: menuCourses[0]?.id || '',
+   143→   143→      price: 0,
+   144→   144→      description: '',
+   145→   145→      isVeg: true,
+   146→   146→      isAvailable: true,
+   147→   147→      tags: [],
+   148→   148→    });
+   149→   149→    setTagInput('');
+   150→   150→    setMenuItemDialogOpen(true);
+   151→   151→  };
+   152→   152→
+   153→   153→  const openEditItemDialog = (item: MenuItem) => {
+   154→   154→    setEditingItem(item);
+   155→   155→    setMenuItemForm({
+   156→   156→      name: item.name,
+   157→   157→      nameLocal: item.nameHi || '',
+   158→   158→      course: item.course,
+   159→   159→      price: item.price,
+   160→   160→      description: item.description || '',
+   161→   161→      isVeg: item.isVeg,
+   162→   162→      isAvailable: item.isAvailable,
+   163→   163→      tags: item.tags || [],
+   164→   164→    });
+   165→   165→    setTagInput('');
+   166→   166→    setMenuItemDialogOpen(true);
+   167→   167→  };
+   168→   168→
+   169→   169→  const handleSaveMenuItem = () => {
+   170→   170→    if (!menuItemForm.name.trim() || menuItemForm.price <= 0) return;
+   171→   171→    if (editingItem) {
+   172→   172→      updateMenuItem(editingItem.id, menuItemForm);
+   173→   173→    } else {
+   174→   174→      addMenuItem(menuItemForm);
+   175→   175→    }
+   176→   176→    setMenuItemDialogOpen(false);
+   177→   177→  };
+   178→   178→
+   179→   179→  const handleAddTag = () => {
+   180→   180→    const tag = tagInput.trim().toLowerCase();
+   181→   181→    if (tag && !menuItemForm.tags?.includes(tag)) {
+   182→   182→      setMenuItemForm((prev) => ({
+   183→   183→        ...prev,
+   184→   184→        tags: [...(prev.tags || []), tag],
+   185→   185→      }));
+   186→   186→    }
+   187→   187→    setTagInput('');
+   188→   188→  };
+   189→   189→
+   190→   190→  const handleRemoveTag = (tag: string) => {
+   191→   191→    setMenuItemForm((prev) => ({
+   192→   192→      ...prev,
+   193→   193→      tags: prev.tags?.filter((t) => t !== tag) || [],
+   194→   194→    }));
+   195→   195→  };
+   196→   196→
+   197→   197→  // ── Course CRUD handlers ────────────────────────────────
+   198→   198→
+   199→   199→  const openCreateCourseDialog = () => {
+   200→   200→    setEditingCourse(null);
+   201→   201→    setCourseForm({
+   202→   202→      name: '',
+   203→   203→      priority: menuCourses.length + 1,
+   204→   204→    });
+   205→   205→    setCourseDialogOpen(true);
+   206→   206→  };
+   207→   207→
+   208→   208→  const openEditCourseDialog = (course: MenuCourse) => {
+   209→   209→    setEditingCourse(course);
+   210→   210→    setCourseForm({
+   211→   211→      name: course.name,
+   212→   212→      priority: course.priority,
+   213→   213→    });
+   214→   214→    setCourseDialogOpen(true);
+   215→   215→  };
+   216→   216→
+   217→   217→  const handleSaveCourse = () => {
+   218→   218→    if (!courseForm.name.trim()) return;
+   219→   219→    if (editingCourse) {
+   220→   220→      updateMenuCourse(editingCourse.id, courseForm);
+   221→   221→    } else {
+   222→   222→      addMenuCourse(courseForm);
+   223→   223→    }
+   224→   224→    setCourseDialogOpen(false);
+   225→   225→  };
+   226→   226→
+   227→   227→  return (
+   228→   228→    <div className="space-y-4">
+   229→   229→      {/* Header Stats */}
+   230→   230→      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   231→   231→        <Card className="bg-emerald-50 border-emerald-200">
+   232→   232→          <CardContent className="p-3 flex items-center gap-3">
+   233→   233→            <BookOpen className="h-5 w-5 text-emerald-600" />
+   234→   234→            <div>
+   235→   235→              <p className="text-xs text-emerald-600 font-medium">Skupaj artiklov</p>
+   236→   236→              <p className="text-xl font-bold text-emerald-800">{totalItems}</p>
+   237→   237→            </div>
+   238→   238→          </CardContent>
+   239→   239→        </Card>
+   240→   240→        <Card className="bg-green-50 border-green-200">
+   241→   241→          <CardContent className="p-3 flex items-center gap-3">
+   242→   242→            <Leaf className="h-5 w-5 text-green-600" />
+   243→   243→            <div>
+   244→   244→              <p className="text-xs text-green-600 font-medium">Vegetarijansko</p>
+   245→   245→              <p className="text-xl font-bold text-green-800">{vegItems}</p>
+   246→   246→            </div>
+   247→   247→          </CardContent>
+   248→   248→        </Card>
+   249→   249→        <Card className="bg-blue-50 border-blue-200">
+   250→   250→          <CardContent className="p-3 flex items-center gap-3">
+   251→   251→            <Tag className="h-5 w-5 text-blue-600" />
+   252→   252→            <div>
+   253→   253→              <p className="text-xs text-blue-600 font-medium">Dosegljivo</p>
+   254→   254→              <p className="text-xl font-bold text-blue-800">{availableItems}/{totalItems}</p>
+   255→   255→            </div>
+   256→   256→          </CardContent>
+   257→   257→        </Card>
+   258→   258→        <Card className="bg-amber-50 border-amber-200">
+   259→   259→          <CardContent className="p-3 flex items-center gap-3">
+   260→   260→            <SlidersHorizontal className="h-5 w-5 text-amber-600" />
+   261→   261→            <div>
+   262→   262→              <p className="text-xs text-amber-600 font-medium">Povprečna cena</p>
+   263→   263→              <p className="text-xl font-bold text-amber-800">{currency}{avgPrice}</p>
+   264→   264→            </div>
+   265→   265→          </CardContent>
+   266→   266→        </Card>
+   267→   267→      </div>
+   268→   268→
+   269→   269→      {/* Action Bar */}
+   270→   270→      <div className="flex flex-wrap items-center gap-3">
+   271→   271→        <div className="relative flex-1 min-w-[200px]">
+   272→   272→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   273→   273→          <Input
+   274→   274→            placeholder="Išči artikle, kategorije, oznake..."
+   275→   275→            value={searchQuery}
+   276→   276→            onChange={(e) => setSearchQuery(e.target.value)}
+   277→   277→            className="pl-9"
+   278→   278→          />
+   279→   279→          {searchQuery && (
+   280→   280→            <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchQuery('')}>
+   281→   281→              <X className="h-3.5 w-3.5" />
+   282→   282→            </Button>
+   283→   283→          )}
+   284→   284→        </div>
+   285→   285→        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={openCreateItemDialog}>
+   286→   286→          <Plus className="h-4 w-4 mr-1" />
+   287→   287→          Nov artikel
+   288→   288→        </Button>
+   289→   289→        <Button variant="outline" size="sm" onClick={openCreateCourseDialog}>
+   290→   290→          <Plus className="h-4 w-4 mr-1" />
+   291→   291→          Nova kategorija
+   292→   292→        </Button>
+   293→   293→        <div className="flex items-center gap-1 border rounded-md p-0.5">
+   294→   294→          <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" className="h-7 px-2" onClick={() => setViewMode('table')}>
+   295→   295→            <ArrowUpDown className="h-3.5 w-3.5" />
+   296→   296→          </Button>
+   297→   297→          <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="h-7 px-2" onClick={() => setViewMode('grid')}>
+   298→   298→            <GripVertical className="h-3.5 w-3.5" />
+   299→   299→          </Button>
+   300→   300→        </div>
+   301→   301→      </div>
+   302→   302→
+   303→   303→      {/* Course Filters */}
+   304→   304→      <div className="flex flex-wrap gap-2">
+   305→   305→        <Button
+   306→   306→          variant={activeCourse === 'all' ? 'default' : 'outline'}
+   307→   307→          size="sm"
+   308→   308→          className={activeCourse === 'all' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+   309→   309→          onClick={() => setActiveCourse('all')}
+   310→   310→        >
+   311→   311→          Vse ({menuItems.length})
+   312→   312→        </Button>
+   313→   313→        {menuCourses.map((course) => {
+   314→   314→          const count = menuItems.filter((i) => i.course === course.id).length;
+   315→   315→          return (
+   316→   316→            <Button
+   317→   317→              key={course.id}
+   318→   318→              variant={activeCourse === course.id ? 'default' : 'outline'}
+   319→   319→              size="sm"
+   320→   320→              className={activeCourse === course.id ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+   321→   321→              onClick={() => setActiveCourse(course.id)}
+   322→   322→            >
+   323→   323→              {course.name} ({count})
+   324→   324→            </Button>
+   325→   325→          );
+   326→   326→        })}
+   327→   327→      </div>
+   328→   328→
+   329→   329→      {/* Course Management Section */}
+   330→   330→      <Card>
+   331→   331→        <CardHeader className="pb-2">
+   332→   332→          <div className="flex items-center justify-between">
+   333→   333→            <CardTitle className="text-base font-semibold">Kategorije jedilnika</CardTitle>
+   334→   334→            <Badge variant="secondary" className="text-xs">{menuCourses.length} kategorij</Badge>
+   335→   335→          </div>
+   336→   336→        </CardHeader>
+   337→   337→        <CardContent>
+   338→   338→          <div className="flex flex-wrap gap-2">
+   339→   339→            {menuCourses.map((course) => (
+   340→   340→              <div
+   341→   341→                key={course.id}
+   342→   342→                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-muted/50 text-sm"
+   343→   343→              >
+   344→   344→                <span className="text-muted-foreground text-xs">#{course.priority}</span>
+   345→   345→                <span className="font-medium">{course.name}</span>
+   346→   346→                <Badge variant="outline" className="text-[10px] h-4 px-1">{course.itemCount} artiklov</Badge>
+   347→   347→                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => openEditCourseDialog(course)}>
+   348→   348→                  <Pencil className="h-3 w-3" />
+   349→   349→                </Button>
+   350→   350→                <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500 hover:text-red-700" onClick={() => setDeleteTarget({ type: 'course', id: course.id, name: course.name })}>
+   351→   351→                  <Trash2 className="h-3 w-3" />
+   352→   352→                </Button>
+   353→   353→              </div>
+   354→   354→            ))}
+   355→   355→          </div>
+   356→   356→        </CardContent>
+   357→   357→      </Card>
+   358→   358→
+   359→   359→      {/* Results count */}
+   360→   360→      <div className="text-sm text-muted-foreground">
+   361→   361→        Prikazano {filteredItems.length} od {menuItems.length} artiklov
+   362→   362→        {searchQuery && ` za "${searchQuery}"`}
+   363→   363→      </div>
+   364→   364→
+   365→   365→      {/* Items Display */}
+   366→   366→      {viewMode === 'table' ? (
+   367→   367→        <Card>
+   368→   368→          <CardContent className="p-0">
+   369→   369→            <div className="overflow-x-auto">
+   370→   370→              <Table>
+   371→   371→                <TableHeader>
+   372→   372→                  <TableRow>
+   373→   373→                    <TableHead className="w-10">Veg</TableHead>
+   374→   374→                    <TableHead>Ime</TableHead>
+   375→   375→                    <TableHead>Kategorija</TableHead>
+   376→   376→                    <TableHead className="text-right">Cena</TableHead>
+   377→   377→                    <TableHead>Status</TableHead>
+   378→   378→                    <TableHead>Oznake</TableHead>
+   379→   379→                    <TableHead className="text-right">Dejanja</TableHead>
+   380→   380→                  </TableRow>
+   381→   381→                </TableHeader>
+   382→   382→                <TableBody>
+   383→   383→                  {filteredItems.map((item) => (
+   384→   384→                    <TableRow key={item.id} className={!item.isAvailable ? 'opacity-50' : ''}>
+   385→   385→                      <TableCell>
+   386→   386→                        <span className={`inline-block w-3 h-3 rounded-sm border ${
+   387→   387→                          item.isVeg ? 'bg-green-500 border-green-600' : 'bg-red-500 border-red-600'
+   388→   388→                        }`} />
+   389→   389→                      </TableCell>
+   390→   390→                      <TableCell>
+   391→   391→                        <div>
+   392→   392→                          <p className="font-medium text-sm">{item.name}</p>
+   393→   393→                          {item.nameHi && <p className="text-xs text-muted-foreground">{item.nameHi}</p>}
+   394→   394→                          {item.description && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.description}</p>}
+   395→   395→                        </div>
+   396→   396→                      </TableCell>
+   397→   397→                      <TableCell className="text-sm">{item.courseName}</TableCell>
+   398→   398→                      <TableCell className="text-right font-mono font-medium text-emerald-600">
+   399→   399→                        {currency}{item.price.toLocaleString('en-IN')}
+   400→   400→                      </TableCell>
+   401→   401→                      <TableCell>
+   402→   402→                        <Badge
+   403→   403→                          variant="outline"
+   404→   404→                          className={`text-[10px] ${
+   405→   405→                            item.isAvailable
+   406→   406→                              ? 'border-emerald-300 text-emerald-700'
+   407→   407→                              : 'border-red-300 text-red-700 bg-red-50'
+   408→   408→                          }`}
+   409→   409→                        >
+   410→   410→                          {item.isAvailable ? 'Na voljo' : 'Ni na voljo'}
+   411→   411→                        </Badge>
+   412→   412→                      </TableCell>
+   413→   413→                      <TableCell>
+   414→   414→                        <div className="flex flex-wrap gap-1">
+   415→   415→                          {item.tags?.map((tag) => (
+   416→   416→                            <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+   417→   417→                              {tag}
+   418→   418→                            </Badge>
+   419→   419→                          ))}
+   420→   420→                        </div>
+   421→   421→                      </TableCell>
+   422→   422→                      <TableCell className="text-right">
+   423→   423→                        <div className="flex items-center justify-end gap-1">
+   424→   424→                          <Button
+   425→   425→                            variant="ghost"
+   426→   426→                            size="icon"
+   427→   427→                            className="h-7 w-7"
+   428→   428→                            onClick={() => toggleMenuItemAvailability(item.id)}
+   429→   429→                            title={item.isAvailable ? 'Onemogoči' : 'Omogoči'}
+   430→   430→                          >
+   431→   431→                            {item.isAvailable ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 text-red-500" />}
+   432→   432→                          </Button>
+   433→   433→                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditItemDialog(item)}>
+   434→   434→                            <Pencil className="h-3.5 w-3.5" />
+   435→   435→                          </Button>
+   436→   436→                          <Button
+   437→   437→                            variant="ghost"
+   438→   438→                            size="icon"
+   439→   439→                            className="h-7 w-7 text-red-500 hover:text-red-700"
+   440→   440→                            onClick={() => setDeleteTarget({ type: 'item', id: item.id, name: item.name })}
+   441→   441→                          >
+   442→   442→                            <Trash2 className="h-3.5 w-3.5" />
+   443→   443→                          </Button>
+   444→   444→                        </div>
+   445→   445→                      </TableCell>
+   446→   446→                    </TableRow>
+   447→   447→                  ))}
+   448→   448→                </TableBody>
+   449→   449→              </Table>
+   450→   450→            </div>
+   451→   451→          </CardContent>
+   452→   452→        </Card>
+   453→   453→      ) : (
+   454→   454→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+   455→   455→          {filteredItems.map((item) => (
+   456→   456→            <Card key={item.id} className={`transition-all hover:shadow-md ${!item.isAvailable ? 'opacity-60' : ''}`}>
+   457→   457→              <CardContent className="p-4 space-y-3">
+   458→   458→                <div className="flex items-start justify-between gap-2">
+   459→   459→                  <div className="flex-1 min-w-0">
+   460→   460→                    <div className="flex items-center gap-2">
+   461→   461→                      <span className={`w-3 h-3 rounded-sm border shrink-0 ${
+   462→   462→                        item.isVeg ? 'bg-green-500 border-green-600' : 'bg-red-500 border-red-600'
+   463→   463→                      }`} />
+   464→   464→                      <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+   465→   465→                    </div>
+   466→   466→                    <p className="text-xs text-muted-foreground mt-0.5">{item.courseName}</p>
+   467→   467→                  </div>
+   468→   468→                  <span className="text-base font-bold text-emerald-600 shrink-0">
+   469→   469→                    {currency}{item.price.toLocaleString('en-IN')}
+   470→   470→                  </span>
+   471→   471→                </div>
+   472→   472→                {item.description && (
+   473→   473→                  <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+   474→   474→                )}
+   475→   475→                {item.tags && item.tags.length > 0 && (
+   476→   476→                  <div className="flex flex-wrap gap-1">
+   477→   477→                    {item.tags.map((tag) => (
+   478→   478→                      <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 h-4">{tag}</Badge>
+   479→   479→                    ))}
+   480→   480→                  </div>
+   481→   481→                )}
+   482→   482→                <div className="flex items-center justify-between">
+   483→   483→                  <Badge
+   484→   484→                    variant="outline"
+   485→   485→                    className={`text-[10px] ${
+   486→   486→                      item.isAvailable ? 'border-emerald-300 text-emerald-700' : 'border-red-300 text-red-700 bg-red-50'
+   487→   487→                    }`}
+   488→   488→                  >
+   489→   489→                    {item.isAvailable ? 'Na voljo' : 'Ni na voljo'}
+   490→   490→                  </Badge>
+   491→   491→                  <div className="flex items-center gap-1">
+   492→   492→                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleMenuItemAvailability(item.id)}>
+   493→   493→                      {item.isAvailable ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3 text-red-500" />}
+   494→   494→                    </Button>
+   495→   495→                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditItemDialog(item)}>
+   496→   496→                      <Pencil className="h-3 w-3" />
+   497→   497→                    </Button>
+   498→   498→                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setDeleteTarget({ type: 'item', id: item.id, name: item.name })}>
+   499→   499→                      <Trash2 className="h-3 w-3" />
+   500→   500→                    </Button>
+   501→   501→                  </div>
+   502→   502→                </div>
+   503→   503→              </CardContent>
+   504→   504→            </Card>
+   505→   505→          ))}
+   506→   506→        </div>
+   507→   507→      )}
+   508→   508→
+   509→   509→      {filteredItems.length === 0 && (
+   510→   510→        <div className="py-12 text-center text-muted-foreground">
+   511→   511→          <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-30" />
+   512→   512→          <p>Ni zadetkov</p>
+   513→   513→          <p className="text-sm">Poskusite spremeniti iskalni niz ali filtre</p>
+   514→   514→        </div>
+   515→   515→      )}
+   516→   516→
+   517→   517→      {/* ── Menu Item Dialog ──────────────────────────────── */}
+   518→   518→      <Dialog open={menuItemDialogOpen} onOpenChange={setMenuItemDialogOpen}>
+   519→   519→        <DialogContent className="sm:max-w-[525px]">
+   520→   520→          <DialogHeader>
+   521→   521→            <DialogTitle>{editingItem ? 'Uredi artikel' : 'Nov artikel'}</DialogTitle>
+   522→   522→            <DialogDescription>
+   523→   523→              {editingItem ? 'Posodobite podatke artikla v jedilniku.' : 'Dodajte nov artikel v jedilnik.'}
+   524→   524→            </DialogDescription>
+   525→   525→          </DialogHeader>
+   526→   526→          <div className="grid gap-4 py-4">
+   527→   527→            <div className="grid grid-cols-2 gap-4">
+   528→   528→              <div className="space-y-2">
+   529→   529→                <Label htmlFor="item-name">Ime artikla *</Label>
+   530→   530→                <Input
+   531→   531→                  id="item-name"
+   532→   532→                  placeholder="npr. Butter Chicken"
+   533→   533→                  value={menuItemForm.name}
+   534→   534→                  onChange={(e) => setMenuItemForm((prev) => ({ ...prev, name: e.target.value }))}
+   535→   535→                />
+   536→   536→              </div>
+   537→   537→              <div className="space-y-2">
+   538→   538→                <Label htmlFor="item-name-local">Lokalno ime</Label>
+   539→   539→                <Input
+   540→   540→                  id="item-name-local"
+   541→   541→                  placeholder="npr. बटर चिकन"
+   542→   542→                  value={menuItemForm.nameLocal || ''}
+   543→   543→                  onChange={(e) => setMenuItemForm((prev) => ({ ...prev, nameLocal: e.target.value }))}
+   544→   544→                />
+   545→   545→              </div>
+   546→   546→            </div>
+   547→   547→            <div className="grid grid-cols-2 gap-4">
+   548→   548→              <div className="space-y-2">
+   549→   549→                <Label htmlFor="item-course">Kategorija *</Label>
+   550→   550→                <Select
+   551→   551→                  value={menuItemForm.course}
+   552→   552→                  onValueChange={(value) => setMenuItemForm((prev) => ({ ...prev, course: value }))}
+   553→   553→                >
+   554→   554→                  <SelectTrigger id="item-course">
+   555→   555→                    <SelectValue placeholder="Izberite kategorijo" />
+   556→   556→                  </SelectTrigger>
+   557→   557→                  <SelectContent>
+   558→   558→                    {menuCourses.map((course) => (
+   559→   559→                      <SelectItem key={course.id} value={course.id}>
+   560→   560→                        {course.name}
+   561→   561→                      </SelectItem>
+   562→   562→                    ))}
+   563→   563→                  </SelectContent>
+   564→   564→                </Select>
+   565→   565→              </div>
+   566→   566→              <div className="space-y-2">
+   567→   567→                <Label htmlFor="item-price">Cena ({currency}) *</Label>
+   568→   568→                <Input
+   569→   569→                  id="item-price"
+   570→   570→                  type="number"
+   571→   571→                  min={0}
+   572→   572→                  value={menuItemForm.price || ''}
+   573→   573→                  onChange={(e) => setMenuItemForm((prev) => ({ ...prev, price: Number(e.target.value) }))}
+   574→   574→                />
+   575→   575→              </div>
+   576→   576→            </div>
+   577→   577→            <div className="space-y-2">
+   578→   578→              <Label htmlFor="item-description">Opis</Label>
+   579→   579→              <Textarea
+   580→   580→                id="item-description"
+   581→   581→                placeholder="Kratek opis artikla..."
+   582→   582→                value={menuItemForm.description || ''}
+   583→   583→                onChange={(e) => setMenuItemForm((prev) => ({ ...prev, description: e.target.value }))}
+   584→   584→                rows={2}
+   585→   585→              />
+   586→   586→            </div>
+   587→   587→            <div className="flex items-center gap-6">
+   588→   588→              <div className="flex items-center gap-2">
+   589→   589→                <Switch
+   590→   590→                  id="item-veg"
+   591→   591→                  checked={menuItemForm.isVeg}
+   592→   592→                  onCheckedChange={(checked) => setMenuItemForm((prev) => ({ ...prev, isVeg: checked }))}
+   593→   593→                />
+   594→   594→                <Label htmlFor="item-veg" className="flex items-center gap-1">
+   595→   595→                  <Leaf className="h-3.5 w-3.5 text-green-500" />
+   596→   596→                  Vegetarijansko
+   597→   597→                </Label>
+   598→   598→              </div>
+   599→   599→              <div className="flex items-center gap-2">
+   600→   600→                <Switch
+   601→   601→                  id="item-available"
+   602→   602→                  checked={menuItemForm.isAvailable}
+   603→   603→                  onCheckedChange={(checked) => setMenuItemForm((prev) => ({ ...prev, isAvailable: checked }))}
+   604→   604→                />
+   605→   605→                <Label htmlFor="item-available">Na voljo</Label>
+   606→   606→              </div>
+   607→   607→            </div>
+   608→   608→            <div className="space-y-2">
+   609→   609→              <Label>Oznake</Label>
+   610→   610→              <div className="flex gap-2">
+   611→   611→                <Input
+   612→   612→                  placeholder="npr. bestseller"
+   613→   613→                  value={tagInput}
+   614→   614→                  onChange={(e) => setTagInput(e.target.value)}
+   615→   615→                  onKeyDown={(e) => {
+   616→   616→                    if (e.key === 'Enter') {
+   617→   617→                      e.preventDefault();
+   618→   618→                      handleAddTag();
+   619→   619→                    }
+   620→   620→                  }}
+   621→   621→                />
+   622→   622→                <Button type="button" variant="outline" size="sm" onClick={handleAddTag}>
+   623→   623→                  Dodaj
+   624→   624→                </Button>
+   625→   625→              </div>
+   626→   626→              {menuItemForm.tags && menuItemForm.tags.length > 0 && (
+   627→   627→                <div className="flex flex-wrap gap-1 mt-1">
+   628→   628→                  {menuItemForm.tags.map((tag) => (
+   629→   629→                    <Badge key={tag} variant="secondary" className="text-xs pr-1">
+   630→   630→                      {tag}
+   631→   631→                      <button
+   632→   632→                        className="ml-1 hover:text-red-500"
+   633→   633→                        onClick={() => handleRemoveTag(tag)}
+   634→   634→                      >
+   635→   635→                        <X className="h-3 w-3" />
+   636→   636→                      </button>
+   637→   637→                    </Badge>
+   638→   638→                  ))}
+   639→   639→                </div>
+   640→   640→              )}
+   641→   641→            </div>
+   642→   642→          </div>
+   643→   643→          <DialogFooter>
+   644→   644→            <Button variant="outline" onClick={() => setMenuItemDialogOpen(false)}>
+   645→   645→              Prekliči
+   646→   646→            </Button>
+   647→   647→            <Button
+   648→   648→              className="bg-emerald-600 hover:bg-emerald-700"
+   649→   649→              onClick={handleSaveMenuItem}
+   650→   650→              disabled={!menuItemForm.name.trim() || menuItemForm.price <= 0 || !menuItemForm.course}
+   651→   651→            >
+   652→   652→              {editingItem ? 'Shrani spremembe' : 'Dodaj artikel'}
+   653→   653→            </Button>
+   654→   654→          </DialogFooter>
+   655→   655→        </DialogContent>
+   656→   656→      </Dialog>
+   657→   657→
+   658→   658→      {/* ── Course Dialog ─────────────────────────────────── */}
+   659→   659→      <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
+   660→   660→        <DialogContent className="sm:max-w-[400px]">
+   661→   661→          <DialogHeader>
+   662→   662→            <DialogTitle>{editingCourse ? 'Uredi kategorijo' : 'Nova kategorija'}</DialogTitle>
+   663→   663→            <DialogDescription>
+   664→   664→              {editingCourse ? 'Posodobite podatke kategorije.' : 'Dodajte novo kategorijo v jedilnik.'}
+   665→   665→            </DialogDescription>
+   666→   666→          </DialogHeader>
+   667→   667→          <div className="grid gap-4 py-4">
+   668→   668→            <div className="space-y-2">
+   669→   669→              <Label htmlFor="course-name">Ime kategorije *</Label>
+   670→   670→              <Input
+   671→   671→                id="course-name"
+   672→   672→                placeholder="npr. Predjedi"
+   673→   673→                value={courseForm.name}
+   674→   674→                onChange={(e) => setCourseForm((prev) => ({ ...prev, name: e.target.value }))}
+   675→   675→              />
+   676→   676→            </div>
+   677→   677→            <div className="space-y-2">
+   678→   678→              <Label htmlFor="course-priority">Prioriteta (vrstni red)</Label>
+   679→   679→              <Input
+   680→   680→                id="course-priority"
+   681→   681→                type="number"
+   682→   682→                min={0}
+   683→   683→                value={courseForm.priority || ''}
+   684→   684→                onChange={(e) => setCourseForm((prev) => ({ ...prev, priority: Number(e.target.value) }))}
+   685→   685→              />
+   686→   686→              <p className="text-xs text-muted-foreground">Nižja številka = višje v jedilniku</p>
+   687→   687→            </div>
+   688→   688→          </div>
+   689→   689→          <DialogFooter>
+   690→   690→            <Button variant="outline" onClick={() => setCourseDialogOpen(false)}>
+   691→   691→              Prekliči
+   692→   692→            </Button>
+   693→   693→            <Button
+   694→   694→              className="bg-emerald-600 hover:bg-emerald-700"
+   695→   695→              onClick={handleSaveCourse}
+   696→   696→              disabled={!courseForm.name.trim()}
+   697→   697→            >
+   698→   698→              {editingCourse ? 'Shrani spremembe' : 'Dodaj kategorijo'}
+   699→   699→            </Button>
+   700→   700→          </DialogFooter>
+   701→   701→        </DialogContent>
+   702→   702→      </Dialog>
+   703→   703→
+   704→   704→      {/* ── Delete Confirmation ───────────────────────────── */}
+   705→   705→      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+   706→   706→        <AlertDialogContent>
+   707→   707→          <AlertDialogHeader>
+   708→   708→            <AlertDialogTitle>Potrditev brisanja</AlertDialogTitle>
+   709→   709→            <AlertDialogDescription>
+   710→   710→              Ali ste prepričani, da želite izbrisati {deleteTarget?.type === 'item' ? 'artikel' : 'kategorijo'} &quot;{deleteTarget?.name}&quot;?
+   711→   711→              {deleteTarget?.type === 'course' && ' Izbrišete lahko samo prazne kategorije.'}
+   712→   712→              {' '}Tega dejanja ni mogoče razveljaviti.
+   713→   713→            </AlertDialogDescription>
+   714→   714→          </AlertDialogHeader>
+   715→   715→          <AlertDialogFooter>
+   716→   716→            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Prekliči</AlertDialogCancel>
+   717→   717→            <AlertDialogAction
+   718→   718→              className="bg-red-600 hover:bg-red-700"
+   719→   719→              onClick={() => {
+   720→   720→                if (deleteTarget) {
+   721→   721→                  if (deleteTarget.type === 'item') {
+   722→   722→                    deleteMenuItem(deleteTarget.id);
+   723→   723→                  } else {
+   724→   724→                    deleteMenuCourse(deleteTarget.id);
+   725→   725→                  }
+   726→   726→                }
+   727→   727→                setDeleteTarget(null);
+   728→   728→              }}
+   729→   729→            >
+   730→   730→              Izbriši
+   731→   731→            </AlertDialogAction>
+   732→   732→          </AlertDialogFooter>
+   733→   733→        </AlertDialogContent>
+   734→   734→      </AlertDialog>
+   735→   735→    </div>
+   736→   736→  );
+   737→   737→}
+   738→   738→

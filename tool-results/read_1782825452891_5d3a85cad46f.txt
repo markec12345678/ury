@@ -1,0 +1,1324 @@
+     1→// URY Dashboard Store — Zustand
+     2→// Centralized state management with real-time Socket.io updates
+     3→// Falls back to mock data when no Frappe backend is connected
+     4→
+     5→import { create } from 'zustand';
+     6→import {
+     7→  kpiData,
+     8→  hourlySalesData,
+     9→  recentOrders,
+    10→  tablesData,
+    11→  rooms as mockRooms,
+    12→  kotCards as mockKotCards,
+    13→  plSummary,
+    14→  dailyPLData,
+    15→  expenseBreakdown,
+    16→  plLineItems,
+    17→  apiEndpoints,
+    18→  frontendApps,
+    19→  backendComponents,
+    20→  infrastructureComponents,
+    21→  doctypes,
+    22→  docEventHooks,
+    23→  mockCashiers,
+    24→  mockShiftInfo,
+    25→  menuCourses as mockMenuCourses,
+    26→  menuItems as mockMenuItems,
+    27→  activeOrders as mockActiveOrders,
+    28→  dashboardMetricsByPeriod as mockDashboardMetrics,
+    29→  salesTrendByPeriod as mockSalesTrends,
+    30→  topSellingItems as mockTopSellingItems,
+    31→  paymentMethodSplit as mockPaymentSplit,
+    32→  hourlyHeatmapData as mockHeatmapData,
+    33→  reportDataByPeriod as mockReportData,
+    34→  RESTAURANT_NAME,
+    35→  CURRENCY,
+    36→} from '@/lib/mock-data';
+    37→import type {
+    38→  KPIs,
+    39→  HourlySales,
+    40→  MenuCourse,
+    41→  MenuItem,
+    42→  ActiveOrder,
+    43→  RecentOrder,
+    44→  TableData,
+    45→  Room,
+    46→  KOTCard,
+    47→  KOTStatus,
+    48→  PLSummary,
+    49→  DailyPL,
+    50→  ExpenseBreakdown,
+    51→  PLLineItem,
+    52→  CashierData,
+    53→  ShiftInfo,
+    54→  APIEndpoint,
+    55→  FrontendApp,
+    56→  BackendComponent,
+    57→  InfrastructureComponent,
+    58→  DocEventHook,
+    59→  DashboardMetrics,
+    60→  DashboardPeriod,
+    61→  SalesTrendPoint,
+    62→  TopSellingItem,
+    63→  PaymentMethodSplit,
+    64→  HourlyHeatmapPoint,
+    65→  ReportSummary,
+    66→  ReportPeriod,
+    67→  MenuFormData,
+    68→  CourseFormData,
+    69→} from '@/lib/ury-types';
+    70→export type {
+    71→  KPIs,
+    72→  HourlySales,
+    73→  RecentOrder,
+    74→  TableData,
+    75→  Room,
+    76→  KOTCard,
+    77→  KOTStatus,
+    78→  PLSummary,
+    79→  DailyPL,
+    80→  ExpenseBreakdown,
+    81→  PLLineItem,
+    82→  CashierData,
+    83→  ShiftInfo,
+    84→  APIEndpoint,
+    85→  FrontendApp,
+    86→  BackendComponent,
+    87→  InfrastructureComponent,
+    88→  DocEventHook,
+    89→  TableStatus,
+    90→  ProductionUnit,
+    91→  OrderStatus,
+    92→  OrderType,
+    93→  KOTItem,
+    94→  KOTType,
+    95→  MenuCourse,
+    96→  MenuItem,
+    97→  ActiveOrder,
+    98→  DashboardMetrics,
+    99→  DashboardPeriod,
+   100→  SalesTrendPoint,
+   101→  TopSellingItem,
+   102→  PaymentMethodSplit,
+   103→  HourlyHeatmapPoint,
+   104→  ReportSummary,
+   105→  ReportPeriod,
+   106→  MenuFormData,
+   107→  CourseFormData,
+   108→} from '@/lib/ury-types';
+   109→import {
+   110→  getFrappeClient,
+   111→  saveConfig,
+   112→  loadConfig,
+   113→  clearConfig,
+   114→  type FrappeConfig,
+   115→} from '@/lib/frappe-client';
+   116→import { reconnectSocket } from '@/lib/use-ury-socket';
+   117→
+   118→// ── Auto-refresh interval (ms) ──────────────────────────
+   119→const REFRESH_INTERVAL = typeof window !== 'undefined'
+   120→  ? Number(process.env.NEXT_PUBLIC_REFRESH_INTERVAL) || 30_000
+   121→  : 30_000;
+   122→
+   123→// ── UI Preference Persistence ────────────────────────────
+   124→const UI_PREFS_KEY = 'ury_ui_prefs';
+   125→
+   126→interface UIPreferences {
+   127→  darkMode: boolean;
+   128→  activeTab: string;
+   129→}
+   130→
+   131→function loadUIPrefs(): Partial<UIPreferences> {
+   132→  if (typeof window === 'undefined') return {};
+   133→  try {
+   134→    const raw = localStorage.getItem(UI_PREFS_KEY);
+   135→    if (!raw) return {};
+   136→    return JSON.parse(raw);
+   137→  } catch {
+   138→    return {};
+   139→  }
+   140→}
+   141→
+   142→function saveUIPrefs(prefs: Partial<UIPreferences>): void {
+   143→  if (typeof window === 'undefined') return;
+   144→  try {
+   145→    localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
+   146→  } catch {
+   147→    // ignore storage errors
+   148→  }
+   149→}
+   150→
+   151→// ── Types ────────────────────────────────────────────────
+   152→
+   153→export interface DashboardState {
+   154→  // Connection
+   155→  frappeConfig: FrappeConfig | null;
+   156→  isConnected: boolean;
+   157→  isConnecting: boolean;
+   158→  connectionError: string | null;
+   159→  authenticatedUser: string | null;
+   160→  lastRefreshed: Date | null;
+   161→  isRefreshing: boolean;
+   162→
+   163→  // Data
+   164→  restaurantName: string;
+   165→  currency: string;
+   166→  kpis: KPIs;
+   167→  hourlySales: HourlySales[];
+   168→  recentOrders: RecentOrder[];
+   169→  tables: TableData[];
+   170→  rooms: Room[];
+   171→  kotCards: KOTCard[];
+   172→  plSummary: PLSummary;
+   173→  dailyPL: DailyPL[];
+   174→  expenseBreakdown: ExpenseBreakdown[];
+   175→  plLineItems: PLLineItem[];
+   176→  apiEndpoints: APIEndpoint[];
+   177→  cashiers: CashierData[];
+   178→  shiftInfo: ShiftInfo;
+   179→  frontendApps: FrontendApp[];
+   180→  backendComponents: BackendComponent[];
+   181→  infrastructureComponents: InfrastructureComponent[];
+   182→  doctypes: string[];
+   183→  docEventHooks: DocEventHook[];
+   184→
+   185→  // Menu & Orders
+   186→  menuCourses: MenuCourse[];
+   187→  menuItems: MenuItem[];
+   188→  activeOrders: ActiveOrder[];
+   189→
+   190→  // Advanced Dashboard
+   191→  dashboardPeriod: DashboardPeriod;
+   192→  dashboardMetrics: DashboardMetrics;
+   193→  salesTrend: SalesTrendPoint[];
+   194→  topSellingItems: TopSellingItem[];
+   195→  paymentSplit: PaymentMethodSplit[];
+   196→  hourlyHeatmap: HourlyHeatmapPoint[];
+   197→
+   198→  // Reports
+   199→  reportPeriod: ReportPeriod;
+   200→  reportData: ReportSummary;
+   201→
+   202→  // UI state
+   203→  activeTab: string;
+   204→  sidebarOpen: boolean;
+   205→  darkMode: boolean;
+   206→
+   207→  // Actions
+   208→  setActiveTab: (tab: string) => void;
+   209→  toggleSidebar: () => void;
+   210→  setSidebarOpen: (open: boolean) => void;
+   211→  toggleDarkMode: () => void;
+   212→  setFrappeConfig: (config: FrappeConfig) => void;
+   213→  testConnection: () => Promise<boolean>;
+   214→  login: (username: string, password: string) => Promise<boolean>;
+   215→  logout: () => void;
+   216→  disconnectBackend: () => void;
+   217→  refreshData: () => Promise<void>;
+   218→  refreshKPIs: () => Promise<void>;
+   219→  refreshPL: () => Promise<void>;
+   220→  refreshShift: () => Promise<void>;
+   221→
+   222→  // KOT actions
+   223→  updateKOTStatus: (id: string, status: KOTStatus) => void;
+   224→
+   225→  // Shift actions
+   226→  openShift: (openingBalance: number, openedBy: string) => void;
+   227→  closeShift: () => void;
+   228→  transferShift: (fromCashier: string, toCashier: string) => void;
+   229→
+   230→  // Auto-refresh
+   231→  startAutoRefresh: () => void;
+   232→  stopAutoRefresh: () => void;
+   233→
+   234→  // Toast notifications
+   235→  toasts: ToastMessage[];
+   236→  addToast: (toast: Omit<ToastMessage, 'id'>) => void;
+   237→  removeToast: (id: string) => void;
+   238→
+   239→  // Menu CRUD
+   240→  addMenuItem: (data: MenuFormData) => void;
+   241→  updateMenuItem: (id: string, data: Partial<MenuFormData>) => void;
+   242→  deleteMenuItem: (id: string) => void;
+   243→  toggleMenuItemAvailability: (id: string) => void;
+   244→  addMenuCourse: (data: CourseFormData) => void;
+   245→  updateMenuCourse: (id: string, data: Partial<CourseFormData>) => void;
+   246→  deleteMenuCourse: (id: string) => void;
+   247→
+   248→  // Advanced Dashboard
+   249→  setDashboardPeriod: (period: DashboardPeriod) => void;
+   250→
+   251→  // Reports
+   252→  setReportPeriod: (period: ReportPeriod) => void;
+   253→  exportReportPDF: () => Promise<void>;
+   254→}
+   255→
+   256→// ── Toast Types ──────────────────────────────────────────
+   257→
+   258→export interface ToastMessage {
+   259→  id: string;
+   260→  type: 'success' | 'error' | 'warning' | 'info';
+   261→  title: string;
+   262→  description?: string;
+   263→  duration?: number;
+   264→}
+   265→
+   266→// ── Auto-refresh timer ──────────────────────────────────
+   267→let refreshTimer: ReturnType<typeof setInterval> | null = null;
+   268→
+   269→// ── Toast auto-remove timer ─────────────────────────────
+   270→const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
+   271→
+   272→// ── Store ────────────────────────────────────────────────
+   273→
+   274→export const useURYStore = create<DashboardState>((set, get) => {
+   275→  // Load saved config
+   276→  const savedConfig = typeof window !== 'undefined' ? loadConfig() : null;
+   277→  const savedPrefs = loadUIPrefs();
+   278→
+   279→  // Apply dark mode on load
+   280→  if (savedPrefs.darkMode && typeof document !== 'undefined') {
+   281→    document.documentElement.classList.add('dark');
+   282→  }
+   283→
+   284→  return {
+   285→    // Connection
+   286→    frappeConfig: savedConfig,
+   287→    isConnected: false,
+   288→    isConnecting: false,
+   289→    connectionError: null,
+   290→    authenticatedUser: null,
+   291→    lastRefreshed: null,
+   292→    isRefreshing: false,
+   293→
+   294→    // Data (mock defaults)
+   295→    restaurantName: process.env.NEXT_PUBLIC_RESTAURANT_NAME || RESTAURANT_NAME,
+   296→    currency: process.env.NEXT_PUBLIC_CURRENCY || CURRENCY,
+   297→    kpis: { ...kpiData },
+   298→    hourlySales: [...hourlySalesData],
+   299→    recentOrders: [...recentOrders],
+   300→    tables: [...tablesData],
+   301→    rooms: [...mockRooms],
+   302→    kotCards: [...mockKotCards],
+   303→    plSummary: { ...plSummary },
+   304→    dailyPL: [...dailyPLData],
+   305→    expenseBreakdown: [...expenseBreakdown],
+   306→    plLineItems: [...plLineItems],
+   307→    apiEndpoints: [...apiEndpoints],
+   308→    cashiers: [...mockCashiers],
+   309→    shiftInfo: { ...mockShiftInfo },
+   310→    frontendApps: [...frontendApps],
+   311→    backendComponents: [...backendComponents],
+   312→    infrastructureComponents: [...infrastructureComponents],
+   313→    doctypes: [...doctypes],
+   314→    docEventHooks: [...docEventHooks],
+   315→
+   316→    // Menu & Orders
+   317→    menuCourses: [...mockMenuCourses],
+   318→    menuItems: [...mockMenuItems],
+   319→    activeOrders: [...mockActiveOrders],
+   320→
+   321→    // Advanced Dashboard
+   322→    dashboardPeriod: 'today' as DashboardPeriod,
+   323→    dashboardMetrics: { ...mockDashboardMetrics.today },
+   324→    salesTrend: [...mockSalesTrends.today],
+   325→    topSellingItems: [...mockTopSellingItems],
+   326→    paymentSplit: [...mockPaymentSplit],
+   327→    hourlyHeatmap: [...mockHeatmapData],
+   328→
+   329→    // Reports
+   330→    reportPeriod: 'daily' as ReportPeriod,
+   331→    reportData: { ...mockReportData.daily },
+   332→
+   333→    // UI state (persisted)
+   334→    activeTab: savedPrefs.activeTab || 'overview',
+   335→    sidebarOpen: false,
+   336→    darkMode: savedPrefs.darkMode || false,
+   337→
+   338→    // Toast notifications
+   339→    toasts: [],
+   340→
+   341→    // ── Actions ────────────────────────────────────────
+   342→
+   343→    setActiveTab: (tab) => {
+   344→      set({ activeTab: tab });
+   345→      saveUIPrefs({ activeTab: tab });
+   346→    },
+   347→
+   348→    toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+   349→
+   350→    setSidebarOpen: (open) => set({ sidebarOpen: open }),
+   351→
+   352→    toggleDarkMode: () => set((s) => {
+   353→      const newDark = !s.darkMode;
+   354→      if (typeof document !== 'undefined') {
+   355→        document.documentElement.classList.toggle('dark', newDark);
+   356→      }
+   357→      saveUIPrefs({ darkMode: newDark });
+   358→      return { darkMode: newDark };
+   359→    }),
+   360→
+   361→    setFrappeConfig: (config) => {
+   362→      saveConfig(config);
+   363→      const client = getFrappeClient();
+   364→      client.updateConfig(config);
+   365→      set({ frappeConfig: config, connectionError: null });
+   366→    },
+   367→
+   368→    testConnection: async () => {
+   369→      set({ isConnecting: true, connectionError: null });
+   370→      try {
+   371→        const client = getFrappeClient();
+   372→        const config = get().frappeConfig;
+   373→        if (config) {
+   374→          client.updateConfig(config);
+   375→        }
+   376→        const ok = await client.ping();
+   377→        if (ok) {
+   378→          // Try to get logged-in user
+   379→          const user = await client.getLoggedInUser();
+   380→          set({
+   381→            isConnected: true,
+   382→            isConnecting: false,
+   383→            authenticatedUser: user,
+   384→          });
+   385→          // Reconnect socket to Frappe server
+   386→          reconnectSocket();
+   387→          // Fetch real data from Frappe
+   388→          get().refreshData();
+   389→          // Start auto-refresh
+   390→          get().startAutoRefresh();
+   391→          // Toast notification
+   392→          get().addToast({ type: 'success', title: 'Povezava uspešna', description: `Povezan s Frappe strežnikom${user ? ` kot ${user}` : ''}` });
+   393→          return true;
+   394→        }
+   395→        set({
+   396→          isConnected: false,
+   397→          isConnecting: false,
+   398→          connectionError: 'Ne morem vzpostaviti povezave s Frappe strežnikom',
+   399→        });
+   400→        get().addToast({ type: 'error', title: 'Povezava ni uspela', description: 'Ne morem vzpostaviti povezave s Frappe strežnikom' });
+   401→        return false;
+   402→      } catch (err) {
+   403→        set({
+   404→          isConnected: false,
+   405→          isConnecting: false,
+   406→          connectionError: err instanceof Error ? err.message : 'Napaka povezave',
+   407→        });
+   408→        get().addToast({ type: 'error', title: 'Napaka povezave', description: err instanceof Error ? err.message : 'Napaka povezave' });
+   409→        return false;
+   410→      }
+   411→    },
+   412→
+   413→    login: async (username, password) => {
+   414→      set({ isConnecting: true, connectionError: null });
+   415→      try {
+   416→        const client = getFrappeClient();
+   417→        const config = get().frappeConfig;
+   418→        if (config) {
+   419→          client.updateConfig(config);
+   420→        }
+   421→        const result = await client.login(username, password);
+   422→        set({
+   423→          isConnected: true,
+   424→          isConnecting: false,
+   425→          authenticatedUser: result.user || result.full_name || username,
+   426→        });
+   427→        // Reconnect socket to Frappe server
+   428→        reconnectSocket();
+   429→        // Fetch real data from Frappe
+   430→        get().refreshData();
+   431→        // Start auto-refresh
+   432→        get().startAutoRefresh();
+   433→        get().addToast({ type: 'success', title: 'Prijava uspešna', description: `Dobrodošli, ${result.full_name || username}` });
+   434→        return true;
+   435→      } catch (err) {
+   436→        set({
+   437→          isConnecting: false,
+   438→          connectionError: err instanceof Error ? err.message : 'Prijava ni uspela',
+   439→        });
+   440→        get().addToast({ type: 'error', title: 'Prijava ni uspela', description: err instanceof Error ? err.message : 'Prijava ni uspela' });
+   441→        return false;
+   442→      }
+   443→    },
+   444→
+   445→    logout: () => {
+   446→      get().stopAutoRefresh();
+   447→      set({
+   448→        isConnected: false,
+   449→        authenticatedUser: null,
+   450→        connectionError: null,
+   451→      });
+   452→    },
+   453→
+   454→    disconnectBackend: () => {
+   455→      get().stopAutoRefresh();
+   456→      clearConfig();
+   457→      set({
+   458→        frappeConfig: null,
+   459→        isConnected: false,
+   460→        authenticatedUser: null,
+   461→        connectionError: null,
+   462→        lastRefreshed: null,
+   463→        isRefreshing: false,
+   464→        // Reset to mock data
+   465→        restaurantName: RESTAURANT_NAME,
+   466→        currency: CURRENCY,
+   467→        kpis: { ...kpiData },
+   468→        hourlySales: [...hourlySalesData],
+   469→        recentOrders: [...recentOrders],
+   470→        tables: [...tablesData],
+   471→        rooms: [...mockRooms],
+   472→        kotCards: [...mockKotCards],
+   473→        plSummary: { ...plSummary },
+   474→        dailyPL: [...dailyPLData],
+   475→        expenseBreakdown: [...expenseBreakdown],
+   476→        plLineItems: [...plLineItems],
+   477→        cashiers: [...mockCashiers],
+   478→        shiftInfo: { ...mockShiftInfo },
+   479→        menuCourses: [...mockMenuCourses],
+   480→        menuItems: [...mockMenuItems],
+   481→        activeOrders: [...mockActiveOrders],
+   482→      });
+   483→    },
+   484→
+   485→    // ── Main Data Refresh ──────────────────────────────
+   486→
+   487→    refreshData: async () => {
+   488→      const { isConnected } = get();
+   489→      if (!isConnected) return;
+   490→
+   491→      set({ isRefreshing: true });
+   492→
+   493→      try {
+   494→        const client = getFrappeClient();
+   495→
+   496→        // Run all fetches in parallel for better performance
+   497→        const [
+   498→          kotResult,
+   499→          tablesResult,
+   500→          invoicesResult,
+   501→          roomsResult,
+   502→          plResult,
+   503→          shiftResult,
+   504→        ] = await Promise.allSettled([
+   505→          client.getKOTList(),
+   506→          client.getRestaurantTables(),
+   507→          client.getInvoiceForCashier('Paid', '', 20, 0),
+   508→          client.getRestaurantRooms(),
+   509→          client.getDailyPL(),
+   510→          client.getPOSOpeningEntry('Open'),
+   511→        ]);
+   512→
+   513→        // ── Process KOTs ────────────────────────────────
+   514→        if (kotResult.status === 'fulfilled' && kotResult.value?.data) {
+   515→          const transformedKOTs: KOTCard[] = Array.isArray(kotResult.value.data)
+   516→            ? kotResult.value.data.map((kot: Record<string, unknown>) => ({
+   517→                id: String(kot.name || kot.id || ''),
+   518→                orderNo: String(kot.order_no || kot.orderNo || ''),
+   519→                table: String(kot.restaurant_table || kot.table || ''),
+   520→                items: Array.isArray(kot.items)
+   521→                  ? kot.items.map((item: Record<string, unknown>) => ({
+   522→                      name: String(item.item_name || item.name || ''),
+   523→                      qty: Number(item.qty || 1),
+   524→                      course: item.course ? String(item.course) : undefined,
+   525→                      comments: item.comments ? String(item.comments) : undefined,
+   526→                    }))
+   527→                  : [],
+   528→                timePlaced: String(kot.time_placed || kot.timePlaced || ''),
+   529→                elapsed: Number(kot.elapsed || 0),
+   530→                status: (kot.status as KOTStatus) || 'new',
+   531→                production: String(kot.production_unit || kot.production || 'Kuhinja 1') as KOTCard['production'],
+   532→                kotType: (kot.kot_type || kot.kotType || 'New Order') as KOTCard['kotType'],
+   533→              }))
+   534→            : [];
+   535→          set({ kotCards: transformedKOTs });
+   536→        }
+   537→
+   538→        // ── Process Tables ──────────────────────────────
+   539→        if (tablesResult.status === 'fulfilled' && tablesResult.value?.data) {
+   540→          const transformedTables: TableData[] = Array.isArray(tablesResult.value.data)
+   541→            ? tablesResult.value.data.map((t: Record<string, unknown>) => ({
+   542→                id: Number(t.name || t.id || 0),
+   543→                room: String(t.room || ''),
+   544→                status: (t.status as TableData['status']) || 'free',
+   545→                pax: Number(t.no_of_seats || t.pax || 0),
+   546→                occupiedSince: t.occupied_since ? String(t.occupied_since) : undefined,
+   547→                orderItems: t.order_items ? String(t.order_items).split(', ') : undefined,
+   548→                orderTotal: t.order_total ? Number(t.order_total) : undefined,
+   549→                customer: t.customer ? String(t.customer) : undefined,
+   550→              }))
+   551→            : [];
+   552→          set({ tables: transformedTables });
+   553→        }
+   554→
+   555→        // ── Process Invoices → Recent Orders + KPIs ─────
+   556→        if (invoicesResult.status === 'fulfilled' && invoicesResult.value?.data) {
+   557→          const invoices = Array.isArray(invoicesResult.value.data)
+   558→            ? invoicesResult.value.data
+   559→            : [];
+   560→
+   561→          // Recent orders
+   562→          const transformedOrders: RecentOrder[] = invoices.map((inv: Record<string, unknown>) => ({
+   563→            invoice: String(inv.name || ''),
+   564→            customer: String(inv.customer || ''),
+   565→            type: (inv.type === 'Dine-in' ? 'Dine-in' : inv.type === 'Takeaway' ? 'Takeaway' : 'Delivery') as RecentOrder['type'],
+   566→            amount: Number(inv.grand_total || 0),
+   567→            status: (inv.status as RecentOrder['status']) || 'Paid',
+   568→            time: inv.posting_time ? String(inv.posting_time).slice(0, 5) : '',
+   569→          }));
+   570→          set({ recentOrders: transformedOrders });
+   571→
+   572→          // Compute KPIs from invoices
+   573→          const totalSales = invoices.reduce((sum: number, inv: Record<string, unknown>) => sum + Number(inv.grand_total || 0), 0);
+   574→          const totalOrders = invoices.length;
+   575→          const occupiedTables = invoices.filter((inv: Record<string, unknown>) => inv.type === 'Dine-in').length;
+   576→          const allTables = get().tables;
+   577→          set({
+   578→            kpis: {
+   579→              dailySales: totalSales,
+   580→              totalOrders,
+   581→              avgBill: totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0,
+   582→              occupiedTables,
+   583→              totalTables: allTables.length || 32,
+   584→            },
+   585→          });
+   586→
+   587→          // Compute hourly sales from invoices
+   588→          const hourMap = new Map<string, { dineIn: number; takeaway: number }>();
+   589→          // Initialize all hours from 11:00 to 22:00
+   590→          for (let h = 11; h <= 22; h++) {
+   591→            const key = `${String(h).padStart(2, '0')}:00`;
+   592→            hourMap.set(key, { dineIn: 0, takeaway: 0 });
+   593→          }
+   594→          // Aggregate invoice totals by hour
+   595→          invoices.forEach((inv: Record<string, unknown>) => {
+   596→            const timeStr = String(inv.posting_time || '').slice(0, 5);
+   597→            if (!timeStr) return;
+   598→            const hour = timeStr.split(':')[0];
+   599→            const key = `${hour}:00`;
+   600→            const entry = hourMap.get(key);
+   601→            if (entry) {
+   602→              const amount = Number(inv.grand_total || 0);
+   603→              if (inv.type === 'Takeaway' || inv.type === 'Delivery') {
+   604→                entry.takeaway += amount;
+   605→              } else {
+   606→                entry.dineIn += amount;
+   607→              }
+   608→            }
+   609→          });
+   610→          const hourlyData: HourlySales[] = Array.from(hourMap.entries()).map(([hour, data]) => ({
+   611→            hour,
+   612→            dineIn: data.dineIn,
+   613→            takeaway: data.takeaway,
+   614→          }));
+   615→          if (hourlyData.length > 0) set({ hourlySales: hourlyData });
+   616→        }
+   617→
+   618→        // ── Process Rooms ───────────────────────────────
+   619→        if (roomsResult.status === 'fulfilled' && roomsResult.value?.data) {
+   620→          const transformedRooms: Room[] = Array.isArray(roomsResult.value.data)
+   621→            ? roomsResult.value.data.map((r: Record<string, unknown>) => ({
+   622→                id: String(r.name || r.id || '').toLowerCase().replace(/\s+/g, '-'),
+   623→                name: String(r.room_name || r.name || ''),
+   624→                tables: Number(r.no_of_tables || r.tables || 0),
+   625→              }))
+   626→            : [];
+   627→          if (transformedRooms.length > 0) set({ rooms: transformedRooms });
+   628→        }
+   629→
+   630→        // ── Process P&L ─────────────────────────────────
+   631→        if (plResult.status === 'fulfilled' && plResult.value?.data) {
+   632→          const plDocs = Array.isArray(plResult.value.data) ? plResult.value.data : [];
+   633→          if (plDocs.length > 0) {
+   634→            // Use the latest P&L document
+   635→            const latest = plDocs[0] as Record<string, unknown>;
+   636→
+   637→            // P&L Summary
+   638→            const grossSales = Number(latest.gross_sales || latest.total_revenue || 0);
+   639→            const cogs = Number(latest.cogs || latest.cost_of_goods_sold || 0);
+   640→            const grossProfit = grossSales - cogs;
+   641→            const netProfit = Number(latest.net_profit || grossProfit - Number(latest.total_expenses || 0));
+   642→            set({
+   643→              plSummary: { grossSales, cogs, grossProfit, netProfit },
+   644→            });
+   645→
+   646→            // Daily P&L from multiple docs
+   647→            const dailyData: DailyPL[] = plDocs.slice(0, 7).reverse().map((doc: Record<string, unknown>) => {
+   648→              const date = String(doc.date || doc.posting_date || '');
+   649→              const dayName = date
+   650→                ? new Date(date).toLocaleDateString('sl-SI', { weekday: 'short' })
+   651→                : '';
+   652→              return {
+   653→                day: dayName,
+   654→                revenue: Number(doc.gross_sales || doc.total_revenue || 0),
+   655→                costs: Number(doc.cogs || doc.total_expenses || 0),
+   656→              };
+   657→            });
+   658→            if (dailyData.length > 0) set({ dailyPL: dailyData });
+   659→
+   660→            // Expense breakdown — try to extract from P&L doc
+   661→            const breakdownData: ExpenseBreakdown[] = [];
+   662→            if (latest.breakup || latest.expense_breakdown) {
+   663→              const items = Array.isArray(latest.breakup || latest.expense_breakdown)
+   664→                ? (latest.breakup || latest.expense_breakdown) as Record<string, unknown>[]
+   665→                : [];
+   666→              const colors = ['#ef4444', '#f97316', '#eab308', '#8b5cf6', '#10b981'];
+   667→              items.forEach((item, i) => {
+   668→                breakdownData.push({
+   669→                  name: String(item.expense_type || item.category || item.name || ''),
+   670→                  value: Number(item.percentage || item.value || 0),
+   671→                  color: colors[i % colors.length],
+   672→                });
+   673→              });
+   674→            }
+   675→            if (breakdownData.length > 0) set({ expenseBreakdown: breakdownData });
+   676→
+   677→            // Line items
+   678→            const lines: PLLineItem[] = [];
+   679→            if (latest.breakup || latest.line_items) {
+   680→              const items = Array.isArray(latest.breakup || latest.line_items)
+   681→                ? (latest.breakup || latest.line_items) as Record<string, unknown>[]
+   682→                : [];
+   683→              items.forEach((item) => {
+   684→                lines.push({
+   685→                  label: String(item.label || item.expense_type || item.name || ''),
+   686→                  value: Number(item.amount || item.value || 0),
+   687→                  bold: Boolean(item.is_total || item.bold || false),
+   688→                });
+   689→              });
+   690→            }
+   691→            if (lines.length > 0) set({ plLineItems: lines });
+   692→          }
+   693→        }
+   694→
+   695→        // ── Process Shift / Cashier ─────────────────────
+   696→        if (shiftResult.status === 'fulfilled' && shiftResult.value?.data) {
+   697→          const openings = Array.isArray(shiftResult.value.data) ? shiftResult.value.data : [];
+   698→          if (openings.length > 0) {
+   699→            const latestOpening = openings[0] as Record<string, unknown>;
+   700→            const openedAt = String(latestOpening.period_start || latestOpening.opening_time || '').slice(0, 5);
+   701→            const openedBy = String(latestOpening.user || latestOpening.opened_by || '');
+   702→            const openingBalance = Number(latestOpening.opening_amount || latestOpening.balance_details?.[0]?.amount || 0);
+   703→
+   704→            set({
+   705→              shiftInfo: {
+   706→                status: 'open',
+   707→                openedAt: openedAt || '09:00',
+   708→                closesAt: '23:00',
+   709→                openedBy: openedBy || 'Administrator',
+   710→                openingBalance,
+   711→              },
+   712→            });
+   713→
+   714→            // Build cashier data from POS opening entry
+   715→            const cashierList: CashierData[] = [];
+   716→            const balanceRows = Array.isArray(latestOpening.balance_details)
+   717→              ? latestOpening.balance_details as Record<string, unknown>[]
+   718→              : [];
+   719→            if (balanceRows.length > 0) {
+   720→              balanceRows.forEach((row) => {
+   721→                cashierList.push({
+   722→                  name: String(row.user || openedBy || 'Cashier'),
+   723→                  role: 'URY Cashier',
+   724→                  openedAt: openedAt || '09:00',
+   725→                  status: 'active',
+   726→                  openingBalance: Number(row.opening_amount || 0),
+   727→                  currentTotal: Number(row.closing_amount || row.opening_amount || 0),
+   728→                  cashPayments: Number(row.cash_amount || 0),
+   729→                  cardPayments: Number(row.card_amount || 0),
+   730→                  upiPayments: Number(row.upi_amount || 0),
+   731→                  ordersProcessed: Number(row.orders_processed || 0),
+   732→                  room: String(row.room || 'Glavna dvorana'),
+   733→                });
+   734→              });
+   735→            }
+   736→            if (cashierList.length > 0) set({ cashiers: cashierList });
+   737→          } else {
+   738→            // No open shift found
+   739→            set({
+   740→              shiftInfo: {
+   741→                status: 'closed',
+   742→                openedAt: '',
+   743→                closesAt: '',
+   744→                openedBy: '',
+   745→                openingBalance: 0,
+   746→              },
+   747→            });
+   748→          }
+   749→        }
+   750→
+   751→        // Mark refresh time
+   752→        set({ lastRefreshed: new Date(), isRefreshing: false });
+   753→      } catch (err) {
+   754→        console.error('Failed to refresh data:', err);
+   755→        set({ isRefreshing: false });
+   756→      }
+   757→    },
+   758→
+   759→    // ── Targeted Refresh: KPIs only ────────────────────
+   760→    refreshKPIs: async () => {
+   761→      const { isConnected } = get();
+   762→      if (!isConnected) return;
+   763→
+   764→      try {
+   765→        const client = getFrappeClient();
+   766→        const invoicesResult = await client.getInvoiceForCashier('Paid', '', 50, 0).catch(() => null);
+   767→        if (invoicesResult?.data && Array.isArray(invoicesResult.data)) {
+   768→          const invoices = invoicesResult.data as Record<string, unknown>[];
+   769→          const totalSales = invoices.reduce((sum, inv) => sum + Number(inv.grand_total || 0), 0);
+   770→          const totalOrders = invoices.length;
+   771→          const occupiedTables = invoices.filter((inv) => inv.type === 'Dine-in').length;
+   772→          const allTables = get().tables;
+   773→          set({
+   774→            kpis: {
+   775→              dailySales: totalSales,
+   776→              totalOrders,
+   777→              avgBill: totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0,
+   778→              occupiedTables,
+   779→              totalTables: allTables.length || 32,
+   780→            },
+   781→          });
+   782→        }
+   783→      } catch (err) {
+   784→        console.error('Failed to refresh KPIs:', err);
+   785→      }
+   786→    },
+   787→
+   788→    // ── Targeted Refresh: P&L only ─────────────────────
+   789→    refreshPL: async () => {
+   790→      const { isConnected } = get();
+   791→      if (!isConnected) return;
+   792→
+   793→      try {
+   794→        const client = getFrappeClient();
+   795→        const plResult = await client.getDailyPL().catch(() => null);
+   796→        if (plResult?.data && Array.isArray(plResult.data)) {
+   797→          const plDocs = plResult.data as Record<string, unknown>[];
+   798→          if (plDocs.length > 0) {
+   799→            const latest = plDocs[0];
+   800→            const grossSales = Number(latest.gross_sales || latest.total_revenue || 0);
+   801→            const cogs = Number(latest.cogs || latest.cost_of_goods_sold || 0);
+   802→            const grossProfit = grossSales - cogs;
+   803→            const netProfit = Number(latest.net_profit || grossProfit - Number(latest.total_expenses || 0));
+   804→            set({ plSummary: { grossSales, cogs, grossProfit, netProfit } });
+   805→
+   806→            const dailyData: DailyPL[] = plDocs.slice(0, 7).reverse().map((doc) => {
+   807→              const date = String(doc.date || doc.posting_date || '');
+   808→              return {
+   809→                day: date ? new Date(date).toLocaleDateString('sl-SI', { weekday: 'short' }) : '',
+   810→                revenue: Number(doc.gross_sales || doc.total_revenue || 0),
+   811→                costs: Number(doc.cogs || doc.total_expenses || 0),
+   812→              };
+   813→            });
+   814→            if (dailyData.length > 0) set({ dailyPL: dailyData });
+   815→          }
+   816→        }
+   817→      } catch (err) {
+   818→        console.error('Failed to refresh P&L:', err);
+   819→      }
+   820→    },
+   821→
+   822→    // ── Targeted Refresh: Shift only ───────────────────
+   823→    refreshShift: async () => {
+   824→      const { isConnected } = get();
+   825→      if (!isConnected) return;
+   826→
+   827→      try {
+   828→        const client = getFrappeClient();
+   829→        const shiftResult = await client.getPOSOpeningEntry('Open').catch(() => null);
+   830→        if (shiftResult?.data && Array.isArray(shiftResult.data)) {
+   831→          const openings = shiftResult.data as Record<string, unknown>[];
+   832→          if (openings.length > 0) {
+   833→            const latestOpening = openings[0];
+   834→            const openedAt = String(latestOpening.period_start || latestOpening.opening_time || '').slice(0, 5);
+   835→            const openedBy = String(latestOpening.user || latestOpening.opened_by || '');
+   836→            const openingBalance = Number(latestOpening.opening_amount || 0);
+   837→            set({
+   838→              shiftInfo: {
+   839→                status: 'open',
+   840→                openedAt: openedAt || '09:00',
+   841→                closesAt: '23:00',
+   842→                openedBy: openedBy || 'Administrator',
+   843→                openingBalance,
+   844→              },
+   845→            });
+   846→          } else {
+   847→            set({
+   848→              shiftInfo: {
+   849→                status: 'closed',
+   850→                openedAt: '',
+   851→                closesAt: '',
+   852→                openedBy: '',
+   853→                openingBalance: 0,
+   854→              },
+   855→            });
+   856→          }
+   857→        }
+   858→      } catch (err) {
+   859→        console.error('Failed to refresh shift:', err);
+   860→      }
+   861→    },
+   862→
+   863→    updateKOTStatus: (id, status) => {
+   864→      set((s) => ({
+   865→        kotCards: s.kotCards.map((c) =>
+   866→          c.id === id ? { ...c, status } : c
+   867→        ),
+   868→      }));
+   869→
+   870→      // If connected to backend, also push the status change
+   871→      const { isConnected } = get();
+   872→      if (isConnected) {
+   873→        const client = getFrappeClient();
+   874→        if (status === 'served') {
+   875→          client.serveKOT(id, new Date().toISOString()).catch(console.error);
+   876→        } else if (status === 'preparing') {
+   877→          // Could call a confirm/update endpoint
+   878→        }
+   879→      }
+   880→    },
+   881→
+   882→    openShift: (openingBalance, openedBy) => {
+   883→      const now = new Date();
+   884→      const timeStr = now.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+   885→      set({
+   886→        shiftInfo: {
+   887→          status: 'open',
+   888→          openedAt: timeStr,
+   889→          closesAt: '23:00',
+   890→          openedBy,
+   891→          openingBalance,
+   892→        },
+   893→      });
+   894→
+   895→      // If connected, call Frappe POS Opening
+   896→      if (get().isConnected) {
+   897→        const client = getFrappeClient();
+   898→        client.posOpening().catch(console.error);
+   899→      }
+   900→    },
+   901→
+   902→    closeShift: () => {
+   903→      set((s) => ({
+   904→        shiftInfo: {
+   905→          ...s.shiftInfo,
+   906→          status: 'closed',
+   907→        },
+   908→      }));
+   909→    },
+   910→
+   911→    transferShift: (fromCashier) => {
+   912→      set((s) => ({
+   913→        cashiers: s.cashiers.map((c) =>
+   914→          c.name === fromCashier ? { ...c, status: 'closing' as const } : c
+   915→        ),
+   916→      }));
+   917→    },
+   918→
+   919→    // ── Auto-Refresh ───────────────────────────────────
+   920→
+   921→    startAutoRefresh: () => {
+   922→      if (refreshTimer) return; // Already running
+   923→      refreshTimer = setInterval(() => {
+   924→        const { isConnected } = get();
+   925→        if (isConnected) {
+   926→          get().refreshData();
+   927→        } else {
+   928→          get().stopAutoRefresh();
+   929→        }
+   930→      }, REFRESH_INTERVAL);
+   931→    },
+   932→
+   933→    stopAutoRefresh: () => {
+   934→      if (refreshTimer) {
+   935→        clearInterval(refreshTimer);
+   936→        refreshTimer = null;
+   937→      }
+   938→    },
+   939→
+   940→    // ── Toast Notifications ──────────────────────────────
+   941→
+   942→    addToast: (toast) => {
+   943→      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+   944→      const duration = toast.duration ?? 5000;
+   945→      set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
+   946→
+   947→      // Auto-remove after duration
+   948→      const timer = setTimeout(() => {
+   949→        get().removeToast(id);
+   950→        toastTimers.delete(id);
+   951→      }, duration);
+   952→      toastTimers.set(id, timer);
+   953→    },
+   954→
+   955→    removeToast: (id) => {
+   956→      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+   957→      const timer = toastTimers.get(id);
+   958→      if (timer) {
+   959→        clearTimeout(timer);
+   960→        toastTimers.delete(id);
+   961→      }
+   962→    },
+   963→
+   964→    // ── Menu CRUD Actions ──────────────────────────────
+   965→
+   966→    addMenuItem: (data) => {
+   967→      const id = `mi-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+   968→      const course = get().menuCourses.find((c) => c.id === data.course);
+   969→      const newItem: MenuItem = {
+   970→        id,
+   971→        name: data.name,
+   972→        nameHi: data.nameLocal,
+   973→        course: data.course,
+   974→        courseName: course?.name || data.course,
+   975→        price: data.price,
+   976→        description: data.description,
+   977→        isVeg: data.isVeg,
+   978→        isAvailable: data.isAvailable,
+   979→        modifiers: data.modifiers,
+   980→        tags: data.tags,
+   981→      };
+   982→      set((s) => ({
+   983→        menuItems: [...s.menuItems, newItem],
+   984→        menuCourses: s.menuCourses.map((c) =>
+   985→          c.id === data.course ? { ...c, itemCount: c.itemCount + 1 } : c
+   986→        ),
+   987→      }));
+   988→      get().addToast({ type: 'success', title: 'Artikel dodan', description: `${data.name} je bil uspešno dodan v jedilnik` });
+   989→    },
+   990→
+   991→    updateMenuItem: (id, data) => {
+   992→      set((s) => ({
+   993→        menuItems: s.menuItems.map((item) => {
+   994→          if (item.id !== id) return item;
+   995→          const course = data.course
+   996→            ? s.menuCourses.find((c) => c.id === data.course)
+   997→            : null;
+   998→          return {
+   999→            ...item,
+  1000→            ...(data.name && { name: data.name }),
+  1001→            ...(data.nameLocal !== undefined && { nameHi: data.nameLocal }),
+  1002→            ...(data.course && { course: data.course, courseName: course?.name || data.course }),
+  1003→            ...(data.price !== undefined && { price: data.price }),
+  1004→            ...(data.description !== undefined && { description: data.description }),
+  1005→            ...(data.isVeg !== undefined && { isVeg: data.isVeg }),
+  1006→            ...(data.isAvailable !== undefined && { isAvailable: data.isAvailable }),
+  1007→            ...(data.tags && { tags: data.tags }),
+  1008→            ...(data.modifiers && { modifiers: data.modifiers }),
+  1009→          };
+  1010→        }),
+  1011→      }));
+  1012→      get().addToast({ type: 'success', title: 'Artikel posodobljen', description: 'Spremembe so bile shranjene' });
+  1013→    },
+  1014→
+  1015→    deleteMenuItem: (id) => {
+  1016→      const item = get().menuItems.find((i) => i.id === id);
+  1017→      set((s) => ({
+  1018→        menuItems: s.menuItems.filter((i) => i.id !== id),
+  1019→        menuCourses: item
+  1020→          ? s.menuCourses.map((c) =>
+  1021→              c.id === item.course ? { ...c, itemCount: Math.max(0, c.itemCount - 1) } : c
+  1022→            )
+  1023→          : s.menuCourses,
+  1024→      }));
+  1025→      get().addToast({ type: 'info', title: 'Artikel izbrisan', description: item ? `${item.name} je bil odstranjen iz jedilnika` : 'Artikel je bil odstranjen' });
+  1026→    },
+  1027→
+  1028→    toggleMenuItemAvailability: (id) => {
+  1029→      set((s) => ({
+  1030→        menuItems: s.menuItems.map((item) =>
+  1031→          item.id === id ? { ...item, isAvailable: !item.isAvailable } : item
+  1032→        ),
+  1033→      }));
+  1034→    },
+  1035→
+  1036→    addMenuCourse: (data) => {
+  1037→      const id = `course-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  1038→      const newCourse: MenuCourse = {
+  1039→        id,
+  1040→        name: data.name,
+  1041→        priority: data.priority,
+  1042→        itemCount: 0,
+  1043→      };
+  1044→      set((s) => ({
+  1045→        menuCourses: [...s.menuCourses, newCourse].sort((a, b) => a.priority - b.priority),
+  1046→      }));
+  1047→      get().addToast({ type: 'success', title: 'Kategorija dodana', description: `${data.name} je bila uspešno dodana` });
+  1048→    },
+  1049→
+  1050→    updateMenuCourse: (id, data) => {
+  1051→      set((s) => ({
+  1052→        menuCourses: s.menuCourses
+  1053→          .map((c) => (c.id === id ? { ...c, ...data } : c))
+  1054→          .sort((a, b) => a.priority - b.priority),
+  1055→        // Also update courseName in menu items if name changed
+  1056→        menuItems: data.name
+  1057→          ? s.menuItems.map((item) =>
+  1058→              item.course === id ? { ...item, courseName: data.name! } : item
+  1059→            )
+  1060→          : s.menuItems,
+  1061→      }));
+  1062→      get().addToast({ type: 'success', title: 'Kategorija posodobljena', description: 'Spremembe so bile shranjene' });
+  1063→    },
+  1064→
+  1065→    deleteMenuCourse: (id) => {
+  1066→      const course = get().menuCourses.find((c) => c.id === id);
+  1067→      const itemsInCourse = get().menuItems.filter((i) => i.course === id).length;
+  1068→      if (itemsInCourse > 0) {
+  1069→        get().addToast({ type: 'warning', title: 'Ni mogoče izbrisati', description: `Kategorija "${course?.name}" vsebuje ${itemsInCourse} artiklov. Najprej premaknite ali izbrišite artikle.` });
+  1070→        return;
+  1071→      }
+  1072→      set((s) => ({
+  1073→        menuCourses: s.menuCourses.filter((c) => c.id !== id),
+  1074→      }));
+  1075→      get().addToast({ type: 'info', title: 'Kategorija izbrisana', description: course ? `${course.name} je bila odstranjena` : 'Kategorija je bila odstranjena' });
+  1076→    },
+  1077→
+  1078→    // ── Advanced Dashboard Actions ──────────────────────
+  1079→
+  1080→    setDashboardPeriod: (period) => {
+  1081→      const metrics = mockDashboardMetrics[period] || mockDashboardMetrics.today;
+  1082→      const trend = mockSalesTrends[period] || mockSalesTrends.today;
+  1083→      set({
+  1084→        dashboardPeriod: period,
+  1085→        dashboardMetrics: { ...metrics },
+  1086→        salesTrend: [...trend],
+  1087→      });
+  1088→    },
+  1089→
+  1090→    // ── Report Actions ─────────────────────────────────
+  1091→
+  1092→    setReportPeriod: (period) => {
+  1093→      const data = mockReportData[period] || mockReportData.daily;
+  1094→      set({
+  1095→        reportPeriod: period,
+  1096→        reportData: { ...data },
+  1097→      });
+  1098→    },
+  1099→
+  1100→    exportReportPDF: async () => {
+  1101→      const { reportData, currency, restaurantName } = get();
+  1102→      const { jsPDF } = await import('jspdf');
+  1103→      const autoTable = (await import('jspdf-autotable')).default;
+  1104→
+  1105→      const doc = new jsPDF();
+  1106→      const periodLabels: Record<string, string> = {
+  1107→        daily: 'Dnevno poročilo',
+  1108→        weekly: 'Tedensko poročilo',
+  1109→        monthly: 'Mesečno poročilo',
+  1110→      };
+  1111→
+  1112→      // Title
+  1113→      doc.setFontSize(20);
+  1114→      doc.setTextColor(5, 150, 105);
+  1115→      doc.text(periodLabels[reportData.period] || 'Poročilo', 14, 22);
+  1116→
+  1117→      // Restaurant name and date
+  1118→      doc.setFontSize(12);
+  1119→      doc.setTextColor(100, 100, 100);
+  1120→      doc.text(restaurantName, 14, 30);
+  1121→      doc.setFontSize(10);
+  1122→      doc.text(`Obdobje: ${reportData.periodLabel}`, 14, 36);
+  1123→      doc.text(`Datum: ${new Date().toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`, 14, 42);
+  1124→
+  1125→      // Summary Table
+  1126→      doc.setFontSize(14);
+  1127→      doc.setTextColor(30, 30, 30);
+  1128→      doc.text('Povzetek', 14, 54);
+  1129→
+  1130→      autoTable(doc, {
+  1131→        startY: 57,
+  1132→        head: [['Postavka', 'Vrednost']],
+  1133→        body: [
+  1134→          ['Skupni prihodki', `${currency}${reportData.totalRevenue.toLocaleString('en-IN')}`],
+  1135→          ['Skupna naročila', reportData.totalOrders.toString()],
+  1136→          ['Povprečni račun', `${currency}${reportData.avgOrderValue.toLocaleString('en-IN')}`],
+  1137→          ['Popusti', `-${currency}${reportData.totalDiscounts.toLocaleString('en-IN')}`],
+  1138→          ['Preklici', reportData.totalCancellations.toString()],
+  1139→          ['Neto prihodki', `${currency}${reportData.netRevenue.toLocaleString('en-IN')}`],
+  1140→        ],
+  1141→        theme: 'striped',
+  1142→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+  1143→        bodyStyles: { fontSize: 10 },
+  1144→        alternateRowStyles: { fillColor: [240, 253, 244] },
+  1145→        columnStyles: {
+  1146→          0: { fontStyle: 'bold', cellWidth: 80 },
+  1147→          1: { halign: 'right', cellWidth: 60 },
+  1148→        },
+  1149→        didParseCell: (data) => {
+  1150→          if (data.section === 'body' && data.column.index === 1) {
+  1151→            const text = data.cell.raw as string;
+  1152→            if (text.startsWith('-')) {
+  1153→              data.cell.styles.textColor = [220, 38, 38];
+  1154→            }
+  1155→            if (data.row.index === 5) {
+  1156→              data.cell.styles.fontStyle = 'bold';
+  1157→              data.cell.styles.textColor = [5, 150, 105];
+  1158→            }
+  1159→          }
+  1160→        },
+  1161→      });
+  1162→
+  1163→      // Top Selling Items
+  1164→      const summaryEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 120;
+  1165→      doc.setFontSize(14);
+  1166→      doc.setTextColor(30, 30, 30);
+  1167→      doc.text('Najbolj prodajani artikli', 14, summaryEndY + 15);
+  1168→
+  1169→      autoTable(doc, {
+  1170→        startY: summaryEndY + 18,
+  1171→        head: [['Artikel', 'Količina', 'Prihodki', 'Kategorija']],
+  1172→        body: reportData.topItems.map((item) => [
+  1173→          item.name,
+  1174→          item.quantity.toString(),
+  1175→          `${currency}${item.revenue.toLocaleString('en-IN')}`,
+  1176→          item.course,
+  1177→        ]),
+  1178→        theme: 'striped',
+  1179→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+  1180→        bodyStyles: { fontSize: 9 },
+  1181→        alternateRowStyles: { fillColor: [240, 253, 244] },
+  1182→      });
+  1183→
+  1184→      // Payment Split (new page)
+  1185→      doc.addPage();
+  1186→      doc.setFontSize(14);
+  1187→      doc.setTextColor(30, 30, 30);
+  1188→      doc.text('Razdelitev plačil', 14, 22);
+  1189→
+  1190→      autoTable(doc, {
+  1191→        startY: 28,
+  1192→        head: [['Metoda', 'Število', 'Znesek']],
+  1193→        body: reportData.paymentSplit.map((p) => [
+  1194→          p.method,
+  1195→          p.count.toString(),
+  1196→          `${currency}${p.amount.toLocaleString('en-IN')}`,
+  1197→        ]),
+  1198→        theme: 'striped',
+  1199→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+  1200→        bodyStyles: { fontSize: 10 },
+  1201→        alternateRowStyles: { fillColor: [240, 253, 244] },
+  1202→      });
+  1203→
+  1204→      // Order Type Split
+  1205→      const payEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 80;
+  1206→      doc.setFontSize(14);
+  1207→      doc.setTextColor(30, 30, 30);
+  1208→      doc.text('Razdelitev po tipu naročila', 14, payEndY + 15);
+  1209→
+  1210→      autoTable(doc, {
+  1211→        startY: payEndY + 18,
+  1212→        head: [['Tip', 'Število', 'Prihodki']],
+  1213→        body: reportData.orderTypeSplit.map((o) => [
+  1214→          o.type,
+  1215→          o.count.toString(),
+  1216→          `${currency}${o.revenue.toLocaleString('en-IN')}`,
+  1217→        ]),
+  1218→        theme: 'striped',
+  1219→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+  1220→        bodyStyles: { fontSize: 10 },
+  1221→        alternateRowStyles: { fillColor: [240, 253, 244] },
+  1222→      });
+  1223→
+  1224→      // Course Revenue
+  1225→      const otEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 140;
+  1226→      doc.setFontSize(14);
+  1227→      doc.setTextColor(30, 30, 30);
+  1228→      doc.text('Prihodki po kategorijah', 14, otEndY + 15);
+  1229→
+  1230→      autoTable(doc, {
+  1231→        startY: otEndY + 18,
+  1232→        head: [['Kategorija', 'Prihodki', 'Artikli']],
+  1233→        body: reportData.courseRevenue.map((c) => [
+  1234→          c.course,
+  1235→          `${currency}${c.revenue.toLocaleString('en-IN')}`,
+  1236→          c.items.toString(),
+  1237→        ]),
+  1238→        theme: 'striped',
+  1239→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+  1240→        bodyStyles: { fontSize: 10 },
+  1241→        alternateRowStyles: { fillColor: [240, 253, 244] },
+  1242→      });
+  1243→
+  1244→      // Daily Breakdown (new page)
+  1245→      if (reportData.dailyBreakdown.length > 0) {
+  1246→        doc.addPage();
+  1247→        doc.setFontSize(14);
+  1248→        doc.setTextColor(30, 30, 30);
+  1249→        doc.text('Dnevni pregled', 14, 22);
+  1250→
+  1251→        autoTable(doc, {
+  1252→          startY: 28,
+  1253→          head: [['Datum/Ura', 'Prihodki', 'Naročila']],
+  1254→          body: reportData.dailyBreakdown.map((d) => [
+  1255→            d.label,
+  1256→            `${currency}${d.revenue.toLocaleString('en-IN')}`,
+  1257→            d.orders.toString(),
+  1258→          ]),
+  1259→          theme: 'striped',
+  1260→          headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+  1261→          bodyStyles: { fontSize: 10 },
+  1262→          alternateRowStyles: { fillColor: [240, 253, 244] },
+  1263→        });
+  1264→      }
+  1265→
+  1266→      // Footer
+  1267→      const pageCount = doc.getNumberOfPages();
+  1268→      for (let i = 1; i <= pageCount; i++) {
+  1269→        doc.setPage(i);
+  1270→        doc.setFontSize(8);
+  1271→        doc.setTextColor(150, 150, 150);
+  1272→        doc.text(
+  1273→          `URY Dashboard — ${periodLabels[reportData.period]} — Stran ${i} od ${pageCount}`,
+  1274→          doc.internal.pageSize.getWidth() / 2,
+  1275→          doc.internal.pageSize.getHeight() - 10,
+  1276→          { align: 'center' }
+  1277→        );
+  1278→      }
+  1279→
+  1280→      doc.save(`${reportData.period}-porocilo-${reportData.dateFrom}.pdf`);
+  1281→      get().addToast({ type: 'success', title: 'PDF generiran', description: 'Poročilo je bilo shranjeno' });
+  1282→    },
+  1283→  };
+  1284→});
+  1285→
+  1286→// ── Selector Hooks ───────────────────────────────────────
+  1287→
+  1288→export const useConnectionStatus = () =>
+  1289→  useURYStore((s) => ({
+  1290→    isConnected: s.isConnected,
+  1291→    isConnecting: s.isConnecting,
+  1292→    connectionError: s.connectionError,
+  1293→    authenticatedUser: s.authenticatedUser,
+  1294→    frappeConfig: s.frappeConfig,
+  1295→    lastRefreshed: s.lastRefreshed,
+  1296→    isRefreshing: s.isRefreshing,
+  1297→  }));
+  1298→
+  1299→export const useDashboardData = () =>
+  1300→  useURYStore((s) => ({
+  1301→    restaurantName: s.restaurantName,
+  1302→    currency: s.currency,
+  1303→    kpis: s.kpis,
+  1304→    hourlySales: s.hourlySales,
+  1305→    recentOrders: s.recentOrders,
+  1306→    tables: s.tables,
+  1307→    rooms: s.rooms,
+  1308→    kotCards: s.kotCards,
+  1309→    plSummary: s.plSummary,
+  1310→    dailyPL: s.dailyPL,
+  1311→    expenseBreakdown: s.expenseBreakdown,
+  1312→    plLineItems: s.plLineItems,
+  1313→    apiEndpoints: s.apiEndpoints,
+  1314→    cashiers: s.cashiers,
+  1315→    shiftInfo: s.shiftInfo,
+  1316→  }));
+  1317→
+  1318→export const useUIState = () =>
+  1319→  useURYStore((s) => ({
+  1320→    activeTab: s.activeTab,
+  1321→    sidebarOpen: s.sidebarOpen,
+  1322→    darkMode: s.darkMode,
+  1323→  }));
+  1324→

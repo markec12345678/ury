@@ -1,0 +1,916 @@
+     1→     1→// URY Dashboard Store — Zustand
+     2→     2→// Centralized state management with real-time Socket.io updates
+     3→     3→// Falls back to mock data when no Frappe backend is connected
+     4→     4→
+     5→     5→import { create } from 'zustand';
+     6→     6→import {
+     7→     7→  kpiData,
+     8→     8→  hourlySalesData,
+     9→     9→  recentOrders,
+    10→    10→  tablesData,
+    11→    11→  rooms as mockRooms,
+    12→    12→  kotCards as mockKotCards,
+    13→    13→  plSummary,
+    14→    14→  dailyPLData,
+    15→    15→  expenseBreakdown,
+    16→    16→  plLineItems,
+    17→    17→  apiEndpoints,
+    18→    18→  frontendApps,
+    19→    19→  backendComponents,
+    20→    20→  infrastructureComponents,
+    21→    21→  doctypes,
+    22→    22→  docEventHooks,
+    23→    23→  mockCashiers,
+    24→    24→  mockShiftInfo,
+    25→    25→  RESTAURANT_NAME,
+    26→    26→  CURRENCY,
+    27→    27→} from '@/lib/mock-data';
+    28→    28→import type {
+    29→    29→  KPIs,
+    30→    30→  HourlySales,
+    31→    31→  RecentOrder,
+    32→    32→  TableData,
+    33→    33→  Room,
+    34→    34→  KOTCard,
+    35→    35→  KOTStatus,
+    36→    36→  PLSummary,
+    37→    37→  DailyPL,
+    38→    38→  ExpenseBreakdown,
+    39→    39→  PLLineItem,
+    40→    40→  CashierData,
+    41→    41→  ShiftInfo,
+    42→    42→  APIEndpoint,
+    43→    43→  FrontendApp,
+    44→    44→  BackendComponent,
+    45→    45→  InfrastructureComponent,
+    46→    46→  DocEventHook,
+    47→    47→} from '@/lib/ury-types';
+    48→    48→export type {
+    49→    49→  KPIs,
+    50→    50→  HourlySales,
+    51→    51→  RecentOrder,
+    52→    52→  TableData,
+    53→    53→  Room,
+    54→    54→  KOTCard,
+    55→    55→  KOTStatus,
+    56→    56→  PLSummary,
+    57→    57→  DailyPL,
+    58→    58→  ExpenseBreakdown,
+    59→    59→  PLLineItem,
+    60→    60→  CashierData,
+    61→    61→  ShiftInfo,
+    62→    62→  APIEndpoint,
+    63→    63→  FrontendApp,
+    64→    64→  BackendComponent,
+    65→    65→  InfrastructureComponent,
+    66→    66→  DocEventHook,
+    67→    67→  TableStatus,
+    68→    68→  ProductionUnit,
+    69→    69→  OrderStatus,
+    70→    70→  OrderType,
+    71→    71→  KOTItem,
+    72→    72→  KOTType,
+    73→    73→} from '@/lib/ury-types';
+    74→    74→import {
+    75→    75→  getFrappeClient,
+    76→    76→  saveConfig,
+    77→    77→  loadConfig,
+    78→    78→  clearConfig,
+    79→    79→  type FrappeConfig,
+    80→    80→} from '@/lib/frappe-client';
+    81→    81→import { reconnectSocket } from '@/lib/use-ury-socket';
+    82→    82→
+    83→    83→// ── Auto-refresh interval (ms) ──────────────────────────
+    84→    84→const REFRESH_INTERVAL = typeof window !== 'undefined'
+    85→    85→  ? Number(process.env.NEXT_PUBLIC_REFRESH_INTERVAL) || 30_000
+    86→    86→  : 30_000;
+    87→    87→
+    88→    88→// ── UI Preference Persistence ────────────────────────────
+    89→    89→const UI_PREFS_KEY = 'ury_ui_prefs';
+    90→    90→
+    91→    91→interface UIPreferences {
+    92→    92→  darkMode: boolean;
+    93→    93→  activeTab: string;
+    94→    94→}
+    95→    95→
+    96→    96→function loadUIPrefs(): Partial<UIPreferences> {
+    97→    97→  if (typeof window === 'undefined') return {};
+    98→    98→  try {
+    99→    99→    const raw = localStorage.getItem(UI_PREFS_KEY);
+   100→   100→    if (!raw) return {};
+   101→   101→    return JSON.parse(raw);
+   102→   102→  } catch {
+   103→   103→    return {};
+   104→   104→  }
+   105→   105→}
+   106→   106→
+   107→   107→function saveUIPrefs(prefs: Partial<UIPreferences>): void {
+   108→   108→  if (typeof window === 'undefined') return;
+   109→   109→  try {
+   110→   110→    localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
+   111→   111→  } catch {
+   112→   112→    // ignore storage errors
+   113→   113→  }
+   114→   114→}
+   115→   115→
+   116→   116→// ── Types ────────────────────────────────────────────────
+   117→   117→
+   118→   118→export interface DashboardState {
+   119→   119→  // Connection
+   120→   120→  frappeConfig: FrappeConfig | null;
+   121→   121→  isConnected: boolean;
+   122→   122→  isConnecting: boolean;
+   123→   123→  connectionError: string | null;
+   124→   124→  authenticatedUser: string | null;
+   125→   125→  lastRefreshed: Date | null;
+   126→   126→  isRefreshing: boolean;
+   127→   127→
+   128→   128→  // Data
+   129→   129→  restaurantName: string;
+   130→   130→  currency: string;
+   131→   131→  kpis: KPIs;
+   132→   132→  hourlySales: HourlySales[];
+   133→   133→  recentOrders: RecentOrder[];
+   134→   134→  tables: TableData[];
+   135→   135→  rooms: Room[];
+   136→   136→  kotCards: KOTCard[];
+   137→   137→  plSummary: PLSummary;
+   138→   138→  dailyPL: DailyPL[];
+   139→   139→  expenseBreakdown: ExpenseBreakdown[];
+   140→   140→  plLineItems: PLLineItem[];
+   141→   141→  apiEndpoints: APIEndpoint[];
+   142→   142→  cashiers: CashierData[];
+   143→   143→  shiftInfo: ShiftInfo;
+   144→   144→  frontendApps: FrontendApp[];
+   145→   145→  backendComponents: BackendComponent[];
+   146→   146→  infrastructureComponents: InfrastructureComponent[];
+   147→   147→  doctypes: string[];
+   148→   148→  docEventHooks: DocEventHook[];
+   149→   149→
+   150→   150→  // UI state
+   151→   151→  activeTab: string;
+   152→   152→  sidebarOpen: boolean;
+   153→   153→  darkMode: boolean;
+   154→   154→
+   155→   155→  // Actions
+   156→   156→  setActiveTab: (tab: string) => void;
+   157→   157→  toggleSidebar: () => void;
+   158→   158→  setSidebarOpen: (open: boolean) => void;
+   159→   159→  toggleDarkMode: () => void;
+   160→   160→  setFrappeConfig: (config: FrappeConfig) => void;
+   161→   161→  testConnection: () => Promise<boolean>;
+   162→   162→  login: (username: string, password: string) => Promise<boolean>;
+   163→   163→  logout: () => void;
+   164→   164→  disconnectBackend: () => void;
+   165→   165→  refreshData: () => Promise<void>;
+   166→   166→  refreshKPIs: () => Promise<void>;
+   167→   167→  refreshPL: () => Promise<void>;
+   168→   168→  refreshShift: () => Promise<void>;
+   169→   169→
+   170→   170→  // KOT actions
+   171→   171→  updateKOTStatus: (id: string, status: KOTStatus) => void;
+   172→   172→
+   173→   173→  // Shift actions
+   174→   174→  openShift: (openingBalance: number, openedBy: string) => void;
+   175→   175→  closeShift: () => void;
+   176→   176→  transferShift: (fromCashier: string, toCashier: string) => void;
+   177→   177→
+   178→   178→  // Auto-refresh
+   179→   179→  startAutoRefresh: () => void;
+   180→   180→  stopAutoRefresh: () => void;
+   181→   181→
+   182→   182→  // Toast notifications
+   183→   183→  toasts: ToastMessage[];
+   184→   184→  addToast: (toast: Omit<ToastMessage, 'id'>) => void;
+   185→   185→  removeToast: (id: string) => void;
+   186→   186→}
+   187→   187→
+   188→   188→// ── Toast Types ──────────────────────────────────────────
+   189→   189→
+   190→   190→export interface ToastMessage {
+   191→   191→  id: string;
+   192→   192→  type: 'success' | 'error' | 'warning' | 'info';
+   193→   193→  title: string;
+   194→   194→  description?: string;
+   195→   195→  duration?: number;
+   196→   196→}
+   197→   197→
+   198→   198→// ── Auto-refresh timer ──────────────────────────────────
+   199→   199→let refreshTimer: ReturnType<typeof setInterval> | null = null;
+   200→   200→
+   201→   201→// ── Toast auto-remove timer ─────────────────────────────
+   202→   202→const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
+   203→   203→
+   204→   204→// ── Store ────────────────────────────────────────────────
+   205→   205→
+   206→   206→export const useURYStore = create<DashboardState>((set, get) => {
+   207→   207→  // Load saved config
+   208→   208→  const savedConfig = typeof window !== 'undefined' ? loadConfig() : null;
+   209→   209→  const savedPrefs = loadUIPrefs();
+   210→   210→
+   211→   211→  // Apply dark mode on load
+   212→   212→  if (savedPrefs.darkMode && typeof document !== 'undefined') {
+   213→   213→    document.documentElement.classList.add('dark');
+   214→   214→  }
+   215→   215→
+   216→   216→  return {
+   217→   217→    // Connection
+   218→   218→    frappeConfig: savedConfig,
+   219→   219→    isConnected: false,
+   220→   220→    isConnecting: false,
+   221→   221→    connectionError: null,
+   222→   222→    authenticatedUser: null,
+   223→   223→    lastRefreshed: null,
+   224→   224→    isRefreshing: false,
+   225→   225→
+   226→   226→    // Data (mock defaults)
+   227→   227→    restaurantName: process.env.NEXT_PUBLIC_RESTAURANT_NAME || RESTAURANT_NAME,
+   228→   228→    currency: process.env.NEXT_PUBLIC_CURRENCY || CURRENCY,
+   229→   229→    kpis: { ...kpiData },
+   230→   230→    hourlySales: [...hourlySalesData],
+   231→   231→    recentOrders: [...recentOrders],
+   232→   232→    tables: [...tablesData],
+   233→   233→    rooms: [...mockRooms],
+   234→   234→    kotCards: [...mockKotCards],
+   235→   235→    plSummary: { ...plSummary },
+   236→   236→    dailyPL: [...dailyPLData],
+   237→   237→    expenseBreakdown: [...expenseBreakdown],
+   238→   238→    plLineItems: [...plLineItems],
+   239→   239→    apiEndpoints: [...apiEndpoints],
+   240→   240→    cashiers: [...mockCashiers],
+   241→   241→    shiftInfo: { ...mockShiftInfo },
+   242→   242→    frontendApps: [...frontendApps],
+   243→   243→    backendComponents: [...backendComponents],
+   244→   244→    infrastructureComponents: [...infrastructureComponents],
+   245→   245→    doctypes: [...doctypes],
+   246→   246→    docEventHooks: [...docEventHooks],
+   247→   247→
+   248→   248→    // UI state (persisted)
+   249→   249→    activeTab: savedPrefs.activeTab || 'overview',
+   250→   250→    sidebarOpen: false,
+   251→   251→    darkMode: savedPrefs.darkMode || false,
+   252→   252→
+   253→   253→    // Toast notifications
+   254→   254→    toasts: [],
+   255→   255→
+   256→   256→    // ── Actions ────────────────────────────────────────
+   257→   257→
+   258→   258→    setActiveTab: (tab) => {
+   259→   259→      set({ activeTab: tab });
+   260→   260→      saveUIPrefs({ activeTab: tab });
+   261→   261→    },
+   262→   262→
+   263→   263→    toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+   264→   264→
+   265→   265→    setSidebarOpen: (open) => set({ sidebarOpen: open }),
+   266→   266→
+   267→   267→    toggleDarkMode: () => set((s) => {
+   268→   268→      const newDark = !s.darkMode;
+   269→   269→      if (typeof document !== 'undefined') {
+   270→   270→        document.documentElement.classList.toggle('dark', newDark);
+   271→   271→      }
+   272→   272→      saveUIPrefs({ darkMode: newDark });
+   273→   273→      return { darkMode: newDark };
+   274→   274→    }),
+   275→   275→
+   276→   276→    setFrappeConfig: (config) => {
+   277→   277→      saveConfig(config);
+   278→   278→      const client = getFrappeClient();
+   279→   279→      client.updateConfig(config);
+   280→   280→      set({ frappeConfig: config, connectionError: null });
+   281→   281→    },
+   282→   282→
+   283→   283→    testConnection: async () => {
+   284→   284→      set({ isConnecting: true, connectionError: null });
+   285→   285→      try {
+   286→   286→        const client = getFrappeClient();
+   287→   287→        const config = get().frappeConfig;
+   288→   288→        if (config) {
+   289→   289→          client.updateConfig(config);
+   290→   290→        }
+   291→   291→        const ok = await client.ping();
+   292→   292→        if (ok) {
+   293→   293→          // Try to get logged-in user
+   294→   294→          const user = await client.getLoggedInUser();
+   295→   295→          set({
+   296→   296→            isConnected: true,
+   297→   297→            isConnecting: false,
+   298→   298→            authenticatedUser: user,
+   299→   299→          });
+   300→   300→          // Reconnect socket to Frappe server
+   301→   301→          reconnectSocket();
+   302→   302→          // Fetch real data from Frappe
+   303→   303→          get().refreshData();
+   304→   304→          // Start auto-refresh
+   305→   305→          get().startAutoRefresh();
+   306→   306→          // Toast notification
+   307→   307→          get().addToast({ type: 'success', title: 'Povezava uspešna', description: `Povezan s Frappe strežnikom${user ? ` kot ${user}` : ''}` });
+   308→   308→          return true;
+   309→   309→        }
+   310→   310→        set({
+   311→   311→          isConnected: false,
+   312→   312→          isConnecting: false,
+   313→   313→          connectionError: 'Ne morem vzpostaviti povezave s Frappe strežnikom',
+   314→   314→        });
+   315→   315→        get().addToast({ type: 'error', title: 'Povezava ni uspela', description: 'Ne morem vzpostaviti povezave s Frappe strežnikom' });
+   316→   316→        return false;
+   317→   317→      } catch (err) {
+   318→   318→        set({
+   319→   319→          isConnected: false,
+   320→   320→          isConnecting: false,
+   321→   321→          connectionError: err instanceof Error ? err.message : 'Napaka povezave',
+   322→   322→        });
+   323→   323→        get().addToast({ type: 'error', title: 'Napaka povezave', description: err instanceof Error ? err.message : 'Napaka povezave' });
+   324→   324→        return false;
+   325→   325→      }
+   326→   326→    },
+   327→   327→
+   328→   328→    login: async (username, password) => {
+   329→   329→      set({ isConnecting: true, connectionError: null });
+   330→   330→      try {
+   331→   331→        const client = getFrappeClient();
+   332→   332→        const config = get().frappeConfig;
+   333→   333→        if (config) {
+   334→   334→          client.updateConfig(config);
+   335→   335→        }
+   336→   336→        const result = await client.login(username, password);
+   337→   337→        set({
+   338→   338→          isConnected: true,
+   339→   339→          isConnecting: false,
+   340→   340→          authenticatedUser: result.user || result.full_name || username,
+   341→   341→        });
+   342→   342→        // Reconnect socket to Frappe server
+   343→   343→        reconnectSocket();
+   344→   344→        // Fetch real data from Frappe
+   345→   345→        get().refreshData();
+   346→   346→        // Start auto-refresh
+   347→   347→        get().startAutoRefresh();
+   348→   348→        get().addToast({ type: 'success', title: 'Prijava uspešna', description: `Dobrodošli, ${result.full_name || username}` });
+   349→   349→        return true;
+   350→   350→      } catch (err) {
+   351→   351→        set({
+   352→   352→          isConnecting: false,
+   353→   353→          connectionError: err instanceof Error ? err.message : 'Prijava ni uspela',
+   354→   354→        });
+   355→   355→        get().addToast({ type: 'error', title: 'Prijava ni uspela', description: err instanceof Error ? err.message : 'Prijava ni uspela' });
+   356→   356→        return false;
+   357→   357→      }
+   358→   358→    },
+   359→   359→
+   360→   360→    logout: () => {
+   361→   361→      get().stopAutoRefresh();
+   362→   362→      set({
+   363→   363→        isConnected: false,
+   364→   364→        authenticatedUser: null,
+   365→   365→        connectionError: null,
+   366→   366→      });
+   367→   367→    },
+   368→   368→
+   369→   369→    disconnectBackend: () => {
+   370→   370→      get().stopAutoRefresh();
+   371→   371→      clearConfig();
+   372→   372→      set({
+   373→   373→        frappeConfig: null,
+   374→   374→        isConnected: false,
+   375→   375→        authenticatedUser: null,
+   376→   376→        connectionError: null,
+   377→   377→        lastRefreshed: null,
+   378→   378→        isRefreshing: false,
+   379→   379→        // Reset to mock data
+   380→   380→        restaurantName: RESTAURANT_NAME,
+   381→   381→        currency: CURRENCY,
+   382→   382→        kpis: { ...kpiData },
+   383→   383→        hourlySales: [...hourlySalesData],
+   384→   384→        recentOrders: [...recentOrders],
+   385→   385→        tables: [...tablesData],
+   386→   386→        rooms: [...mockRooms],
+   387→   387→        kotCards: [...mockKotCards],
+   388→   388→        plSummary: { ...plSummary },
+   389→   389→        dailyPL: [...dailyPLData],
+   390→   390→        expenseBreakdown: [...expenseBreakdown],
+   391→   391→        plLineItems: [...plLineItems],
+   392→   392→        cashiers: [...mockCashiers],
+   393→   393→        shiftInfo: { ...mockShiftInfo },
+   394→   394→      });
+   395→   395→    },
+   396→   396→
+   397→   397→    // ── Main Data Refresh ──────────────────────────────
+   398→   398→
+   399→   399→    refreshData: async () => {
+   400→   400→      const { isConnected } = get();
+   401→   401→      if (!isConnected) return;
+   402→   402→
+   403→   403→      set({ isRefreshing: true });
+   404→   404→
+   405→   405→      try {
+   406→   406→        const client = getFrappeClient();
+   407→   407→
+   408→   408→        // Run all fetches in parallel for better performance
+   409→   409→        const [
+   410→   410→          kotResult,
+   411→   411→          tablesResult,
+   412→   412→          invoicesResult,
+   413→   413→          roomsResult,
+   414→   414→          plResult,
+   415→   415→          shiftResult,
+   416→   416→        ] = await Promise.allSettled([
+   417→   417→          client.getKOTList(),
+   418→   418→          client.getRestaurantTables(),
+   419→   419→          client.getInvoiceForCashier('Paid', '', 20, 0),
+   420→   420→          client.getRestaurantRooms(),
+   421→   421→          client.getDailyPL(),
+   422→   422→          client.getPOSOpeningEntry('Open'),
+   423→   423→        ]);
+   424→   424→
+   425→   425→        // ── Process KOTs ────────────────────────────────
+   426→   426→        if (kotResult.status === 'fulfilled' && kotResult.value?.data) {
+   427→   427→          const transformedKOTs: KOTCard[] = Array.isArray(kotResult.value.data)
+   428→   428→            ? kotResult.value.data.map((kot: Record<string, unknown>) => ({
+   429→   429→                id: String(kot.name || kot.id || ''),
+   430→   430→                orderNo: String(kot.order_no || kot.orderNo || ''),
+   431→   431→                table: String(kot.restaurant_table || kot.table || ''),
+   432→   432→                items: Array.isArray(kot.items)
+   433→   433→                  ? kot.items.map((item: Record<string, unknown>) => ({
+   434→   434→                      name: String(item.item_name || item.name || ''),
+   435→   435→                      qty: Number(item.qty || 1),
+   436→   436→                      course: item.course ? String(item.course) : undefined,
+   437→   437→                      comments: item.comments ? String(item.comments) : undefined,
+   438→   438→                    }))
+   439→   439→                  : [],
+   440→   440→                timePlaced: String(kot.time_placed || kot.timePlaced || ''),
+   441→   441→                elapsed: Number(kot.elapsed || 0),
+   442→   442→                status: (kot.status as KOTStatus) || 'new',
+   443→   443→                production: String(kot.production_unit || kot.production || 'Kuhinja 1') as KOTCard['production'],
+   444→   444→                kotType: (kot.kot_type || kot.kotType || 'New Order') as KOTCard['kotType'],
+   445→   445→              }))
+   446→   446→            : [];
+   447→   447→          set({ kotCards: transformedKOTs });
+   448→   448→        }
+   449→   449→
+   450→   450→        // ── Process Tables ──────────────────────────────
+   451→   451→        if (tablesResult.status === 'fulfilled' && tablesResult.value?.data) {
+   452→   452→          const transformedTables: TableData[] = Array.isArray(tablesResult.value.data)
+   453→   453→            ? tablesResult.value.data.map((t: Record<string, unknown>) => ({
+   454→   454→                id: Number(t.name || t.id || 0),
+   455→   455→                room: String(t.room || ''),
+   456→   456→                status: (t.status as TableData['status']) || 'free',
+   457→   457→                pax: Number(t.no_of_seats || t.pax || 0),
+   458→   458→                occupiedSince: t.occupied_since ? String(t.occupied_since) : undefined,
+   459→   459→                orderItems: t.order_items ? String(t.order_items).split(', ') : undefined,
+   460→   460→                orderTotal: t.order_total ? Number(t.order_total) : undefined,
+   461→   461→                customer: t.customer ? String(t.customer) : undefined,
+   462→   462→              }))
+   463→   463→            : [];
+   464→   464→          set({ tables: transformedTables });
+   465→   465→        }
+   466→   466→
+   467→   467→        // ── Process Invoices → Recent Orders + KPIs ─────
+   468→   468→        if (invoicesResult.status === 'fulfilled' && invoicesResult.value?.data) {
+   469→   469→          const invoices = Array.isArray(invoicesResult.value.data)
+   470→   470→            ? invoicesResult.value.data
+   471→   471→            : [];
+   472→   472→
+   473→   473→          // Recent orders
+   474→   474→          const transformedOrders: RecentOrder[] = invoices.map((inv: Record<string, unknown>) => ({
+   475→   475→            invoice: String(inv.name || ''),
+   476→   476→            customer: String(inv.customer || ''),
+   477→   477→            type: (inv.type === 'Dine-in' ? 'Dine-in' : inv.type === 'Takeaway' ? 'Takeaway' : 'Delivery') as RecentOrder['type'],
+   478→   478→            amount: Number(inv.grand_total || 0),
+   479→   479→            status: (inv.status as RecentOrder['status']) || 'Paid',
+   480→   480→            time: inv.posting_time ? String(inv.posting_time).slice(0, 5) : '',
+   481→   481→          }));
+   482→   482→          set({ recentOrders: transformedOrders });
+   483→   483→
+   484→   484→          // Compute KPIs from invoices
+   485→   485→          const totalSales = invoices.reduce((sum: number, inv: Record<string, unknown>) => sum + Number(inv.grand_total || 0), 0);
+   486→   486→          const totalOrders = invoices.length;
+   487→   487→          const occupiedTables = invoices.filter((inv: Record<string, unknown>) => inv.type === 'Dine-in').length;
+   488→   488→          const allTables = get().tables;
+   489→   489→          set({
+   490→   490→            kpis: {
+   491→   491→              dailySales: totalSales,
+   492→   492→              totalOrders,
+   493→   493→              avgBill: totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0,
+   494→   494→              occupiedTables,
+   495→   495→              totalTables: allTables.length || 32,
+   496→   496→            },
+   497→   497→          });
+   498→   498→
+   499→   499→          // Compute hourly sales from invoices
+   500→   500→          const hourMap = new Map<string, { dineIn: number; takeaway: number }>();
+   501→   501→          // Initialize all hours from 11:00 to 22:00
+   502→   502→          for (let h = 11; h <= 22; h++) {
+   503→   503→            const key = `${String(h).padStart(2, '0')}:00`;
+   504→   504→            hourMap.set(key, { dineIn: 0, takeaway: 0 });
+   505→   505→          }
+   506→   506→          // Aggregate invoice totals by hour
+   507→   507→          invoices.forEach((inv: Record<string, unknown>) => {
+   508→   508→            const timeStr = String(inv.posting_time || '').slice(0, 5);
+   509→   509→            if (!timeStr) return;
+   510→   510→            const hour = timeStr.split(':')[0];
+   511→   511→            const key = `${hour}:00`;
+   512→   512→            const entry = hourMap.get(key);
+   513→   513→            if (entry) {
+   514→   514→              const amount = Number(inv.grand_total || 0);
+   515→   515→              if (inv.type === 'Takeaway' || inv.type === 'Delivery') {
+   516→   516→                entry.takeaway += amount;
+   517→   517→              } else {
+   518→   518→                entry.dineIn += amount;
+   519→   519→              }
+   520→   520→            }
+   521→   521→          });
+   522→   522→          const hourlyData: HourlySales[] = Array.from(hourMap.entries()).map(([hour, data]) => ({
+   523→   523→            hour,
+   524→   524→            dineIn: data.dineIn,
+   525→   525→            takeaway: data.takeaway,
+   526→   526→          }));
+   527→   527→          if (hourlyData.length > 0) set({ hourlySales: hourlyData });
+   528→   528→        }
+   529→   529→
+   530→   530→        // ── Process Rooms ───────────────────────────────
+   531→   531→        if (roomsResult.status === 'fulfilled' && roomsResult.value?.data) {
+   532→   532→          const transformedRooms: Room[] = Array.isArray(roomsResult.value.data)
+   533→   533→            ? roomsResult.value.data.map((r: Record<string, unknown>) => ({
+   534→   534→                id: String(r.name || r.id || '').toLowerCase().replace(/\s+/g, '-'),
+   535→   535→                name: String(r.room_name || r.name || ''),
+   536→   536→                tables: Number(r.no_of_tables || r.tables || 0),
+   537→   537→              }))
+   538→   538→            : [];
+   539→   539→          if (transformedRooms.length > 0) set({ rooms: transformedRooms });
+   540→   540→        }
+   541→   541→
+   542→   542→        // ── Process P&L ─────────────────────────────────
+   543→   543→        if (plResult.status === 'fulfilled' && plResult.value?.data) {
+   544→   544→          const plDocs = Array.isArray(plResult.value.data) ? plResult.value.data : [];
+   545→   545→          if (plDocs.length > 0) {
+   546→   546→            // Use the latest P&L document
+   547→   547→            const latest = plDocs[0] as Record<string, unknown>;
+   548→   548→
+   549→   549→            // P&L Summary
+   550→   550→            const grossSales = Number(latest.gross_sales || latest.total_revenue || 0);
+   551→   551→            const cogs = Number(latest.cogs || latest.cost_of_goods_sold || 0);
+   552→   552→            const grossProfit = grossSales - cogs;
+   553→   553→            const netProfit = Number(latest.net_profit || grossProfit - Number(latest.total_expenses || 0));
+   554→   554→            set({
+   555→   555→              plSummary: { grossSales, cogs, grossProfit, netProfit },
+   556→   556→            });
+   557→   557→
+   558→   558→            // Daily P&L from multiple docs
+   559→   559→            const dailyData: DailyPL[] = plDocs.slice(0, 7).reverse().map((doc: Record<string, unknown>) => {
+   560→   560→              const date = String(doc.date || doc.posting_date || '');
+   561→   561→              const dayName = date
+   562→   562→                ? new Date(date).toLocaleDateString('sl-SI', { weekday: 'short' })
+   563→   563→                : '';
+   564→   564→              return {
+   565→   565→                day: dayName,
+   566→   566→                revenue: Number(doc.gross_sales || doc.total_revenue || 0),
+   567→   567→                costs: Number(doc.cogs || doc.total_expenses || 0),
+   568→   568→              };
+   569→   569→            });
+   570→   570→            if (dailyData.length > 0) set({ dailyPL: dailyData });
+   571→   571→
+   572→   572→            // Expense breakdown — try to extract from P&L doc
+   573→   573→            const breakdownData: ExpenseBreakdown[] = [];
+   574→   574→            if (latest.breakup || latest.expense_breakdown) {
+   575→   575→              const items = Array.isArray(latest.breakup || latest.expense_breakdown)
+   576→   576→                ? (latest.breakup || latest.expense_breakdown) as Record<string, unknown>[]
+   577→   577→                : [];
+   578→   578→              const colors = ['#ef4444', '#f97316', '#eab308', '#8b5cf6', '#10b981'];
+   579→   579→              items.forEach((item, i) => {
+   580→   580→                breakdownData.push({
+   581→   581→                  name: String(item.expense_type || item.category || item.name || ''),
+   582→   582→                  value: Number(item.percentage || item.value || 0),
+   583→   583→                  color: colors[i % colors.length],
+   584→   584→                });
+   585→   585→              });
+   586→   586→            }
+   587→   587→            if (breakdownData.length > 0) set({ expenseBreakdown: breakdownData });
+   588→   588→
+   589→   589→            // Line items
+   590→   590→            const lines: PLLineItem[] = [];
+   591→   591→            if (latest.breakup || latest.line_items) {
+   592→   592→              const items = Array.isArray(latest.breakup || latest.line_items)
+   593→   593→                ? (latest.breakup || latest.line_items) as Record<string, unknown>[]
+   594→   594→                : [];
+   595→   595→              items.forEach((item) => {
+   596→   596→                lines.push({
+   597→   597→                  label: String(item.label || item.expense_type || item.name || ''),
+   598→   598→                  value: Number(item.amount || item.value || 0),
+   599→   599→                  bold: Boolean(item.is_total || item.bold || false),
+   600→   600→                });
+   601→   601→              });
+   602→   602→            }
+   603→   603→            if (lines.length > 0) set({ plLineItems: lines });
+   604→   604→          }
+   605→   605→        }
+   606→   606→
+   607→   607→        // ── Process Shift / Cashier ─────────────────────
+   608→   608→        if (shiftResult.status === 'fulfilled' && shiftResult.value?.data) {
+   609→   609→          const openings = Array.isArray(shiftResult.value.data) ? shiftResult.value.data : [];
+   610→   610→          if (openings.length > 0) {
+   611→   611→            const latestOpening = openings[0] as Record<string, unknown>;
+   612→   612→            const openedAt = String(latestOpening.period_start || latestOpening.opening_time || '').slice(0, 5);
+   613→   613→            const openedBy = String(latestOpening.user || latestOpening.opened_by || '');
+   614→   614→            const openingBalance = Number(latestOpening.opening_amount || latestOpening.balance_details?.[0]?.amount || 0);
+   615→   615→
+   616→   616→            set({
+   617→   617→              shiftInfo: {
+   618→   618→                status: 'open',
+   619→   619→                openedAt: openedAt || '09:00',
+   620→   620→                closesAt: '23:00',
+   621→   621→                openedBy: openedBy || 'Administrator',
+   622→   622→                openingBalance,
+   623→   623→              },
+   624→   624→            });
+   625→   625→
+   626→   626→            // Build cashier data from POS opening entry
+   627→   627→            const cashierList: CashierData[] = [];
+   628→   628→            const balanceRows = Array.isArray(latestOpening.balance_details)
+   629→   629→              ? latestOpening.balance_details as Record<string, unknown>[]
+   630→   630→              : [];
+   631→   631→            if (balanceRows.length > 0) {
+   632→   632→              balanceRows.forEach((row) => {
+   633→   633→                cashierList.push({
+   634→   634→                  name: String(row.user || openedBy || 'Cashier'),
+   635→   635→                  role: 'URY Cashier',
+   636→   636→                  openedAt: openedAt || '09:00',
+   637→   637→                  status: 'active',
+   638→   638→                  openingBalance: Number(row.opening_amount || 0),
+   639→   639→                  currentTotal: Number(row.closing_amount || row.opening_amount || 0),
+   640→   640→                  cashPayments: Number(row.cash_amount || 0),
+   641→   641→                  cardPayments: Number(row.card_amount || 0),
+   642→   642→                  upiPayments: Number(row.upi_amount || 0),
+   643→   643→                  ordersProcessed: Number(row.orders_processed || 0),
+   644→   644→                  room: String(row.room || 'Glavna dvorana'),
+   645→   645→                });
+   646→   646→              });
+   647→   647→            }
+   648→   648→            if (cashierList.length > 0) set({ cashiers: cashierList });
+   649→   649→          } else {
+   650→   650→            // No open shift found
+   651→   651→            set({
+   652→   652→              shiftInfo: {
+   653→   653→                status: 'closed',
+   654→   654→                openedAt: '',
+   655→   655→                closesAt: '',
+   656→   656→                openedBy: '',
+   657→   657→                openingBalance: 0,
+   658→   658→              },
+   659→   659→            });
+   660→   660→          }
+   661→   661→        }
+   662→   662→
+   663→   663→        // Mark refresh time
+   664→   664→        set({ lastRefreshed: new Date(), isRefreshing: false });
+   665→   665→      } catch (err) {
+   666→   666→        console.error('Failed to refresh data:', err);
+   667→   667→        set({ isRefreshing: false });
+   668→   668→      }
+   669→   669→    },
+   670→   670→
+   671→   671→    // ── Targeted Refresh: KPIs only ────────────────────
+   672→   672→    refreshKPIs: async () => {
+   673→   673→      const { isConnected } = get();
+   674→   674→      if (!isConnected) return;
+   675→   675→
+   676→   676→      try {
+   677→   677→        const client = getFrappeClient();
+   678→   678→        const invoicesResult = await client.getInvoiceForCashier('Paid', '', 50, 0).catch(() => null);
+   679→   679→        if (invoicesResult?.data && Array.isArray(invoicesResult.data)) {
+   680→   680→          const invoices = invoicesResult.data as Record<string, unknown>[];
+   681→   681→          const totalSales = invoices.reduce((sum, inv) => sum + Number(inv.grand_total || 0), 0);
+   682→   682→          const totalOrders = invoices.length;
+   683→   683→          const occupiedTables = invoices.filter((inv) => inv.type === 'Dine-in').length;
+   684→   684→          const allTables = get().tables;
+   685→   685→          set({
+   686→   686→            kpis: {
+   687→   687→              dailySales: totalSales,
+   688→   688→              totalOrders,
+   689→   689→              avgBill: totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0,
+   690→   690→              occupiedTables,
+   691→   691→              totalTables: allTables.length || 32,
+   692→   692→            },
+   693→   693→          });
+   694→   694→        }
+   695→   695→      } catch (err) {
+   696→   696→        console.error('Failed to refresh KPIs:', err);
+   697→   697→      }
+   698→   698→    },
+   699→   699→
+   700→   700→    // ── Targeted Refresh: P&L only ─────────────────────
+   701→   701→    refreshPL: async () => {
+   702→   702→      const { isConnected } = get();
+   703→   703→      if (!isConnected) return;
+   704→   704→
+   705→   705→      try {
+   706→   706→        const client = getFrappeClient();
+   707→   707→        const plResult = await client.getDailyPL().catch(() => null);
+   708→   708→        if (plResult?.data && Array.isArray(plResult.data)) {
+   709→   709→          const plDocs = plResult.data as Record<string, unknown>[];
+   710→   710→          if (plDocs.length > 0) {
+   711→   711→            const latest = plDocs[0];
+   712→   712→            const grossSales = Number(latest.gross_sales || latest.total_revenue || 0);
+   713→   713→            const cogs = Number(latest.cogs || latest.cost_of_goods_sold || 0);
+   714→   714→            const grossProfit = grossSales - cogs;
+   715→   715→            const netProfit = Number(latest.net_profit || grossProfit - Number(latest.total_expenses || 0));
+   716→   716→            set({ plSummary: { grossSales, cogs, grossProfit, netProfit } });
+   717→   717→
+   718→   718→            const dailyData: DailyPL[] = plDocs.slice(0, 7).reverse().map((doc) => {
+   719→   719→              const date = String(doc.date || doc.posting_date || '');
+   720→   720→              return {
+   721→   721→                day: date ? new Date(date).toLocaleDateString('sl-SI', { weekday: 'short' }) : '',
+   722→   722→                revenue: Number(doc.gross_sales || doc.total_revenue || 0),
+   723→   723→                costs: Number(doc.cogs || doc.total_expenses || 0),
+   724→   724→              };
+   725→   725→            });
+   726→   726→            if (dailyData.length > 0) set({ dailyPL: dailyData });
+   727→   727→          }
+   728→   728→        }
+   729→   729→      } catch (err) {
+   730→   730→        console.error('Failed to refresh P&L:', err);
+   731→   731→      }
+   732→   732→    },
+   733→   733→
+   734→   734→    // ── Targeted Refresh: Shift only ───────────────────
+   735→   735→    refreshShift: async () => {
+   736→   736→      const { isConnected } = get();
+   737→   737→      if (!isConnected) return;
+   738→   738→
+   739→   739→      try {
+   740→   740→        const client = getFrappeClient();
+   741→   741→        const shiftResult = await client.getPOSOpeningEntry('Open').catch(() => null);
+   742→   742→        if (shiftResult?.data && Array.isArray(shiftResult.data)) {
+   743→   743→          const openings = shiftResult.data as Record<string, unknown>[];
+   744→   744→          if (openings.length > 0) {
+   745→   745→            const latestOpening = openings[0];
+   746→   746→            const openedAt = String(latestOpening.period_start || latestOpening.opening_time || '').slice(0, 5);
+   747→   747→            const openedBy = String(latestOpening.user || latestOpening.opened_by || '');
+   748→   748→            const openingBalance = Number(latestOpening.opening_amount || 0);
+   749→   749→            set({
+   750→   750→              shiftInfo: {
+   751→   751→                status: 'open',
+   752→   752→                openedAt: openedAt || '09:00',
+   753→   753→                closesAt: '23:00',
+   754→   754→                openedBy: openedBy || 'Administrator',
+   755→   755→                openingBalance,
+   756→   756→              },
+   757→   757→            });
+   758→   758→          } else {
+   759→   759→            set({
+   760→   760→              shiftInfo: {
+   761→   761→                status: 'closed',
+   762→   762→                openedAt: '',
+   763→   763→                closesAt: '',
+   764→   764→                openedBy: '',
+   765→   765→                openingBalance: 0,
+   766→   766→              },
+   767→   767→            });
+   768→   768→          }
+   769→   769→        }
+   770→   770→      } catch (err) {
+   771→   771→        console.error('Failed to refresh shift:', err);
+   772→   772→      }
+   773→   773→    },
+   774→   774→
+   775→   775→    updateKOTStatus: (id, status) => {
+   776→   776→      set((s) => ({
+   777→   777→        kotCards: s.kotCards.map((c) =>
+   778→   778→          c.id === id ? { ...c, status } : c
+   779→   779→        ),
+   780→   780→      }));
+   781→   781→
+   782→   782→      // If connected to backend, also push the status change
+   783→   783→      const { isConnected } = get();
+   784→   784→      if (isConnected) {
+   785→   785→        const client = getFrappeClient();
+   786→   786→        if (status === 'served') {
+   787→   787→          client.serveKOT(id, new Date().toISOString()).catch(console.error);
+   788→   788→        } else if (status === 'preparing') {
+   789→   789→          // Could call a confirm/update endpoint
+   790→   790→        }
+   791→   791→      }
+   792→   792→    },
+   793→   793→
+   794→   794→    openShift: (openingBalance, openedBy) => {
+   795→   795→      const now = new Date();
+   796→   796→      const timeStr = now.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+   797→   797→      set({
+   798→   798→        shiftInfo: {
+   799→   799→          status: 'open',
+   800→   800→          openedAt: timeStr,
+   801→   801→          closesAt: '23:00',
+   802→   802→          openedBy,
+   803→   803→          openingBalance,
+   804→   804→        },
+   805→   805→      });
+   806→   806→
+   807→   807→      // If connected, call Frappe POS Opening
+   808→   808→      if (get().isConnected) {
+   809→   809→        const client = getFrappeClient();
+   810→   810→        client.posOpening().catch(console.error);
+   811→   811→      }
+   812→   812→    },
+   813→   813→
+   814→   814→    closeShift: () => {
+   815→   815→      set((s) => ({
+   816→   816→        shiftInfo: {
+   817→   817→          ...s.shiftInfo,
+   818→   818→          status: 'closed',
+   819→   819→        },
+   820→   820→      }));
+   821→   821→    },
+   822→   822→
+   823→   823→    transferShift: (fromCashier) => {
+   824→   824→      set((s) => ({
+   825→   825→        cashiers: s.cashiers.map((c) =>
+   826→   826→          c.name === fromCashier ? { ...c, status: 'closing' as const } : c
+   827→   827→        ),
+   828→   828→      }));
+   829→   829→    },
+   830→   830→
+   831→   831→    // ── Auto-Refresh ───────────────────────────────────
+   832→   832→
+   833→   833→    startAutoRefresh: () => {
+   834→   834→      if (refreshTimer) return; // Already running
+   835→   835→      refreshTimer = setInterval(() => {
+   836→   836→        const { isConnected } = get();
+   837→   837→        if (isConnected) {
+   838→   838→          get().refreshData();
+   839→   839→        } else {
+   840→   840→          get().stopAutoRefresh();
+   841→   841→        }
+   842→   842→      }, REFRESH_INTERVAL);
+   843→   843→    },
+   844→   844→
+   845→   845→    stopAutoRefresh: () => {
+   846→   846→      if (refreshTimer) {
+   847→   847→        clearInterval(refreshTimer);
+   848→   848→        refreshTimer = null;
+   849→   849→      }
+   850→   850→    },
+   851→   851→
+   852→   852→    // ── Toast Notifications ──────────────────────────────
+   853→   853→
+   854→   854→    addToast: (toast) => {
+   855→   855→      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+   856→   856→      const duration = toast.duration ?? 5000;
+   857→   857→      set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
+   858→   858→
+   859→   859→      // Auto-remove after duration
+   860→   860→      const timer = setTimeout(() => {
+   861→   861→        get().removeToast(id);
+   862→   862→        toastTimers.delete(id);
+   863→   863→      }, duration);
+   864→   864→      toastTimers.set(id, timer);
+   865→   865→    },
+   866→   866→
+   867→   867→    removeToast: (id) => {
+   868→   868→      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+   869→   869→      const timer = toastTimers.get(id);
+   870→   870→      if (timer) {
+   871→   871→        clearTimeout(timer);
+   872→   872→        toastTimers.delete(id);
+   873→   873→      }
+   874→   874→    },
+   875→   875→  };
+   876→   876→});
+   877→   877→
+   878→   878→// ── Selector Hooks ───────────────────────────────────────
+   879→   879→
+   880→   880→export const useConnectionStatus = () =>
+   881→   881→  useURYStore((s) => ({
+   882→   882→    isConnected: s.isConnected,
+   883→   883→    isConnecting: s.isConnecting,
+   884→   884→    connectionError: s.connectionError,
+   885→   885→    authenticatedUser: s.authenticatedUser,
+   886→   886→    frappeConfig: s.frappeConfig,
+   887→   887→    lastRefreshed: s.lastRefreshed,
+   888→   888→    isRefreshing: s.isRefreshing,
+   889→   889→  }));
+   890→   890→
+   891→   891→export const useDashboardData = () =>
+   892→   892→  useURYStore((s) => ({
+   893→   893→    restaurantName: s.restaurantName,
+   894→   894→    currency: s.currency,
+   895→   895→    kpis: s.kpis,
+   896→   896→    hourlySales: s.hourlySales,
+   897→   897→    recentOrders: s.recentOrders,
+   898→   898→    tables: s.tables,
+   899→   899→    rooms: s.rooms,
+   900→   900→    kotCards: s.kotCards,
+   901→   901→    plSummary: s.plSummary,
+   902→   902→    dailyPL: s.dailyPL,
+   903→   903→    expenseBreakdown: s.expenseBreakdown,
+   904→   904→    plLineItems: s.plLineItems,
+   905→   905→    apiEndpoints: s.apiEndpoints,
+   906→   906→    cashiers: s.cashiers,
+   907→   907→    shiftInfo: s.shiftInfo,
+   908→   908→  }));
+   909→   909→
+   910→   910→export const useUIState = () =>
+   911→   911→  useURYStore((s) => ({
+   912→   912→    activeTab: s.activeTab,
+   913→   913→    sidebarOpen: s.sidebarOpen,
+   914→   914→    darkMode: s.darkMode,
+   915→   915→  }));
+   916→   916→

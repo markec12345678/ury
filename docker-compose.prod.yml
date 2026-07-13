@@ -1,0 +1,124 @@
+# URY Dashboard — Production Docker Compose
+# Usage: docker compose -f docker-compose.prod.yml up -d
+#
+# Prerequisites:
+#   1. Copy .env.production to .env and adjust values
+#   2. Generate NEXTAUTH_SECRET: openssl rand -base64 32
+#   3. Update Caddyfile with your domain(s)
+#   4. Ensure ports 80/443 are available
+
+services:
+  # ── URY Dashboard (Next.js) ──────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ury-dashboard
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://dashboard.myrestaurant.com}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}
+      - NEXT_PUBLIC_FRAPPE_URL=${FRAPPE_URL:-http://frappe:8000}
+      - NEXT_PUBLIC_REFRESH_INTERVAL=${REFRESH_INTERVAL:-30000}
+      - NEXT_PUBLIC_RESTAURANT_NAME=${RESTAURANT_NAME:-URY Restaurant}
+      - NEXT_PUBLIC_CURRENCY=${CURRENCY:-€}
+      - NODE_ENV=production
+    networks:
+      - ury-network
+    depends_on:
+      caddy:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ── Caddy Reverse Proxy ─────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: ury-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-logs:/var/log/caddy
+    networks:
+      - ury-network
+    depends_on:
+      dashboard:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ── Frappe/ERPNext Backend (optional) ──────────────────
+  # Uncomment and configure for full-stack deployment
+  # For production, consider a dedicated Frappe deployment
+  #
+  # frappe:
+  #   image: frappe/erpnext:v15
+  #   container_name: ury-frappe
+  #   restart: unless-stopped
+  #   expose:
+  #     - "8000"
+  #     - "9000"
+  #   environment:
+  #     - FRAPPE_SITE_NAME=${FRAPPE_SITE_NAME:-ury}
+  #   volumes:
+  #     - frappe-sites:/home/frappe/frappe-bench/sites
+  #     - frappe-logs:/home/frappe/frappe-bench/logs
+  #   networks:
+  #     - ury-network
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8000/api/method/ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 120s
+
+networks:
+  ury-network:
+    driver: bridge
+    name: ury-network
+
+volumes:
+  caddy-data:
+    name: ury-caddy-data
+  caddy-config:
+    name: ury-caddy-config
+  caddy-logs:
+    name: ury-caddy-logs
+  # frappe-sites:
+  #   name: ury-frappe-sites
+  # frappe-logs:
+  #   name: ury-frappe-logs

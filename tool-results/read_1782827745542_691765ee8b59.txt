@@ -1,0 +1,969 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback, useMemo } from 'react';
+     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+     5→import { Button } from '@/components/ui/button';
+     6→import { Badge } from '@/components/ui/badge';
+     7→import { Progress } from '@/components/ui/progress';
+     8→import { Separator } from '@/components/ui/separator';
+     9→import {
+    10→  Tooltip,
+    11→  TooltipContent,
+    12→  TooltipTrigger,
+    13→} from '@/components/ui/tooltip';
+    14→import {
+    15→  Table,
+    16→  TableBody,
+    17→  TableCell,
+    18→  TableHead,
+    19→  TableHeader,
+    20→  TableRow,
+    21→} from '@/components/ui/table';
+    22→import {
+    23→  AreaChart,
+    24→  Area,
+    25→  BarChart,
+    26→  Bar,
+    27→  XAxis,
+    28→  YAxis,
+    29→  CartesianGrid,
+    30→  Tooltip as RechartsTooltip,
+    31→  ResponsiveContainer,
+    32→  Legend,
+    33→  PieChart,
+    34→  Pie,
+    35→  Cell,
+    36→  ComposedChart,
+    37→  Line,
+    38→} from 'recharts';
+    39→import {
+    40→  IndianRupee,
+    41→  ShoppingCart,
+    42→  Receipt,
+    43→  TrendingUp,
+    44→  TrendingDown,
+    45→  Clock,
+    46→  Users,
+    47→  Leaf,
+    48→  Flame,
+    49→  Zap,
+    50→  CalendarDays,
+    51→  ArrowUpRight,
+    52→  ArrowDownRight,
+    53→  Activity,
+    54→  Download,
+    55→  RefreshCw,
+    56→  Timer,
+    57→  ChefHat,
+    58→  UserCheck,
+    59→  Gauge,
+    60→} from 'lucide-react';
+    61→import { useURYStore } from '@/lib/ury-store';
+    62→import type { DashboardPeriod } from '@/lib/ury-types';
+    63→
+    64→const periodLabels: Record<DashboardPeriod, string> = {
+    65→  today: 'Danes',
+    66→  yesterday: 'Včeraj',
+    67→  week: '7 dni',
+    68→  month: '30 dni',
+    69→  quarter: 'Kvartal',
+    70→};
+    71→
+    72→// ── Mock data for Staff Performance ──────────────────────
+    73→const mockStaffData = [
+    74→  { name: 'Ana M.', ordersServed: 47, avgPrepTime: 12, rating: 4.8 },
+    75→  { name: 'Marko R.', ordersServed: 42, avgPrepTime: 14, rating: 4.6 },
+    76→  { name: 'Luka S.', ordersServed: 38, avgPrepTime: 11, rating: 4.7 },
+    77→  { name: 'Maja P.', ordersServed: 35, avgPrepTime: 15, rating: 4.5 },
+    78→  { name: 'Petar K.', ordersServed: 31, avgPrepTime: 13, rating: 4.4 },
+    79→];
+    80→
+    81→const mockStaffMetrics = {
+    82→  topWaiter: 'Ana M.',
+    83→  topWaiterOrders: 47,
+    84→  avgPrepTime: 13,
+    85→  kitchenThroughput: 24,
+    86→};
+    87→
+    88→// ── Mock data for Wait Time Analytics ────────────────────
+    89→const mockWaitTimeData = {
+    90→  avgOrderToServe: 18,
+    91→  currentQueueLength: 5,
+    92→  peakWaitTimeToday: 32,
+    93→  targetWaitTime: 20,
+    94→};
+    95→
+    96→const mockWaitTimeHistory = [
+    97→  { hour: '10:00', waitTime: 12 },
+    98→  { hour: '11:00', waitTime: 15 },
+    99→  { hour: '12:00', waitTime: 22 },
+   100→  { hour: '13:00', waitTime: 28 },
+   101→  { hour: '14:00', waitTime: 18 },
+   102→  { hour: '15:00', waitTime: 10 },
+   103→  { hour: '16:00', waitTime: 8 },
+   104→  { hour: '17:00', waitTime: 14 },
+   105→  { hour: '18:00', waitTime: 20 },
+   106→  { hour: '19:00', waitTime: 25 },
+   107→  { hour: '20:00', waitTime: 30 },
+   108→  { hour: '21:00', waitTime: 22 },
+   109→  { hour: '22:00', waitTime: 15 },
+   110→];
+   111→
+   112→// ── Mock data for Category Breakdown ─────────────────────
+   113→const mockCategoryBreakdown = [
+   114→  { day: 'Pon', Predjedi: 320, Glavne: 890, Sladice: 210, Pijača: 450 },
+   115→  { day: 'Tor', Predjedi: 280, Glavne: 780, Sladice: 190, Pijača: 410 },
+   116→  { day: 'Sre', Predjedi: 350, Glavne: 920, Sladice: 240, Pijača: 480 },
+   117→  { day: 'Čet', Predjedi: 310, Glavne: 850, Sladice: 220, Pijača: 430 },
+   118→  { day: 'Pet', Predjedi: 420, Glavne: 1100, Sladice: 310, Pijača: 620 },
+   119→  { day: 'Sob', Predjedi: 480, Glavne: 1250, Sladice: 350, Pijača: 700 },
+   120→  { day: 'Ned', Predjedi: 390, Glavne: 980, Sladice: 280, Pijača: 550 },
+   121→];
+   122→
+   123→const REFRESH_INTERVAL = 30; // seconds
+   124→
+   125→// ── Dark mode aware tooltip style helper ─────────────────
+   126→function useIsDark() {
+   127→  const [isDark, setIsDark] = useState(false);
+   128→  useEffect(() => {
+   129→    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+   130→    setIsDark(mq.matches || document.documentElement.classList.contains('dark'));
+   131→    const obs = new MutationObserver(() => {
+   132→      setIsDark(document.documentElement.classList.contains('dark'));
+   133→    });
+   134→    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+   135→    return () => obs.disconnect();
+   136→  }, []);
+   137→  return isDark;
+   138→}
+   139→
+   140→function getTooltipStyle(isDark: boolean) {
+   141→  return {
+   142→    borderRadius: '8px',
+   143→    border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
+   144→    fontSize: '13px',
+   145→    backgroundColor: isDark ? 'rgba(17,24,39,0.95)' : 'rgba(255,255,255,0.95)',
+   146→    color: isDark ? '#f3f4f6' : '#111827',
+   147→  };
+   148→}
+   149→
+   150→// ── Circular Progress Component ──────────────────────────
+   151→function CircularTimer({ seconds, total }: { seconds: number; total: number }) {
+   152→  const radius = 18;
+   153→  const circumference = 2 * Math.PI * radius;
+   154→  const progress = seconds / total;
+   155→  const offset = circumference * (1 - progress);
+   156→
+   157→  return (
+   158→    <div className="relative inline-flex items-center justify-center">
+   159→      <svg width="44" height="44" className="-rotate-90">
+   160→        <circle
+   161→          cx="22"
+   162→          cy="22"
+   163→          r={radius}
+   164→          fill="none"
+   165→          stroke="currentColor"
+   166→          strokeWidth="3"
+   167→          className="text-muted-foreground/20"
+   168→        />
+   169→        <circle
+   170→          cx="22"
+   171→          cy="22"
+   172→          r={radius}
+   173→          fill="none"
+   174→          stroke="currentColor"
+   175→          strokeWidth="3"
+   176→          strokeDasharray={circumference}
+   177→          strokeDashoffset={offset}
+   178→          strokeLinecap="round"
+   179→          className="text-emerald-500 transition-all duration-1000"
+   180→        />
+   181→      </svg>
+   182→      <span className="absolute text-[10px] font-bold tabular-nums">{seconds}s</span>
+   183→    </div>
+   184→  );
+   185→}
+   186→
+   187→// ── Gauge Component ──────────────────────────────────────
+   188→function WaitTimeGauge({ value, max, label, color }: { value: number; max: number; label: string; color: string }) {
+   189→  const percentage = Math.min((value / max) * 100, 100);
+   190→  const isOver = value > max * 0.8;
+   191→
+   192→  return (
+   193→    <div className="space-y-2">
+   194→      <div className="flex items-center justify-between">
+   195→        <span className="text-xs text-muted-foreground">{label}</span>
+   196→        <span className={`text-sm font-bold ${isOver ? 'text-red-500' : 'text-emerald-500'}`}>
+   197→          {value} min
+   198→        </span>
+   199→      </div>
+   200→      <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
+   201→        <div
+   202→          className="absolute left-0 top-0 h-full rounded-full transition-all duration-700 ease-out"
+   203→          style={{
+   204→            width: `${percentage}%`,
+   205→            backgroundColor: isOver ? '#ef4444' : color,
+   206→          }}
+   207→        />
+   208→        {/* Target marker */}
+   209→        <div
+   210→          className="absolute top-0 h-full w-0.5 bg-foreground/50"
+   211→          style={{ left: `${(max * 0.8 / max) * 100}%` }}
+   212→        />
+   213→      </div>
+   214→    </div>
+   215→  );
+   216→}
+   217→
+   218→export function AdvancedDashboardTab() {
+   219→  const {
+   220→    dashboardPeriod,
+   221→    dashboardMetrics,
+   222→    salesTrend,
+   223→    topSellingItems,
+   224→    paymentSplit,
+   225→    hourlyHeatmap,
+   226→    currency,
+   227→    setDashboardPeriod,
+   228→    isConnected,
+   229→    lastRefreshed,
+   230→    refreshData,
+   231→  } = useURYStore();
+   232→
+   233→  const metrics = dashboardMetrics;
+   234→  const isDark = useIsDark();
+   235→
+   236→  // ── Auto-refresh timer ────────────────────────────────
+   237→  const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
+   238→  const [isRefreshing, setIsRefreshing] = useState(false);
+   239→
+   240→  useEffect(() => {
+   241→    if (!isConnected) return;
+   242→    const interval = setInterval(() => {
+   243→      setCountdown((prev) => {
+   244→        if (prev <= 1) {
+   245→          return REFRESH_INTERVAL;
+   246→        }
+   247→        return prev - 1;
+   248→      });
+   249→    }, 1000);
+   250→    return () => clearInterval(interval);
+   251→  }, [isConnected]);
+   252→
+   253→  useEffect(() => {
+   254→    if (!isConnected) return;
+   255→    if (countdown === REFRESH_INTERVAL) {
+   256→      // Timer just reset, trigger refresh
+   257→      const doRefresh = async () => {
+   258→        setIsRefreshing(true);
+   259→        try {
+   260→          await refreshData();
+   261→        } finally {
+   262→          setIsRefreshing(false);
+   263→        }
+   264→      };
+   265→      doRefresh();
+   266→    }
+   267→  }, [countdown, isConnected, refreshData]);
+   268→
+   269→  // ── CSV Export ─────────────────────────────────────────
+   270→  const handleExportCSV = useCallback(() => {
+   271→    const rows: string[][] = [];
+   272→
+   273→    // KPI metrics
+   274→    rows.push(['=== KLJUČNI KAZALNIKI ===']);
+   275→    rows.push(['Kazalnik', 'Vrednost', 'Rast (%)']);
+   276→    rows.push(['Skupni prihodki', metrics.totalRevenue.toString(), metrics.revenueGrowth.toFixed(1)]);
+   277→    rows.push(['Skupna naročila', metrics.totalOrders.toString(), metrics.ordersGrowth.toFixed(1)]);
+   278→    rows.push(['Povprečni račun', metrics.avgOrderValue.toString(), metrics.avgOrderGrowth.toFixed(1)]);
+   279→    rows.push(['Zasedenost miz', metrics.occupancyRate.toString(), metrics.occupancyGrowth.toFixed(1)]);
+   280→    rows.push([]);
+   281→
+   282→    // Sales trend
+   283→    rows.push(['=== TREND PRODAJE ===']);
+   284→    rows.push(['Oznaka', 'Prihodki', 'Naročila']);
+   285→    salesTrend.forEach((p) => rows.push([p.label, p.revenue.toString(), p.orders.toString()]));
+   286→    rows.push([]);
+   287→
+   288→    // Top selling items
+   289→    rows.push(['=== NAJBOLJ PRODAJANI ===']);
+   290→    rows.push(['Naziv', 'Količina', 'Prihodki', 'Kategorija', 'Vegetariansko']);
+   291→    topSellingItems.forEach((item) =>
+   292→      rows.push([item.name, item.quantity.toString(), item.revenue.toString(), item.course, item.isVeg ? 'Da' : 'Ne'])
+   293→    );
+   294→    rows.push([]);
+   295→
+   296→    // Payment split
+   297→    rows.push(['=== NAČINI PLAČILA ===']);
+   298→    rows.push(['Način', 'Število', 'Znesek']);
+   299→    paymentSplit.forEach((p) => rows.push([p.method, p.count.toString(), p.amount.toString()]));
+   300→    rows.push([]);
+   301→
+   302→    // Staff performance
+   303→    rows.push(['=== USPEŠNOST OSEBJA ===']);
+   304→    rows.push(['Ime', 'Naročila', 'Povp. čas priprave (min)', 'Ocena']);
+   305→    mockStaffData.forEach((s) =>
+   306→      rows.push([s.name, s.ordersServed.toString(), s.avgPrepTime.toString(), s.rating.toString()])
+   307→    );
+   308→    rows.push([]);
+   309→
+   310→    // Wait time
+   311→    rows.push(['=== ČASI ČAKANJA ===']);
+   312→    rows.push(['Povp. čas (min)', 'Trenutna čakalna vrsta', 'Vršni čas danes (min)']);
+   313→    rows.push([
+   314→      mockWaitTimeData.avgOrderToServe.toString(),
+   315→      mockWaitTimeData.currentQueueLength.toString(),
+   316→      mockWaitTimeData.peakWaitTimeToday.toString(),
+   317→    ]);
+   318→    rows.push([]);
+   319→
+   320→    // Category breakdown
+   321→    rows.push(['=== PRIHODKI PO KATEGORIJI ===']);
+   322→    rows.push(['Dan', 'Predjedi', 'Glavne jedi', 'Sladice', 'Pijača']);
+   323→    mockCategoryBreakdown.forEach((d) =>
+   324→      rows.push([d.day, d.Predjedi.toString(), d.Glavne.toString(), d.Sladice.toString(), d.Pijača.toString()])
+   325→    );
+   326→
+   327→    const csvContent = rows.map((r) => r.join(',')).join('\n');
+   328→    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+   329→    const url = URL.createObjectURL(blob);
+   330→    const link = document.createElement('a');
+   331→    link.href = url;
+   332→    link.download = `URY-porocilo-${new Date().toISOString().slice(0, 10)}.csv`;
+   333→    link.click();
+   334→    URL.revokeObjectURL(url);
+   335→  }, [metrics, salesTrend, topSellingItems, paymentSplit]);
+   336→
+   337→  // ── Heatmap ────────────────────────────────────────────
+   338→  const heatmapDays = ['Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob', 'Ned'];
+   339→  const heatmapHours = Array.from({ length: 14 }, (_, i) => i + 10); // 10–23
+   340→  const heatmapMax = Math.max(...hourlyHeatmap.map((p) => p.value), 1);
+   341→
+   342→  // ── Last refreshed formatted ───────────────────────────
+   343→  const formattedLastRefreshed = useMemo(() => {
+   344→    if (!lastRefreshed) return null;
+   345→    return lastRefreshed.toLocaleTimeString('sl-SI', {
+   346→      hour: '2-digit',
+   347→      minute: '2-digit',
+   348→      second: '2-digit',
+   349→    });
+   350→  }, [lastRefreshed]);
+   351→
+   352→  // ── Dark mode chart colors ─────────────────────────────
+   353→  const gridStroke = isDark ? '#374151' : '#f0f0f0';
+   354→  const axisStroke = isDark ? '#9ca3af' : '#9ca3af';
+   355→  const tooltipStyle = getTooltipStyle(isDark);
+   356→
+   357→  const categoryColors = {
+   358→    Predjedi: isDark ? '#34d399' : '#059669',
+   359→    Glavne: isDark ? '#fbbf24' : '#d97706',
+   360→    Sladice: isDark ? '#f472b6' : '#db2777',
+   361→    Pijača: isDark ? '#60a5fa' : '#2563eb',
+   362→  };
+   363→
+   364→  const kpiCards = [
+   365→    {
+   366→      title: 'Skupni prihodki',
+   367→      value: `${currency}${metrics.totalRevenue.toLocaleString('en-IN')}`,
+   368→      growth: metrics.revenueGrowth,
+   369→      icon: IndianRupee,
+   370→      color: 'text-emerald-600',
+   371→      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+   372→    },
+   373→    {
+   374→      title: 'Skupna naročila',
+   375→      value: metrics.totalOrders.toLocaleString('en-IN'),
+   376→      growth: metrics.ordersGrowth,
+   377→      icon: ShoppingCart,
+   378→      color: 'text-amber-600',
+   379→      bg: 'bg-amber-50 dark:bg-amber-900/20',
+   380→    },
+   381→    {
+   382→      title: 'Povprečni račun',
+   383→      value: `${currency}${metrics.avgOrderValue.toLocaleString('en-IN')}`,
+   384→      growth: metrics.avgOrderGrowth,
+   385→      icon: Receipt,
+   386→      color: 'text-blue-600',
+   387→      bg: 'bg-blue-50 dark:bg-amber-900/20',
+   388→    },
+   389→    {
+   390→      title: 'Zasedenost miz',
+   391→      value: `${metrics.occupancyRate}%`,
+   392→      growth: metrics.occupancyGrowth,
+   393→      icon: Users,
+   394→      color: 'text-violet-600',
+   395→      bg: 'bg-violet-50 dark:bg-violet-900/20',
+   396→    },
+   397→  ];
+   398→
+   399→  return (
+   400→    <div className="space-y-6">
+   401→      {/* ── Header: Period Selector + Live Status + Refresh Timer ─── */}
+   402→      <div className="flex flex-col gap-4">
+   403→        {/* Top row: Period selector */}
+   404→        <div className="flex flex-wrap items-center gap-2">
+   405→          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+   406→          <span className="text-sm font-medium text-muted-foreground mr-1">Obdobje:</span>
+   407→          {(Object.keys(periodLabels) as DashboardPeriod[]).map((period) => (
+   408→            <Button
+   409→              key={period}
+   410→              variant={dashboardPeriod === period ? 'default' : 'outline'}
+   411→              size="sm"
+   412→              className={dashboardPeriod === period ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+   413→              onClick={() => setDashboardPeriod(period)}
+   414→            >
+   415→              {periodLabels[period]}
+   416→            </Button>
+   417→          ))}
+   418→
+   419→          {/* Live/DEMO badge with pulsing dot */}
+   420→          <Badge
+   421→            variant="outline"
+   422→            className={`text-xs ml-2 flex items-center gap-1.5 ${
+   423→              isConnected
+   424→                ? 'border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400'
+   425→                : 'border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400'
+   426→            }`}
+   427→          >
+   428→            <span className="relative flex h-2.5 w-2.5">
+   429→              <span
+   430→                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+   431→                  isConnected ? 'bg-emerald-400' : 'bg-amber-400'
+   432→                }`}
+   433→              />
+   434→              <span
+   435→                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+   436→                  isConnected ? 'bg-emerald-500' : 'bg-amber-500'
+   437→                }`}
+   438→              />
+   439→            </span>
+   440→            {isConnected ? 'LIVE' : 'DEMO'}
+   441→          </Badge>
+   442→
+   443→          {/* Export button */}
+   444→          <Tooltip>
+   445→            <TooltipTrigger asChild>
+   446→              <Button
+   447→                variant="outline"
+   448→                size="sm"
+   449→                className="ml-auto gap-1.5"
+   450→                onClick={handleExportCSV}
+   451→              >
+   452→                <Download className="h-3.5 w-3.5" />
+   453→                <span className="hidden sm:inline">Izvozi CSV</span>
+   454→              </Button>
+   455→            </TooltipTrigger>
+   456→            <TooltipContent>Izvozi podatke namizja v CSV</TooltipContent>
+   457→          </Tooltip>
+   458→        </div>
+   459→
+   460→        {/* Bottom row: Refresh timer + Last updated */}
+   461→        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+   462→          {isConnected && (
+   463→            <div className="flex items-center gap-2">
+   464→              <Timer className="h-4 w-4 text-emerald-500" />
+   465→              <span className="text-xs">
+   466→                Osvežitev čez <span className="font-bold tabular-nums text-foreground">{countdown}s</span>
+   467→              </span>
+   468→              <CircularTimer seconds={countdown} total={REFRESH_INTERVAL} />
+   469→              <Button
+   470→                variant="ghost"
+   471→                size="sm"
+   472→                className="h-7 w-7 p-0"
+   473→                onClick={async () => {
+   474→                  setIsRefreshing(true);
+   475→                  try {
+   476→                    await refreshData();
+   477→                  } finally {
+   478→                    setIsRefreshing(false);
+   479→                    setCountdown(REFRESH_INTERVAL);
+   480→                  }
+   481→                }}
+   482→                disabled={isRefreshing}
+   483→              >
+   484→                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+   485→              </Button>
+   486→            </div>
+   487→          )}
+   488→          {formattedLastRefreshed && (
+   489→            <div className="flex items-center gap-1.5">
+   490→              <Clock className="h-3.5 w-3.5" />
+   491→              <span className="text-xs">
+   492→                Zadnja posodobitev: <span className="font-medium text-foreground">{formattedLastRefreshed}</span>
+   493→              </span>
+   494→            </div>
+   495→          )}
+   496→        </div>
+   497→      </div>
+   498→
+   499→      {/* ── KPI Cards ────────────────────────────────────── */}
+   500→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   501→        {kpiCards.map((kpi) => {
+   502→          const Icon = kpi.icon;
+   503→          const isPositive = kpi.growth >= 0;
+   504→          return (
+   505→            <Card key={kpi.title} className="relative overflow-hidden">
+   506→              <CardContent className="p-6">
+   507→                <div className="flex items-center justify-between">
+   508→                  <div className="space-y-1">
+   509→                    <p className="text-sm font-medium text-muted-foreground">{kpi.title}</p>
+   510→                    <p className="text-2xl font-bold">{kpi.value}</p>
+   511→                  </div>
+   512→                  <div className={`p-3 rounded-xl ${kpi.bg}`}>
+   513→                    <Icon className={`h-6 w-6 ${kpi.color}`} />
+   514→                  </div>
+   515→                </div>
+   516→                <div className="flex items-center pt-2">
+   517→                  {isPositive ? (
+   518→                    <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500 mr-1" />
+   519→                  ) : (
+   520→                    <ArrowDownRight className="h-3.5 w-3.5 text-red-500 mr-1" />
+   521→                  )}
+   522→                  <span className={`text-xs font-medium ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+   523→                    {isPositive ? '+' : ''}{kpi.growth.toFixed(1)}%
+   524→                  </span>
+   525→                  <span className="text-xs text-muted-foreground ml-1">vs prejšnje obdobje</span>
+   526→                </div>
+   527→              </CardContent>
+   528→            </Card>
+   529→          );
+   530→        })}
+   531→      </div>
+   532→
+   533→      {/* ── Occupancy Progress ────────────────────────────── */}
+   534→      <Card>
+   535→        <CardContent className="p-4">
+   536→          <div className="flex items-center justify-between mb-2">
+   537→            <div className="flex items-center gap-2">
+   538→              <Activity className="h-4 w-4 text-violet-600" />
+   539→              <span className="text-sm font-medium">Zasedenost miz</span>
+   540→            </div>
+   541→            <span className="text-sm font-bold text-violet-600">{metrics.occupancyRate}%</span>
+   542→          </div>
+   543→          <Progress value={metrics.occupancyRate} className="h-3" />
+   544→          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+   545→            <span>Rast: {metrics.occupancyGrowth >= 0 ? '+' : ''}{metrics.occupancyGrowth.toFixed(1)}% vs prejšnje obdobje</span>
+   546→            <span className="text-violet-600 font-medium">{metrics.occupancyRate}% zasedenosti</span>
+   547→          </div>
+   548→        </CardContent>
+   549→      </Card>
+   550→
+   551→      {/* ── Sales Trend Chart ────────────────────────────── */}
+   552→      <Card>
+   553→        <CardHeader className="pb-2">
+   554→          <div className="flex items-center justify-between">
+   555→            <CardTitle className="text-lg font-semibold">Trend prodaje</CardTitle>
+   556→            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+   557→              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-emerald-500 rounded-sm inline-block" /> Prihodki</span>
+   558→              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-amber-500 rounded-sm inline-block" /> Naročila</span>
+   559→            </div>
+   560→          </div>
+   561→        </CardHeader>
+   562→        <CardContent>
+   563→          <div className="h-[350px] w-full">
+   564→            <ResponsiveContainer width="100%" height="100%">
+   565→              <ComposedChart data={salesTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+   566→                <defs>
+   567→                  <linearGradient id="advRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+   568→                    <stop offset="5%" stopColor={isDark ? '#34d399' : '#059669'} stopOpacity={0.3} />
+   569→                    <stop offset="95%" stopColor={isDark ? '#34d399' : '#059669'} stopOpacity={0} />
+   570→                  </linearGradient>
+   571→                </defs>
+   572→                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+   573→                <XAxis dataKey="label" tick={{ fontSize: 12, fill: axisStroke }} stroke={axisStroke} />
+   574→                <YAxis
+   575→                  yAxisId="left"
+   576→                  tick={{ fontSize: 12, fill: axisStroke }}
+   577→                  stroke={axisStroke}
+   578→                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+   579→                />
+   580→                <YAxis
+   581→                  yAxisId="right"
+   582→                  orientation="right"
+   583→                  tick={{ fontSize: 12, fill: '#f59e0b' }}
+   584→                  stroke="#f59e0b"
+   585→                />
+   586→                <RechartsTooltip
+   587→                  contentStyle={tooltipStyle}
+   588→                  formatter={(value: number, name: string) => {
+   589→                    if (name === 'Prihodki') return [`${currency}${value.toLocaleString('en-IN')}`, name];
+   590→                    return [value.toString(), name];
+   591→                  }}
+   592→                />
+   593→                <Area
+   594→                  yAxisId="left"
+   595→                  type="monotone"
+   596→                  dataKey="revenue"
+   597→                  name="Prihodki"
+   598→                  stroke={isDark ? '#34d399' : '#059669'}
+   599→                  strokeWidth={2}
+   600→                  fillOpacity={1}
+   601→                  fill="url(#advRevenueGrad)"
+   602→                />
+   603→                <Line
+   604→                  yAxisId="right"
+   605→                  type="monotone"
+   606→                  dataKey="orders"
+   607→                  name="Naročila"
+   608→                  stroke="#f59e0b"
+   609→                  strokeWidth={2}
+   610→                  dot={{ fill: '#f59e0b', r: 3 }}
+   611→                />
+   612→              </ComposedChart>
+   613→            </ResponsiveContainer>
+   614→          </div>
+   615→        </CardContent>
+   616→      </Card>
+   617→
+   618→      {/* ── Two column: Top Items + Payment Split ────────── */}
+   619→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   620→        {/* Top Selling Items */}
+   621→        <Card>
+   622→          <CardHeader className="pb-2">
+   623→            <div className="flex items-center justify-between">
+   624→              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+   625→                <Flame className="h-5 w-5 text-orange-500" />
+   626→                Najbolj prodajani
+   627→              </CardTitle>
+   628→              <Badge variant="secondary" className="text-xs">Top {topSellingItems.length}</Badge>
+   629→            </div>
+   630→          </CardHeader>
+   631→          <CardContent>
+   632→            <div className="space-y-3">
+   633→              {topSellingItems.slice(0, 8).map((item, idx) => {
+   634→                const maxRevenue = topSellingItems[0]?.revenue || 1;
+   635→                const barWidth = (item.revenue / maxRevenue) * 100;
+   636→                return (
+   637→                  <div key={item.id} className="space-y-1">
+   638→                    <div className="flex items-center justify-between text-sm">
+   639→                      <div className="flex items-center gap-2">
+   640→                        <span className="text-xs font-mono text-muted-foreground w-5">{idx + 1}.</span>
+   641→                        <span className={`w-2.5 h-2.5 rounded-sm border ${item.isVeg ? 'bg-green-500 border-green-600' : 'bg-red-500 border-red-600'}`} />
+   642→                        <span className="font-medium truncate max-w-[140px]">{item.name}</span>
+   643→                      </div>
+   644→                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+   645→                        <span>{item.quantity}x</span>
+   646→                        <span className="font-mono font-medium text-emerald-600">{currency}{item.revenue.toLocaleString('en-IN')}</span>
+   647→                      </div>
+   648→                    </div>
+   649→                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+   650→                      <div
+   651→                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+   652→                        style={{ width: `${barWidth}%` }}
+   653→                      />
+   654→                    </div>
+   655→                  </div>
+   656→                );
+   657→              })}
+   658→            </div>
+   659→          </CardContent>
+   660→        </Card>
+   661→
+   662→        {/* Payment Method Split */}
+   663→        <Card>
+   664→          <CardHeader className="pb-2">
+   665→            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+   666→              <Zap className="h-5 w-5 text-yellow-500" />
+   667→              Načini plačila
+   668→            </CardTitle>
+   669→          </CardHeader>
+   670→          <CardContent>
+   671→            <div className="h-[220px] w-full">
+   672→              <ResponsiveContainer width="100%" height="100%">
+   673→                <PieChart>
+   674→                  <Pie
+   675→                    data={paymentSplit}
+   676→                    cx="50%"
+   677→                    cy="50%"
+   678→                    innerRadius={55}
+   679→                    outerRadius={90}
+   680→                    paddingAngle={3}
+   681→                    dataKey="amount"
+   682→                    nameKey="method"
+   683→                    label={({ method, percent }) => `${method} ${(percent * 100).toFixed(0)}%`}
+   684→                  >
+   685→                    {paymentSplit.map((entry, index) => (
+   686→                      <Cell key={`cell-${index}`} fill={entry.color} />
+   687→                    ))}
+   688→                  </Pie>
+   689→                  <RechartsTooltip
+   690→                    formatter={(value: number) => [`${currency}${value.toLocaleString('en-IN')}`, '']}
+   691→                    contentStyle={tooltipStyle}
+   692→                  />
+   693→                </PieChart>
+   694→              </ResponsiveContainer>
+   695→            </div>
+   696→            <div className="space-y-2 mt-2">
+   697→              {paymentSplit.map((p) => (
+   698→                <div key={p.method} className="flex items-center justify-between text-sm">
+   699→                  <div className="flex items-center gap-2">
+   700→                    <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: p.color }} />
+   701→                    <span>{p.method}</span>
+   702→                  </div>
+   703→                  <div className="flex items-center gap-3">
+   704→                    <span className="text-xs text-muted-foreground">{p.count} transakcij</span>
+   705→                    <span className="font-mono font-medium">{currency}{p.amount.toLocaleString('en-IN')}</span>
+   706→                  </div>
+   707→                </div>
+   708→              ))}
+   709→            </div>
+   710→          </CardContent>
+   711→        </Card>
+   712→      </div>
+   713→
+   714→      {/* ── Two column: Staff Performance + Wait Time Analytics ── */}
+   715→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   716→        {/* Staff Performance Card */}
+   717→        <Card>
+   718→          <CardHeader className="pb-2">
+   719→            <div className="flex items-center justify-between">
+   720→              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+   721→                <ChefHat className="h-5 w-5 text-orange-500" />
+   722→                Uspešnost osebja
+   723→              </CardTitle>
+   724→              <Badge variant="secondary" className="text-xs">Danes</Badge>
+   725→            </div>
+   726→          </CardHeader>
+   727→          <CardContent>
+   728→            {/* Summary metrics */}
+   729→            <div className="grid grid-cols-3 gap-3 mb-5">
+   730→              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
+   731→                <UserCheck className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
+   732→                <p className="text-[10px] text-muted-foreground">Top natakar</p>
+   733→                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{mockStaffMetrics.topWaiter}</p>
+   734→                <p className="text-[10px] text-muted-foreground">{mockStaffMetrics.topWaiterOrders} naročil</p>
+   735→              </div>
+   736→              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3 text-center">
+   737→                <Timer className="h-4 w-4 text-amber-600 mx-auto mb-1" />
+   738→                <p className="text-[10px] text-muted-foreground">Povp. čas priprave</p>
+   739→                <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{mockStaffMetrics.avgPrepTime} min</p>
+   740→                <p className="text-[10px] text-muted-foreground">povprečje</p>
+   741→              </div>
+   742→              <div className="rounded-lg bg-violet-50 dark:bg-violet-900/20 p-3 text-center">
+   743→                <Gauge className="h-4 w-4 text-violet-600 mx-auto mb-1" />
+   744→                <p className="text-[10px] text-muted-foreground">Skladišč. prepustnost</p>
+   745→                <p className="text-sm font-bold text-violet-700 dark:text-violet-400">{mockStaffMetrics.kitchenThroughput}</p>
+   746→                <p className="text-[10px] text-muted-foreground">naročil/h</p>
+   747→              </div>
+   748→            </div>
+   749→
+   750→            {/* Bar chart for individual staff */}
+   751→            <div className="h-[200px] w-full">
+   752→              <ResponsiveContainer width="100%" height="100%">
+   753→                <BarChart data={mockStaffData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+   754→                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+   755→                  <XAxis
+   756→                    dataKey="name"
+   757→                    tick={{ fontSize: 11, fill: axisStroke }}
+   758→                    stroke={axisStroke}
+   759→                  />
+   760→                  <YAxis tick={{ fontSize: 11, fill: axisStroke }} stroke={axisStroke} />
+   761→                  <RechartsTooltip contentStyle={tooltipStyle} />
+   762→                  <Bar
+   763→                    dataKey="ordersServed"
+   764→                    name="Postrežena naročila"
+   765→                    fill={isDark ? '#34d399' : '#059669'}
+   766→                    radius={[4, 4, 0, 0]}
+   767→                  />
+   768→                </BarChart>
+   769→              </ResponsiveContainer>
+   770→            </div>
+   771→          </CardContent>
+   772→        </Card>
+   773→
+   774→        {/* Wait Time Analytics Card */}
+   775→        <Card>
+   776→          <CardHeader className="pb-2">
+   777→            <div className="flex items-center justify-between">
+   778→              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+   779→                <Clock className="h-5 w-5 text-blue-500" />
+   780→                Časi čakanja
+   781→              </CardTitle>
+   782→              <Badge
+   783→                variant="outline"
+   784→                className={`text-xs ${
+   785→                  mockWaitTimeData.avgOrderToServe <= mockWaitTimeData.targetWaitTime
+   786→                    ? 'border-emerald-300 text-emerald-700 dark:text-emerald-400'
+   787→                    : 'border-red-300 text-red-700 dark:text-red-400'
+   788→                }`}
+   789→              >
+   790→                {mockWaitTimeData.avgOrderToServe <= mockWaitTimeData.targetWaitTime ? 'V normi' : 'Prekoračeno'}
+   791→              </Badge>
+   792→            </div>
+   793→          </CardHeader>
+   794→          <CardContent>
+   795→            {/* Gauge visualizations */}
+   796→            <div className="space-y-4 mb-5">
+   797→              <WaitTimeGauge
+   798→                value={mockWaitTimeData.avgOrderToServe}
+   799→                max={40}
+   800→                label="Povprečni čas naročila do postrežbe"
+   801→                color={isDark ? '#34d399' : '#059669'}
+   802→              />
+   803→              <WaitTimeGauge
+   804→                value={mockWaitTimeData.peakWaitTimeToday}
+   805→                max={40}
+   806→                label="Vršni čas čakanja danes"
+   807→                color={isDark ? '#fbbf24' : '#d97706'}
+   808→              />
+   809→            </div>
+   810→
+   811→            {/* Queue length indicator */}
+   812→            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 mb-4">
+   813→              <div className="flex items-center gap-2">
+   814→                <Users className="h-4 w-4 text-violet-500" />
+   815→                <span className="text-sm">Trenutna čakalna vrsta</span>
+   816→              </div>
+   817→              <div className="flex items-center gap-2">
+   818→                <span className="text-2xl font-bold text-violet-600">{mockWaitTimeData.currentQueueLength}</span>
+   819→                <span className="text-xs text-muted-foreground">naročil</span>
+   820→              </div>
+   821→            </div>
+   822→
+   823→            {/* Wait time trend mini chart */}
+   824→            <div className="h-[120px] w-full">
+   825→              <ResponsiveContainer width="100%" height="100%">
+   826→                <AreaChart data={mockWaitTimeHistory} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+   827→                  <defs>
+   828→                    <linearGradient id="waitTimeGrad" x1="0" y1="0" x2="0" y2="1">
+   829→                      <stop offset="5%" stopColor={isDark ? '#60a5fa' : '#3b82f6'} stopOpacity={0.3} />
+   830→                      <stop offset="95%" stopColor={isDark ? '#60a5fa' : '#3b82f6'} stopOpacity={0} />
+   831→                    </linearGradient>
+   832→                  </defs>
+   833→                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+   834→                  <XAxis dataKey="hour" tick={{ fontSize: 9, fill: axisStroke }} stroke={axisStroke} interval={2} />
+   835→                  <YAxis tick={{ fontSize: 9, fill: axisStroke }} stroke={axisStroke} />
+   836→                  <RechartsTooltip
+   837→                    contentStyle={tooltipStyle}
+   838→                    formatter={(value: number) => [`${value} min`, 'Čas čakanja']}
+   839→                  />
+   840→                  <Area
+   841→                    type="monotone"
+   842→                    dataKey="waitTime"
+   843→                    stroke={isDark ? '#60a5fa' : '#3b82f6'}
+   844→                    strokeWidth={2}
+   845→                    fill="url(#waitTimeGrad)"
+   846→                  />
+   847→                </AreaChart>
+   848→              </ResponsiveContainer>
+   849→            </div>
+   850→          </CardContent>
+   851→        </Card>
+   852→      </div>
+   853→
+   854→      {/* ── Category Breakdown Stacked Bar Chart ──────────── */}
+   855→      <Card>
+   856→        <CardHeader className="pb-2">
+   857→          <div className="flex items-center justify-between">
+   858→            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+   859→              <TrendingUp className="h-5 w-5 text-emerald-500" />
+   860→              Prihodki po kategorijah (tedensko)
+   861→            </CardTitle>
+   862→            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+   863→              <span className="flex items-center gap-1">
+   864→                <span className="w-3 h-2 rounded-sm inline-block" style={{ backgroundColor: categoryColors.Predjedi }} /> Predjedi
+   865→              </span>
+   866→              <span className="flex items-center gap-1">
+   867→                <span className="w-3 h-2 rounded-sm inline-block" style={{ backgroundColor: categoryColors.Glavne }} /> Glavne
+   868→              </span>
+   869→              <span className="flex items-center gap-1">
+   870→                <span className="w-3 h-2 rounded-sm inline-block" style={{ backgroundColor: categoryColors.Sladice }} /> Sladice
+   871→              </span>
+   872→              <span className="flex items-center gap-1">
+   873→                <span className="w-3 h-2 rounded-sm inline-block" style={{ backgroundColor: categoryColors.Pijača }} /> Pijača
+   874→              </span>
+   875→            </div>
+   876→          </div>
+   877→        </CardHeader>
+   878→        <CardContent>
+   879→          <div className="h-[320px] w-full">
+   880→            <ResponsiveContainer width="100%" height="100%">
+   881→              <BarChart data={mockCategoryBreakdown} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+   882→                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+   883→                <XAxis dataKey="day" tick={{ fontSize: 12, fill: axisStroke }} stroke={axisStroke} />
+   884→                <YAxis
+   885→                  tick={{ fontSize: 12, fill: axisStroke }}
+   886→                  stroke={axisStroke}
+   887→                  tickFormatter={(v) => `${currency}${(v / 1000).toFixed(1)}k`}
+   888→                />
+   889→                <RechartsTooltip
+   890→                  contentStyle={tooltipStyle}
+   891→                  formatter={(value: number, name: string) => [`${currency}${value.toLocaleString('en-IN')}`, name]}
+   892→                />
+   893→                <Legend
+   894→                  wrapperStyle={{ fontSize: '12px', color: isDark ? '#d1d5db' : '#374151' }}
+   895→                />
+   896→                <Bar dataKey="Predjedi" stackId="a" fill={categoryColors.Predjedi} radius={[0, 0, 0, 0]} />
+   897→                <Bar dataKey="Glavne" stackId="a" fill={categoryColors.Glavne} />
+   898→                <Bar dataKey="Sladice" stackId="a" fill={categoryColors.Sladice} />
+   899→                <Bar dataKey="Pijača" stackId="a" fill={categoryColors.Pijača} radius={[4, 4, 0, 0]} />
+   900→              </BarChart>
+   901→            </ResponsiveContainer>
+   902→          </div>
+   903→        </CardContent>
+   904→      </Card>
+   905→
+   906→      {/* ── Hourly Heatmap ───────────────────────────────── */}
+   907→      <Card>
+   908→        <CardHeader className="pb-2">
+   909→          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+   910→            <Clock className="h-5 w-5 text-blue-500" />
+   911→            Urna aktivnost (tedenski povprečki)
+   912→          </CardTitle>
+   913→        </CardHeader>
+   914→        <CardContent>
+   915→          <div className="overflow-x-auto">
+   916→            <div className="min-w-[600px]">
+   917→              {/* Hour labels */}
+   918→              <div className="flex items-center gap-1 mb-1">
+   919→                <div className="w-10 shrink-0" />
+   920→                {heatmapHours.map((h) => (
+   921→                  <div key={h} className="flex-1 text-center text-[10px] text-muted-foreground">
+   922→                    {String(h).padStart(2, '0')}
+   923→                  </div>
+   924→                ))}
+   925→              </div>
+   926→              {/* Heatmap rows */}
+   927→              {heatmapDays.map((day) => (
+   928→                <div key={day} className="flex items-center gap-1 mb-1">
+   929→                  <div className="w-10 shrink-0 text-xs font-medium text-right pr-1">{day}</div>
+   930→                  {heatmapHours.map((hour) => {
+   931→                    const point = hourlyHeatmap.find((p) => p.day === day && p.hour === hour);
+   932→                    const value = point?.value || 0;
+   933→                    const intensity = Math.min(value / heatmapMax, 1);
+   934→                    const bg = intensity === 0
+   935→                      ? (isDark ? 'rgba(55,65,81,0.3)' : 'rgba(243,244,246,1)')
+   936→                      : `rgba(5, 150, 105, ${Math.max(0.1, intensity * 0.9)})`;
+   937→                    return (
+   938→                      <div
+   939→                        key={`${day}-${hour}`}
+   940→                        className="flex-1 aspect-square rounded-sm cursor-pointer transition-transform hover:scale-110"
+   941→                        style={{ backgroundColor: bg }}
+   942→                        title={`${day} ${String(hour).padStart(2, '0')}:00 — ${currency}${value.toLocaleString('en-IN')}`}
+   943→                      />
+   944→                    );
+   945→                  })}
+   946→                </div>
+   947→              ))}
+   948→              {/* Legend */}
+   949→              <div className="flex items-center justify-end gap-2 mt-3 text-xs text-muted-foreground">
+   950→                <span>Nizka</span>
+   951→                <div className="flex gap-0.5">
+   952→                  {[0.1, 0.3, 0.5, 0.7, 0.9].map((opacity) => (
+   953→                    <div
+   954→                      key={opacity}
+   955→                      className="w-4 h-3 rounded-sm"
+   956→                      style={{ backgroundColor: `rgba(5, 150, 105, ${opacity})` }}
+   957→                    />
+   958→                  ))}
+   959→                </div>
+   960→                <span>Visoka</span>
+   961→              </div>
+   962→            </div>
+   963→          </div>
+   964→        </CardContent>
+   965→      </Card>
+   966→    </div>
+   967→  );
+   968→}
+   969→

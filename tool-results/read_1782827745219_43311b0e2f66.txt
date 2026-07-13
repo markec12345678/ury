@@ -1,0 +1,1474 @@
+     1→'use client';
+     2→
+     3→import { useState, useRef, useCallback, useMemo } from 'react';
+     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+     5→import { Button } from '@/components/ui/button';
+     6→import { Badge } from '@/components/ui/badge';
+     7→import { Separator } from '@/components/ui/separator';
+     8→import { Switch } from '@/components/ui/switch';
+     9→import { Input } from '@/components/ui/input';
+    10→import { Skeleton } from '@/components/ui/skeleton';
+    11→import { Label } from '@/components/ui/label';
+    12→import {
+    13→  Table,
+    14→  TableBody,
+    15→  TableCell,
+    16→  TableHead,
+    17→  TableHeader,
+    18→  TableRow,
+    19→} from '@/components/ui/table';
+    20→import {
+    21→  BarChart,
+    22→  Bar,
+    23→  XAxis,
+    24→  YAxis,
+    25→  CartesianGrid,
+    26→  Tooltip,
+    27→  ResponsiveContainer,
+    28→  Legend,
+    29→  PieChart,
+    30→  Pie,
+    31→  Cell,
+    32→  AreaChart,
+    33→  Area,
+    34→  Line,
+    35→  ComposedChart,
+    36→} from 'recharts';
+    37→import {
+    38→  FileText,
+    39→  Download,
+    40→  CalendarDays,
+    41→  IndianRupee,
+    42→  ShoppingCart,
+    43→  Receipt,
+    44→  TrendingUp,
+    45→  TrendingDown,
+    46→  AlertTriangle,
+    47→  BarChart3,
+    48→  Zap,
+    49→  Clock,
+    50→  Printer,
+    51→  Mail,
+    52→  ArrowUpRight,
+    53→  ArrowDownRight,
+    54→  Minus,
+    55→  Sparkles,
+    56→  GitCompareArrows,
+    57→  CalendarRange,
+    58→  Loader2,
+    59→} from 'lucide-react';
+    60→import { useURYStore } from '@/lib/ury-store';
+    61→import type { ReportPeriod, ReportSummary, SalesTrendPoint } from '@/lib/ury-types';
+    62→
+    63→// ── Period labels (Slovenian) ────────────────────────────
+    64→const periodLabels: Record<ReportPeriod, string> & { custom: string } = {
+    65→  daily: 'Dnevno',
+    66→  weekly: 'Tedensko',
+    67→  monthly: 'Mesečno',
+    68→  custom: 'Po meri',
+    69→};
+    70→
+    71→const periodDescriptions: Record<ReportPeriod, string> & { custom: string } = {
+    72→  daily: 'Pregled poslovanja za izbrani dan',
+    73→  weekly: 'Pregled poslovanja za izbrani teden',
+    74→  monthly: 'Pregled poslovanja za izbrani mesec',
+    75→  custom: 'Pregled poslovanja za izbrano obdobje',
+    76→};
+    77→
+    78→const comparisonLabels: Record<ReportPeriod, string> & { custom: string } = {
+    79→  daily: 'Danes vs Včeraj',
+    80→  weekly: 'Ta teden vs Prejšnji teden',
+    81→  monthly: 'Ta mesec vs Prejšnji mesec',
+    82→  custom: 'Izbrano obdobje vs Prejšnje obdobje',
+    83→};
+    84→
+    85→// ── Previous period mock data generator ──────────────────
+    86→// Multiplies current data by realistic factors to simulate previous period
+    87→function generatePreviousPeriodData(current: ReportSummary): ReportSummary {
+    88→  const revenueFactor = 0.85 + Math.random() * 0.2; // 0.85 – 1.05
+    89→  const orderFactor = 0.88 + Math.random() * 0.15;
+    90→  const discountFactor = 0.9 + Math.random() * 0.2;
+    91→  const cancelFactor = 0.8 + Math.random() * 0.4;
+    92→
+    93→  return {
+    94→    ...current,
+    95→    totalRevenue: Math.round(current.totalRevenue * revenueFactor),
+    96→    totalOrders: Math.round(current.totalOrders * orderFactor),
+    97→    avgOrderValue: Math.round((current.totalRevenue * revenueFactor) / (current.totalOrders * orderFactor)),
+    98→    totalDiscounts: Math.round(current.totalDiscounts * discountFactor),
+    99→    totalCancellations: Math.round(current.totalCancellations * cancelFactor),
+   100→    netRevenue: Math.round(
+   101→      current.totalRevenue * revenueFactor - current.totalDiscounts * discountFactor
+   102→    ),
+   103→    topItems: current.topItems.map((item) => ({
+   104→      ...item,
+   105→      quantity: Math.round(item.quantity * (0.8 + Math.random() * 0.3)),
+   106→      revenue: Math.round(item.revenue * (0.8 + Math.random() * 0.3)),
+   107→    })),
+   108→    dailyBreakdown: current.dailyBreakdown.map((d) => ({
+   109→      ...d,
+   110→      revenue: Math.round(d.revenue * (0.82 + Math.random() * 0.25)),
+   111→      orders: Math.round(d.orders * (0.85 + Math.random() * 0.2)),
+   112→    })),
+   113→    paymentSplit: current.paymentSplit.map((p) => ({
+   114→      ...p,
+   115→      count: Math.round(p.count * (0.85 + Math.random() * 0.2)),
+   116→      amount: Math.round(p.amount * (0.85 + Math.random() * 0.2)),
+   117→    })),
+   118→    orderTypeSplit: current.orderTypeSplit.map((o) => ({
+   119→      ...o,
+   120→      count: Math.round(o.count * (0.85 + Math.random() * 0.2)),
+   121→      revenue: Math.round(o.revenue * (0.85 + Math.random() * 0.2)),
+   122→    })),
+   123→    courseRevenue: current.courseRevenue.map((c) => ({
+   124→      ...c,
+   125→      revenue: Math.round(c.revenue * (0.82 + Math.random() * 0.25)),
+   126→      items: Math.round(c.items * (0.85 + Math.random() * 0.2)),
+   127→    })),
+   128→  };
+   129→}
+   130→
+   131→// ── Generate AI-style insight text ───────────────────────
+   132→function generateInsight(
+   133→  current: ReportSummary,
+   134→  previous: ReportSummary | null,
+   135→  currency: string
+   136→): string {
+   137→  const parts: string[] = [];
+   138→
+   139→  // Revenue insight
+   140→  if (previous) {
+   141→    const revDelta = ((current.totalRevenue - previous.totalRevenue) / previous.totalRevenue) * 100;
+   142→    if (revDelta > 0) {
+   143→      parts.push(`Prihodki so se povečali za ${revDelta.toFixed(1)}% v primerjavi s prejšnjim obdobjem`);
+   144→    } else if (revDelta < 0) {
+   145→      parts.push(`Prihodki so se zmanjšali za ${Math.abs(revDelta).toFixed(1)}% v primerjavi s prejšnjim obdobjem`);
+   146→    } else {
+   147→      parts.push('Prihodki so ostali enaki kot v prejšnjem obdobju');
+   148→    }
+   149→
+   150→    // Orders insight
+   151→    const ordDelta = ((current.totalOrders - previous.totalOrders) / previous.totalOrders) * 100;
+   152→    if (Math.abs(ordDelta) > 3) {
+   153→      parts.push(`število naročil se je ${ordDelta > 0 ? 'povečalo' : 'zmanjšalo'} za ${Math.abs(ordDelta).toFixed(1)}%`);
+   154→    }
+   155→  } else {
+   156→    parts.push(`Skupni prihodki znašajo ${currency}${current.totalRevenue.toLocaleString('en-IN')} s ${current.totalOrders} naročili`);
+   157→  }
+   158→
+   159→  // Top item insight
+   160→  if (current.topItems.length > 0) {
+   161→    const top = current.topItems[0];
+   162→    parts.push(`${top.name} ostaja najbolj prodajan artikel (${top.quantity}x, ${currency}${top.revenue.toLocaleString('en-IN')})`);
+   163→  }
+   164→
+   165→  // Net margin insight
+   166→  const netMargin = current.totalRevenue > 0 ? (current.netRevenue / current.totalRevenue) * 100 : 0;
+   167→  if (netMargin > 90) {
+   168→    parts.push(`Neto marža je odlična (${netMargin.toFixed(1)}%)`);
+   169→  } else if (netMargin > 80) {
+   170→    parts.push(`Neto marža je dobra (${netMargin.toFixed(1)}%)`);
+   171→  } else {
+   172→    parts.push(`Neto marža znaša ${netMargin.toFixed(1)}% — priporočljivo je zmanjšati popuste in preklice`);
+   173→  }
+   174→
+   175→  // Cancellations insight
+   176→  if (current.totalCancellations > 5) {
+   177→    parts.push(`Pozor: ${current.totalCancellations} preklicanih naročil — preverite vzroke`);
+   178→  }
+   179→
+   180→  return parts.join('. ') + '.';
+   181→}
+   182→
+   183→// ── Delta arrow component ────────────────────────────────
+   184→function DeltaArrow({ current, previous, invert = false, suffix = '%' }: {
+   185→  current: number;
+   186→  previous: number;
+   187→  invert?: boolean;
+   188→  suffix?: string;
+   189→}) {
+   190→  if (previous === 0) return <span className="text-xs text-muted-foreground">—</span>;
+   191→  const delta = ((current - previous) / previous) * 100;
+   192→  const isPositive = invert ? delta < 0 : delta > 0;
+   193→  const isNeutral = Math.abs(delta) < 0.5;
+   194→
+   195→  if (isNeutral) {
+   196→    return (
+   197→      <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+   198→        <Minus className="h-3 w-3" />
+   199→        {delta.toFixed(1)}{suffix}
+   200→      </span>
+   201→    );
+   202→  }
+   203→
+   204→  return (
+   205→    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isPositive ? 'text-emerald-600' : 'text-red-500'}`}>
+   206→      {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+   207→      {Math.abs(delta).toFixed(1)}{suffix}
+   208→    </span>
+   209→  );
+   210→}
+   211→
+   212→// ── Main component ───────────────────────────────────────
+   213→export function ReportGeneratorTab() {
+   214→  const {
+   215→    reportPeriod,
+   216→    reportData,
+   217→    currency,
+   218→    setReportPeriod,
+   219→    exportReportPDF,
+   220→    isConnected,
+   221→    addToast,
+   222→    restaurantName,
+   223→  } = useURYStore();
+   224→
+   225→  const report = reportData;
+   226→
+   227→  // Local state for custom features
+   228→  const [isCustomMode, setIsCustomMode] = useState(false);
+   229→  const [customDateFrom, setCustomDateFrom] = useState('');
+   230→  const [customDateTo, setCustomDateTo] = useState('');
+   231→  const [comparisonEnabled, setComparisonEnabled] = useState(false);
+   232→  const [isExporting, setIsExporting] = useState(false);
+   233→
+   234→  // Chart refs for PDF capture
+   235→  const revenueChartRef = useRef<HTMLDivElement>(null);
+   236→  const orderTypeChartRef = useRef<HTMLDivElement>(null);
+   237→  const courseChartRef = useRef<HTMLDivElement>(null);
+   238→
+   239→  // Generate previous period data (stable across renders when comparison enabled)
+   240→  const previousData = useMemo(() => {
+   241→    if (!comparisonEnabled) return null;
+   242→    return generatePreviousPeriodData(report);
+   243→  }, [comparisonEnabled, report.totalRevenue, report.totalOrders, reportPeriod]);
+   244→
+   245→  // AI insight
+   246→  const insight = useMemo(
+   247→    () => generateInsight(report, previousData, currency),
+   248→    [report.totalRevenue, report.totalOrders, report.netRevenue, report.totalCancellations, comparisonEnabled, currency]
+   249→  );
+   250→
+   251→  // Composed chart data for comparison mode
+   252→  const comparisonChartData = useMemo(() => {
+   253→    if (!comparisonEnabled || !previousData) return [];
+   254→    return report.dailyBreakdown.map((d, i) => ({
+   255→      label: d.label,
+   256→      revenue: d.revenue,
+   257→      prevRevenue: previousData.dailyBreakdown[i]?.revenue || 0,
+   258→      orders: d.orders,
+   259→      prevOrders: previousData.dailyBreakdown[i]?.orders || 0,
+   260→    }));
+   261→  }, [comparisonEnabled, previousData, report.dailyBreakdown]);
+   262→
+   263→  // Handle period change
+   264→  const handlePeriodChange = useCallback((period: ReportPeriod | 'custom') => {
+   265→    if (period === 'custom') {
+   266→      setIsCustomMode(true);
+   267→    } else {
+   268→      setIsCustomMode(false);
+   269→      setReportPeriod(period);
+   270→    }
+   271→  }, [setReportPeriod]);
+   272→
+   273→  // Enhanced PDF export
+   274→  const handleEnhancedPDFExport = useCallback(async () => {
+   275→    setIsExporting(true);
+   276→    try {
+   277→      const { jsPDF } = await import('jspdf');
+   278→      const autoTable = (await import('jspdf-autotable')).default;
+   279→
+   280→      const doc = new jsPDF();
+   281→      const pageWidth = doc.internal.pageSize.getWidth();
+   282→      const pageHeight = doc.internal.pageSize.getHeight();
+   283→      const margin = 14;
+   284→
+   285→      const periodTitleMap: Record<string, string> = {
+   286→        daily: 'Dnevno poročilo',
+   287→        weekly: 'Tedensko poročilo',
+   288→        monthly: 'Mesečno poročilo',
+   289→      };
+   290→      const periodTitle = isCustomMode
+   291→        ? `Poročilo po meri (${customDateFrom || report.dateFrom} – ${customDateTo || report.dateTo})`
+   292→        : (periodTitleMap[report.period] || 'Poročilo');
+   293→
+   294→      // ── Page 1: Header banner ──────────────────────────
+   295→      // Colored banner
+   296→      doc.setFillColor(5, 150, 105);
+   297→      doc.rect(0, 0, pageWidth, 45, 'F');
+   298→
+   299→      // Restaurant name in banner
+   300→      doc.setFontSize(22);
+   301→      doc.setTextColor(255, 255, 255);
+   302→      doc.text(restaurantName, margin, 18);
+   303→
+   304→      // Report title
+   305→      doc.setFontSize(14);
+   306→      doc.text(periodTitle, margin, 30);
+   307→
+   308→      // Generated timestamp
+   309→      doc.setFontSize(9);
+   310→      doc.setTextColor(200, 240, 220);
+   311→      const timestamp = new Date().toLocaleString('sl-SI', {
+   312→        weekday: 'long',
+   313→        day: 'numeric',
+   314→        month: 'long',
+   315→        year: 'numeric',
+   316→        hour: '2-digit',
+   317→        minute: '2-digit',
+   318→      });
+   319→      doc.text(`Generirano: ${timestamp}`, margin, 39);
+   320→
+   321→      // Live/Demo badge
+   322→      doc.setFontSize(8);
+   323→      doc.setTextColor(200, 240, 220);
+   324→      doc.text(isConnected ? 'LIVE' : 'DEMO', pageWidth - margin - 15, 18);
+   325→
+   326→      // ── Watermark ───────────────────────────────────────
+   327→      const addWatermark = () => {
+   328→        const currentPage = doc.getCurrentPageInfo().pageNumber;
+   329→        doc.setPage(currentPage);
+   330→        doc.setFontSize(60);
+   331→        doc.setTextColor(230, 230, 230);
+   332→        doc.saveGraphicsState();
+   333→        // We'll add watermark text diagonally using a transform approximation
+   334→        // jsPDF doesn't natively support rotation easily, so we use text with opacity feel
+   335→        doc.text('URY Dashboard', pageWidth / 2, pageHeight / 2, {
+   336→          align: 'center',
+   337→          angle: 45,
+   338→        });
+   339→        doc.restoreGraphicsState();
+   340→      };
+   341→
+   342→      // ── Summary Table ───────────────────────────────────
+   343→      doc.setTextColor(30, 30, 30);
+   344→      doc.setFontSize(16);
+   345→      doc.text('Povzetek', margin, 58);
+   346→
+   347→      const summaryRows: string[][] = [
+   348→        ['Skupni prihodki', `${currency}${report.totalRevenue.toLocaleString('en-IN')}`],
+   349→        ['Skupna naročila', report.totalOrders.toString()],
+   350→        ['Povprečni račun', `${currency}${report.avgOrderValue.toLocaleString('en-IN')}`],
+   351→        ['Popusti', `-${currency}${report.totalDiscounts.toLocaleString('en-IN')}`],
+   352→        ['Preklici', report.totalCancellations.toString()],
+   353→        ['Neto prihodki', `${currency}${report.netRevenue.toLocaleString('en-IN')}`],
+   354→      ];
+   355→
+   356→      // If comparison, add previous period columns
+   357→      if (comparisonEnabled && previousData) {
+   358→        autoTable(doc, {
+   359→          startY: 62,
+   360→          head: [['Postavka', 'Trenutno', 'Prejšnje', 'Sprememba']],
+   361→          body: [
+   362→            [
+   363→              'Skupni prihodki',
+   364→              `${currency}${report.totalRevenue.toLocaleString('en-IN')}`,
+   365→              `${currency}${previousData.totalRevenue.toLocaleString('en-IN')}`,
+   366→              `${((report.totalRevenue - previousData.totalRevenue) / previousData.totalRevenue * 100).toFixed(1)}%`,
+   367→            ],
+   368→            [
+   369→              'Skupna naročila',
+   370→              report.totalOrders.toString(),
+   371→              previousData.totalOrders.toString(),
+   372→              `${((report.totalOrders - previousData.totalOrders) / previousData.totalOrders * 100).toFixed(1)}%`,
+   373→            ],
+   374→            [
+   375→              'Povprečni račun',
+   376→              `${currency}${report.avgOrderValue.toLocaleString('en-IN')}`,
+   377→              `${currency}${previousData.avgOrderValue.toLocaleString('en-IN')}`,
+   378→              `${((report.avgOrderValue - previousData.avgOrderValue) / previousData.avgOrderValue * 100).toFixed(1)}%`,
+   379→            ],
+   380→            [
+   381→              'Popusti',
+   382→              `-${currency}${report.totalDiscounts.toLocaleString('en-IN')}`,
+   383→              `-${currency}${previousData.totalDiscounts.toLocaleString('en-IN')}`,
+   384→              `${((report.totalDiscounts - previousData.totalDiscounts) / previousData.totalDiscounts * 100).toFixed(1)}%`,
+   385→            ],
+   386→            [
+   387→              'Preklici',
+   388→              report.totalCancellations.toString(),
+   389→              previousData.totalCancellations.toString(),
+   390→              `${((report.totalCancellations - previousData.totalCancellations) / previousData.totalCancellations * 100).toFixed(1)}%`,
+   391→            ],
+   392→            [
+   393→              'Neto prihodki',
+   394→              `${currency}${report.netRevenue.toLocaleString('en-IN')}`,
+   395→              `${currency}${previousData.netRevenue.toLocaleString('en-IN')}`,
+   396→              `${((report.netRevenue - previousData.netRevenue) / previousData.netRevenue * 100).toFixed(1)}%`,
+   397→            ],
+   398→          ],
+   399→          theme: 'striped',
+   400→          headStyles: { fillColor: [5, 150, 105], textColor: 255, fontSize: 10 },
+   401→          bodyStyles: { fontSize: 9 },
+   402→          alternateRowStyles: { fillColor: [240, 253, 244] },
+   403→          columnStyles: {
+   404→            0: { fontStyle: 'bold', cellWidth: 55 },
+   405→            1: { halign: 'right', cellWidth: 40 },
+   406→            2: { halign: 'right', cellWidth: 40 },
+   407→            3: { halign: 'right', cellWidth: 30 },
+   408→          },
+   409→          didParseCell: (data: Record<string, unknown>) => {
+   410→            const section = data.section as string;
+   411→            const column = data.column as { index: number };
+   412→            const cell = data.cell as { raw: string; styles: { textColor: number[]; fontStyle?: string } };
+   413→            if (section === 'body' && column.index === 3) {
+   414→              const text = cell.raw;
+   415→              if (typeof text === 'string') {
+   416→                const val = parseFloat(text);
+   417→                if (val < 0) cell.styles.textColor = [220, 38, 38];
+   418→                else cell.styles.textColor = [5, 150, 105];
+   419→              }
+   420→            }
+   421→            if (section === 'body' && column.index === 1 && (data.row as { index: number }).index === 5) {
+   422→              cell.styles.fontStyle = 'bold';
+   423→              cell.styles.textColor = [5, 150, 105];
+   424→            }
+   425→          },
+   426→        });
+   427→      } else {
+   428→        autoTable(doc, {
+   429→          startY: 62,
+   430→          head: [['Postavka', 'Vrednost']],
+   431→          body: summaryRows,
+   432→          theme: 'striped',
+   433→          headStyles: { fillColor: [5, 150, 105], textColor: 255, fontSize: 10 },
+   434→          bodyStyles: { fontSize: 10 },
+   435→          alternateRowStyles: { fillColor: [240, 253, 244] },
+   436→          columnStyles: {
+   437→            0: { fontStyle: 'bold', cellWidth: 80 },
+   438→            1: { halign: 'right', cellWidth: 60 },
+   439→          },
+   440→          didParseCell: (data: Record<string, unknown>) => {
+   441→            const section = data.section as string;
+   442→            const column = data.column as { index: number };
+   443→            const cell = data.cell as { raw: string; styles: { textColor: number[]; fontStyle?: string } };
+   444→            if (section === 'body' && column.index === 1) {
+   445→              const text = cell.raw;
+   446→              if (typeof text === 'string' && text.startsWith('-')) {
+   447→                cell.styles.textColor = [220, 38, 38];
+   448→              }
+   449→              if ((data.row as { index: number }).index === 5) {
+   450→                cell.styles.fontStyle = 'bold';
+   451→                cell.styles.textColor = [5, 150, 105];
+   452→              }
+   453→            }
+   454→          },
+   455→        });
+   456→      }
+   457→
+   458→      // ── Capture chart as image ─────────────────────────
+   459→      const captureChart = async (ref: React.RefObject<HTMLDivElement | null>): Promise<string | null> => {
+   460→        if (!ref.current) return null;
+   461→        const canvasEl = ref.current.querySelector('canvas');
+   462→        if (!canvasEl) return null;
+   463→        return canvasEl.toDataURL('image/png');
+   464→      };
+   465→
+   466→      // ── Top Selling Items ───────────────────────────────
+   467→      const summaryEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 120;
+   468→      doc.setFontSize(16);
+   469→      doc.setTextColor(30, 30, 30);
+   470→      doc.text('Najbolj prodajani artikli', margin, summaryEndY + 15);
+   471→
+   472→      autoTable(doc, {
+   473→        startY: summaryEndY + 18,
+   474→        head: [['Artikel', 'Količina', 'Prihodki', 'Kategorija']],
+   475→        body: report.topItems.map((item) => [
+   476→          item.name,
+   477→          item.quantity.toString(),
+   478→          `${currency}${item.revenue.toLocaleString('en-IN')}`,
+   479→          item.course,
+   480→        ]),
+   481→        theme: 'striped',
+   482→        headStyles: { fillColor: [5, 150, 105], textColor: 255, fontSize: 10 },
+   483→        bodyStyles: { fontSize: 9 },
+   484→        alternateRowStyles: { fillColor: [240, 253, 244] },
+   485→        margin: { left: margin, right: margin },
+   486→      });
+   487→
+   488→      // ── Page 2: Charts ─────────────────────────────────
+   489→      doc.addPage();
+   490→
+   491→      // Add watermark to page 1
+   492→      doc.setPage(1);
+   493→      addWatermark();
+   494→
+   495→      doc.setPage(2);
+   496→
+   497→      doc.setFontSize(16);
+   498→      doc.setTextColor(30, 30, 30);
+   499→      doc.text('Trend prihodkov', margin, 22);
+   500→
+   501→      // Try to capture chart image
+   502→      const revenueImg = await captureChart(revenueChartRef);
+   503→      if (revenueImg) {
+   504→        doc.addImage(revenueImg, 'PNG', margin, 26, pageWidth - margin * 2, 80);
+   505→      } else {
+   506→        // Fallback: daily breakdown table
+   507→        autoTable(doc, {
+   508→          startY: 26,
+   509→          head: [['Datum/Ura', 'Prihodki', 'Naročila']],
+   510→          body: report.dailyBreakdown.map((d) => [
+   511→            d.label,
+   512→            `${currency}${d.revenue.toLocaleString('en-IN')}`,
+   513→            d.orders.toString(),
+   514→          ]),
+   515→          theme: 'striped',
+   516→          headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+   517→          bodyStyles: { fontSize: 9 },
+   518→          alternateRowStyles: { fillColor: [240, 253, 244] },
+   519→          margin: { left: margin, right: margin },
+   520→        });
+   521→      }
+   522→
+   523→      // Order type chart
+   524→      const chartY = revenueImg ? 112 : (doc as unknown as Record<string, number>).lastAutoTable?.finalY + 15 || 120;
+   525→      if (!revenueImg) {
+   526→        doc.setFontSize(16);
+   527→        doc.setTextColor(30, 30, 30);
+   528→      }
+   529→      doc.text('Razdelitev po tipu naročila', margin, chartY);
+   530→
+   531→      const otImg = await captureChart(orderTypeChartRef);
+   532→      if (otImg) {
+   533→        doc.addImage(otImg, 'PNG', margin, chartY + 4, (pageWidth - margin * 2) / 2, 70);
+   534→      }
+   535→
+   536→      // Course revenue chart
+   537→      const courseImg = await captureChart(courseChartRef);
+   538→      if (courseImg) {
+   539→        doc.addImage(courseImg, 'PNG', pageWidth / 2, chartY + 4, (pageWidth - margin * 2) / 2, 70);
+   540→      }
+   541→
+   542→      // ── Page 3: Payment + Course tables ─────────────────
+   543→      doc.addPage();
+   544→      addWatermark();
+   545→
+   546→      doc.setFontSize(16);
+   547→      doc.setTextColor(30, 30, 30);
+   548→      doc.text('Razdelitev plačil', margin, 22);
+   549→
+   550→      autoTable(doc, {
+   551→        startY: 28,
+   552→        head: [['Metoda', 'Število', 'Znesek']],
+   553→        body: report.paymentSplit.map((p) => [
+   554→          p.method,
+   555→          p.count.toString(),
+   556→          `${currency}${p.amount.toLocaleString('en-IN')}`,
+   557→        ]),
+   558→        theme: 'striped',
+   559→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+   560→        bodyStyles: { fontSize: 10 },
+   561→        alternateRowStyles: { fillColor: [240, 253, 244] },
+   562→        margin: { left: margin, right: margin },
+   563→      });
+   564→
+   565→      const payEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 80;
+   566→      doc.setFontSize(16);
+   567→      doc.setTextColor(30, 30, 30);
+   568→      doc.text('Razdelitev po tipu naročila', margin, payEndY + 15);
+   569→
+   570→      autoTable(doc, {
+   571→        startY: payEndY + 18,
+   572→        head: [['Tip', 'Število', 'Prihodki']],
+   573→        body: report.orderTypeSplit.map((o) => [
+   574→          o.type,
+   575→          o.count.toString(),
+   576→          `${currency}${o.revenue.toLocaleString('en-IN')}`,
+   577→        ]),
+   578→        theme: 'striped',
+   579→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+   580→        bodyStyles: { fontSize: 10 },
+   581→        alternateRowStyles: { fillColor: [240, 253, 244] },
+   582→        margin: { left: margin, right: margin },
+   583→      });
+   584→
+   585→      const otEndY = (doc as unknown as Record<string, number>).lastAutoTable?.finalY || 140;
+   586→      doc.setFontSize(16);
+   587→      doc.setTextColor(30, 30, 30);
+   588→      doc.text('Prihodki po kategorijah', margin, otEndY + 15);
+   589→
+   590→      autoTable(doc, {
+   591→        startY: otEndY + 18,
+   592→        head: [['Kategorija', 'Prihodki', 'Artikli']],
+   593→        body: report.courseRevenue.map((c) => [
+   594→          c.course,
+   595→          `${currency}${c.revenue.toLocaleString('en-IN')}`,
+   596→          c.items.toString(),
+   597→        ]),
+   598→        theme: 'striped',
+   599→        headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+   600→        bodyStyles: { fontSize: 10 },
+   601→        alternateRowStyles: { fillColor: [240, 253, 244] },
+   602→        margin: { left: margin, right: margin },
+   603→      });
+   604→
+   605→      // ── Page 4: Daily breakdown ─────────────────────────
+   606→      if (report.dailyBreakdown.length > 0) {
+   607→        doc.addPage();
+   608→        addWatermark();
+   609→
+   610→        doc.setFontSize(16);
+   611→        doc.setTextColor(30, 30, 30);
+   612→        doc.text('Dnevni pregled', margin, 22);
+   613→
+   614→        autoTable(doc, {
+   615→          startY: 28,
+   616→          head: [['Datum/Ura', 'Prihodki', 'Naročila']],
+   617→          body: report.dailyBreakdown.map((d) => [
+   618→            d.label,
+   619→            `${currency}${d.revenue.toLocaleString('en-IN')}`,
+   620→            d.orders.toString(),
+   621→          ]),
+   622→          theme: 'striped',
+   623→          headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+   624→          bodyStyles: { fontSize: 10 },
+   625→          alternateRowStyles: { fillColor: [240, 253, 244] },
+   626→          margin: { left: margin, right: margin },
+   627→        });
+   628→      }
+   629→
+   630→      // ── Footers on all pages ────────────────────────────
+   631→      const pageCount = doc.getNumberOfPages();
+   632→      for (let i = 1; i <= pageCount; i++) {
+   633→        doc.setPage(i);
+   634→        addWatermark();
+   635→        // Footer line
+   636→        doc.setDrawColor(200, 200, 200);
+   637→        doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+   638→        doc.setFontSize(8);
+   639→        doc.setTextColor(150, 150, 150);
+   640→        doc.text(
+   641→          `URY Dashboard — ${periodTitle} — Stran ${i} od ${pageCount}`,
+   642→          pageWidth / 2,
+   643→          pageHeight - 10,
+   644→          { align: 'center' }
+   645→        );
+   646→        doc.text(
+   647→          `Generirano: ${timestamp}`,
+   648→          margin,
+   649→          pageHeight - 10
+   650→        );
+   651→      }
+   652→
+   653→      doc.save(`${isCustomMode ? 'custom' : report.period}-porocilo-${report.dateFrom}.pdf`);
+   654→      addToast({ type: 'success', title: 'PDF generiran', description: 'Poročilo je bilo shranjeno z izboljšanim izgledom' });
+   655→    } catch (err) {
+   656→      console.error('PDF export error:', err);
+   657→      addToast({ type: 'error', title: 'Napaka pri izvozu', description: 'PDF ni bilo mogoče generirati' });
+   658→    } finally {
+   659→      setIsExporting(false);
+   660→    }
+   661→  }, [report, previousData, comparisonEnabled, isCustomMode, customDateFrom, customDateTo, currency, isConnected, addToast, restaurantName]);
+   662→
+   663→  // CSV export
+   664→  const handleExportCSV = useCallback(() => {
+   665→    const headers = comparisonEnabled && previousData
+   666→      ? ['Postavka', 'Trenutno', 'Prejšnje', 'Sprememba %']
+   667→      : ['Postavka', 'Vrednost'];
+   668→
+   669→    const pct = (curr: number, prev: number) => prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : '0';
+   670→
+   671→    const rows = comparisonEnabled && previousData
+   672→      ? [
+   673→          ['Skupni prihodki', `${report.totalRevenue}`, `${previousData.totalRevenue}`, pct(report.totalRevenue, previousData.totalRevenue)],
+   674→          ['Skupna naročila', `${report.totalOrders}`, `${previousData.totalOrders}`, pct(report.totalOrders, previousData.totalOrders)],
+   675→          ['Povprečni račun', `${report.avgOrderValue}`, `${previousData.avgOrderValue}`, pct(report.avgOrderValue, previousData.avgOrderValue)],
+   676→          ['Popusti', `${report.totalDiscounts}`, `${previousData.totalDiscounts}`, pct(report.totalDiscounts, previousData.totalDiscounts)],
+   677→          ['Preklici', `${report.totalCancellations}`, `${previousData.totalCancellations}`, pct(report.totalCancellations, previousData.totalCancellations)],
+   678→          ['Neto prihodki', `${report.netRevenue}`, `${previousData.netRevenue}`, pct(report.netRevenue, previousData.netRevenue)],
+   679→        ]
+   680→      : [
+   681→          ['Skupni prihodki', `${report.totalRevenue}`],
+   682→          ['Skupna naročila', `${report.totalOrders}`],
+   683→          ['Povprečni račun', `${report.avgOrderValue}`],
+   684→          ['Popusti', `${report.totalDiscounts}`],
+   685→          ['Preklici', `${report.totalCancellations}`],
+   686→          ['Neto prihodki', `${report.netRevenue}`],
+   687→        ];
+   688→
+   689→    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+   690→    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+   691→    const url = URL.createObjectURL(blob);
+   692→    const link = document.createElement('a');
+   693→    link.href = url;
+   694→    link.download = `${report.period}-porocilo-${report.dateFrom}.csv`;
+   695→    link.click();
+   696→    URL.revokeObjectURL(url);
+   697→  }, [report, previousData, comparisonEnabled]);
+   698→
+   699→  const formatValue = (value: number, format: string) => {
+   700→    if (format === 'currency') return `${currency}${value.toLocaleString('en-IN')}`;
+   701→    return value.toLocaleString('en-IN');
+   702→  };
+   703→
+   704→  const courseColors = ['#059669', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444'];
+   705→
+   706→  const activePeriodKey = isCustomMode ? 'custom' : reportPeriod;
+   707→
+   708→  // Summary cards
+   709→  const summaryCards = [
+   710→    {
+   711→      title: 'Skupni prihodki',
+   712→      value: report.totalRevenue,
+   713→      prevValue: previousData?.totalRevenue,
+   714→      icon: IndianRupee,
+   715→      color: 'text-emerald-600',
+   716→      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+   717→      gradient: 'from-emerald-500/10 to-emerald-600/5',
+   718→      format: 'currency',
+   719→    },
+   720→    {
+   721→      title: 'Skupna naročila',
+   722→      value: report.totalOrders,
+   723→      prevValue: previousData?.totalOrders,
+   724→      icon: ShoppingCart,
+   725→      color: 'text-amber-600',
+   726→      bg: 'bg-amber-50 dark:bg-amber-900/20',
+   727→      gradient: 'from-amber-500/10 to-amber-600/5',
+   728→      format: 'number',
+   729→    },
+   730→    {
+   731→      title: 'Povprečni račun',
+   732→      value: report.avgOrderValue,
+   733→      prevValue: previousData?.avgOrderValue,
+   734→      icon: Receipt,
+   735→      color: 'text-violet-600',
+   736→      bg: 'bg-violet-50 dark:bg-violet-900/20',
+   737→      gradient: 'from-violet-500/10 to-violet-600/5',
+   738→      format: 'currency',
+   739→    },
+   740→    {
+   741→      title: 'Neto prihodki',
+   742→      value: report.netRevenue,
+   743→      prevValue: previousData?.netRevenue,
+   744→      icon: TrendingUp,
+   745→      color: 'text-emerald-600',
+   746→      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+   747→      gradient: 'from-emerald-500/10 to-emerald-600/5',
+   748→      format: 'currency',
+   749→    },
+   750→  ];
+   751→
+   752→  return (
+   753→    <>
+   754→      {/* Print-optimized CSS */}
+   755→      <style dangerouslySetInnerHTML={{ __html: `
+   756→        @media print {
+   757→          body { background: white !important; }
+   758→          .no-print { display: none !important; }
+   759→          .print-break-before { page-break-before: always; }
+   760→          .print-break-after { page-break-after: always; }
+   761→          .print-break-inside-avoid { page-break-inside: avoid; }
+   762→          [data-print-full-width] { width: 100% !important; max-width: 100% !important; }
+   763→          .shadow-sm, .shadow, .shadow-md { box-shadow: none !important; }
+   764→          .rounded-xl, .rounded-lg, .rounded-2xl { border-radius: 4px !important; }
+   765→          @page { margin: 1.5cm; size: A4; }
+   766→        }
+   767→      `}} />
+   768→
+   769→      <div className="space-y-6">
+   770→        {/* ── Period Selector + Actions ─────────────────── */}
+   771→        <div className="flex flex-wrap items-center justify-between gap-4 no-print">
+   772→          <div className="flex flex-wrap items-center gap-2">
+   773→            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+   774→            <span className="text-sm font-medium text-muted-foreground mr-1">Obdobje:</span>
+   775→            {(['daily', 'weekly', 'monthly', 'custom'] as const).map((period) => (
+   776→              <Button
+   777→                key={period}
+   778→                variant={(period === 'custom' ? isCustomMode : reportPeriod === period && !isCustomMode) ? 'default' : 'outline'}
+   779→                size="sm"
+   780→                className={
+   781→                  (period === 'custom' ? isCustomMode : reportPeriod === period && !isCustomMode)
+   782→                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+   783→                    : ''
+   784→                }
+   785→                onClick={() => handlePeriodChange(period)}
+   786→              >
+   787→                {periodLabels[period]}
+   788→              </Button>
+   789→            ))}
+   790→          </div>
+   791→          <div className="flex items-center gap-2">
+   792→            <Badge variant="outline" className="text-xs">
+   793→              {isCustomMode ? `${customDateFrom || report.dateFrom} – ${customDateTo || report.dateTo}` : report.periodLabel}
+   794→            </Badge>
+   795→            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+   796→              <Download className="h-3.5 w-3.5 mr-1" />
+   797→              CSV
+   798→            </Button>
+   799→            <Button
+   800→              size="sm"
+   801→              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+   802→              onClick={handleEnhancedPDFExport}
+   803→              disabled={isExporting}
+   804→            >
+   805→              {isExporting ? (
+   806→                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+   807→              ) : (
+   808→                <FileText className="h-3.5 w-3.5 mr-1" />
+   809→              )}
+   810→              PDF poročilo
+   811→            </Button>
+   812→            <Button variant="outline" size="sm" onClick={() => window.print()}>
+   813→              <Printer className="h-3.5 w-3.5 mr-1" />
+   814→              Natisni
+   815→            </Button>
+   816→            <Button
+   817→              variant="outline"
+   818→              size="sm"
+   819→              onClick={() => addToast({ type: 'info', title: 'Kmalu na voljo', description: 'Funkcija bo na voljo v naslednji verziji' })}
+   820→            >
+   821→              <Mail className="h-3.5 w-3.5 mr-1" />
+   822→              Pošlji po e-pošti
+   823→            </Button>
+   824→          </div>
+   825→        </div>
+   826→
+   827→        {/* ── Custom Date Range Picker ──────────────────── */}
+   828→        {isCustomMode && (
+   829→          <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 dark:from-emerald-900/10 dark:to-teal-900/10 no-print">
+   830→            <CardContent className="p-4">
+   831→              <div className="flex flex-wrap items-end gap-4">
+   832→                <div className="flex items-center gap-2">
+   833→                  <CalendarRange className="h-5 w-5 text-emerald-600" />
+   834→                  <span className="text-sm font-medium">Izberite obdobje:</span>
+   835→                </div>
+   836→                <div className="flex flex-wrap items-center gap-3">
+   837→                  <div className="space-y-1">
+   838→                    <Label htmlFor="date-from" className="text-xs text-muted-foreground">Od</Label>
+   839→                    <Input
+   840→                      id="date-from"
+   841→                      type="date"
+   842→                      value={customDateFrom}
+   843→                      onChange={(e) => setCustomDateFrom(e.target.value)}
+   844→                      className="w-40 h-9 text-sm"
+   845→                    />
+   846→                  </div>
+   847→                  <span className="text-muted-foreground mt-5">—</span>
+   848→                  <div className="space-y-1">
+   849→                    <Label htmlFor="date-to" className="text-xs text-muted-foreground">Do</Label>
+   850→                    <Input
+   851→                      id="date-to"
+   852→                      type="date"
+   853→                      value={customDateTo}
+   854→                      onChange={(e) => setCustomDateTo(e.target.value)}
+   855→                      className="w-40 h-9 text-sm"
+   856→                    />
+   857→                  </div>
+   858→                  {customDateFrom && customDateTo && (
+   859→                    <Badge variant="secondary" className="mt-5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+   860→                      {Math.max(1, Math.ceil((new Date(customDateTo).getTime() - new Date(customDateFrom).getTime()) / (1000 * 60 * 60 * 24)) + 1)} dni
+   861→                    </Badge>
+   862→                  )}
+   863→                </div>
+   864→              </div>
+   865→            </CardContent>
+   866→          </Card>
+   867→        )}
+   868→
+   869→        {/* ── Period Info + Comparison Toggle ───────────── */}
+   870→        <div className="flex flex-wrap items-center justify-between gap-4 no-print">
+   871→          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+   872→            <Clock className="h-4 w-4" />
+   873→            <span>{periodDescriptions[activePeriodKey]}</span>
+   874→            <Separator orientation="vertical" className="h-4" />
+   875→            <span>Od: {isCustomMode ? (customDateFrom || report.dateFrom) : report.dateFrom}</span>
+   876→            <Separator orientation="vertical" className="h-4" />
+   877→            <span>Do: {isCustomMode ? (customDateTo || report.dateTo) : report.dateTo}</span>
+   878→            <Badge variant="outline" className="text-xs ml-2">
+   879→              {isConnected ? 'LIVE' : 'DEMO'}
+   880→            </Badge>
+   881→          </div>
+   882→          <div className="flex items-center gap-3">
+   883→            <GitCompareArrows className="h-4 w-4 text-muted-foreground" />
+   884→            <Label htmlFor="comparison-toggle" className="text-sm font-medium cursor-pointer">
+   885→ Primerjava obdobij
+   886→            </Label>
+   887→            <Switch
+   888→              id="comparison-toggle"
+   889→              checked={comparisonEnabled}
+   890→              onCheckedChange={setComparisonEnabled}
+   891→            />
+   892→          </div>
+   893→        </div>
+   894→
+   895→        {/* ── Quick Stats Comparison Row ────────────────── */}
+   896→        {comparisonEnabled && previousData && (
+   897→          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 no-print">
+   898→            {[
+   899→              { label: 'Prihodki', curr: report.totalRevenue, prev: previousData.totalRevenue, fmt: 'currency' },
+   900→              { label: 'Naročila', curr: report.totalOrders, prev: previousData.totalOrders, fmt: 'number' },
+   901→              { label: 'Povp. račun', curr: report.avgOrderValue, prev: previousData.avgOrderValue, fmt: 'currency' },
+   902→              { label: 'Neto', curr: report.netRevenue, prev: previousData.netRevenue, fmt: 'currency' },
+   903→              { label: 'Popusti', curr: report.totalDiscounts, prev: previousData.totalDiscounts, fmt: 'currency', invert: true },
+   904→              { label: 'Preklici', curr: report.totalCancellations, prev: previousData.totalCancellations, fmt: 'number', invert: true },
+   905→            ].map((stat) => {
+   906→              const delta = stat.prev > 0 ? ((stat.curr - stat.prev) / stat.prev) * 100 : 0;
+   907→              const isPositive = stat.invert ? delta < 0 : delta > 0;
+   908→              return (
+   909→                <Card key={stat.label} className="print-break-inside-avoid">
+   910→                  <CardContent className="p-3 text-center">
+   911→                    <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+   912→                    <p className="text-base font-bold">
+   913→                      {stat.fmt === 'currency' ? `${currency}` : ''}{stat.curr.toLocaleString('en-IN')}
+   914→                    </p>
+   915→                    <div className={`inline-flex items-center gap-0.5 text-xs font-medium mt-1 ${isPositive ? 'text-emerald-600' : 'text-red-500'}`}>
+   916→                      {delta > 0 ? <ArrowUpRight className="h-3 w-3" /> : delta < 0 ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+   917→                      {Math.abs(delta).toFixed(1)}%
+   918→                    </div>
+   919→                    <p className="text-[10px] text-muted-foreground mt-0.5">
+   920→                      prej: {stat.fmt === 'currency' ? currency : ''}{stat.prev.toLocaleString('en-IN')}
+   921→                    </p>
+   922→                  </CardContent>
+   923→                </Card>
+   924→              );
+   925→            })}
+   926→          </div>
+   927→        )}
+   928→
+   929→        {/* ── Summary Cards with gradient ───────────────── */}
+   930→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print-break-inside-avoid">
+   931→          {summaryCards.map((card) => {
+   932→            const Icon = card.icon;
+   933→            return (
+   934→              <Card key={card.title} className={`bg-gradient-to-br ${card.gradient} overflow-hidden`}>
+   935→                <CardContent className="p-6">
+   936→                  <div className="flex items-center justify-between">
+   937→                    <div className="space-y-1">
+   938→                      <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
+   939→                      <p className="text-2xl font-bold">{formatValue(card.value, card.format)}</p>
+   940→                      {comparisonEnabled && card.prevValue != null && (
+   941→                        <DeltaArrow current={card.value} previous={card.prevValue} />
+   942→                      )}
+   943→                    </div>
+   944→                    <div className={`p-3 rounded-xl ${card.bg}`}>
+   945→                      <Icon className={`h-6 w-6 ${card.color}`} />
+   946→                    </div>
+   947→                  </div>
+   948→                </CardContent>
+   949→              </Card>
+   950→            );
+   951→          })}
+   952→        </div>
+   953→
+   954→        {/* ── Additional metrics row ────────────────────── */}
+   955→        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 print-break-inside-avoid">
+   956→          <Card className="bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800">
+   957→            <CardContent className="p-4 flex items-center justify-between">
+   958→              <div className="flex items-center gap-2">
+   959→                <TrendingDown className="h-4 w-4 text-amber-600" />
+   960→                <span className="text-sm font-medium">Popusti</span>
+   961→              </div>
+   962→              <div className="flex items-center gap-2">
+   963→                <span className="text-lg font-bold text-amber-600">-{currency}{report.totalDiscounts.toLocaleString('en-IN')}</span>
+   964→                {comparisonEnabled && previousData && (
+   965→                  <DeltaArrow current={report.totalDiscounts} previous={previousData.totalDiscounts} invert />
+   966→                )}
+   967→              </div>
+   968→            </CardContent>
+   969→          </Card>
+   970→          <Card className="bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-800">
+   971→            <CardContent className="p-4 flex items-center justify-between">
+   972→              <div className="flex items-center gap-2">
+   973→                <AlertTriangle className="h-4 w-4 text-red-600" />
+   974→                <span className="text-sm font-medium">Preklici</span>
+   975→              </div>
+   976→              <div className="flex items-center gap-2">
+   977→                <span className="text-lg font-bold text-red-600">{report.totalCancellations}</span>
+   978→                {comparisonEnabled && previousData && (
+   979→                  <DeltaArrow current={report.totalCancellations} previous={previousData.totalCancellations} invert />
+   980→                )}
+   981→              </div>
+   982→            </CardContent>
+   983→          </Card>
+   984→          <Card className="bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800">
+   985→            <CardContent className="p-4 flex items-center justify-between">
+   986→              <div className="flex items-center gap-2">
+   987→                <BarChart3 className="h-4 w-4 text-emerald-600" />
+   988→                <span className="text-sm font-medium">Neto marža</span>
+   989→              </div>
+   990→              <span className="text-lg font-bold text-emerald-600">
+   991→                {report.totalRevenue > 0 ? ((report.netRevenue / report.totalRevenue) * 100).toFixed(1) : 0}%
+   992→              </span>
+   993→            </CardContent>
+   994→          </Card>
+   995→        </div>
+   996→
+   997→        {/* ── AI Insight Box ───────────────────────────── */}
+   998→        <Card className="border-violet-200 dark:border-violet-800 bg-gradient-to-r from-violet-50/60 via-purple-50/40 to-fuchsia-50/60 dark:from-violet-900/15 dark:via-purple-900/10 dark:to-fuchsia-900/15 print-break-inside-avoid">
+   999→          <CardContent className="p-4">
+  1000→            <div className="flex items-start gap-3">
+  1001→              <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/30 shrink-0">
+  1002→                <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+  1003→              </div>
+  1004→              <div className="flex-1 min-w-0">
+  1005→                <div className="flex items-center gap-2 mb-1">
+  1006→                  <span className="text-sm font-semibold text-violet-700 dark:text-violet-300">Povzetek poročila</span>
+  1007→                  <Badge variant="secondary" className="text-[10px] bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400">
+  1008→                    AI
+  1009→                  </Badge>
+  1010→                </div>
+  1011→                <p className="text-sm text-muted-foreground leading-relaxed">{insight}</p>
+  1012→              </div>
+  1013→            </div>
+  1014→          </CardContent>
+  1015→        </Card>
+  1016→
+  1017→        {/* ── Revenue Trend Chart ───────────────────────── */}
+  1018→        <Card className="print-break-inside-avoid">
+  1019→          <CardHeader className="pb-2">
+  1020→            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+  1021→              <TrendingUp className="h-5 w-5 text-emerald-500" />
+  1022→              Trend prihodkov
+  1023→              {comparisonEnabled && (
+  1024→                <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+  1025→                  {comparisonLabels[activePeriodKey]}
+  1026→                </Badge>
+  1027→              )}
+  1028→            </CardTitle>
+  1029→          </CardHeader>
+  1030→          <CardContent>
+  1031→            <div ref={revenueChartRef} className="h-[300px] w-full" data-print-full-width>
+  1032→              {comparisonEnabled && previousData ? (
+  1033→                <ResponsiveContainer width="100%" height="100%">
+  1034→                  <ComposedChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+  1035→                    <defs>
+  1036→                      <linearGradient id="compRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+  1037→                        <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+  1038→                        <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+  1039→                      </linearGradient>
+  1040→                      <linearGradient id="compPrevGrad" x1="0" y1="0" x2="0" y2="1">
+  1041→                        <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.15} />
+  1042→                        <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
+  1043→                      </linearGradient>
+  1044→                    </defs>
+  1045→                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:stroke-gray-700" />
+  1046→                    <XAxis dataKey="label" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+  1047→                    <YAxis
+  1048→                      yAxisId="left"
+  1049→                      tick={{ fontSize: 12 }}
+  1050→                      stroke="#9ca3af"
+  1051→                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+  1052→                    />
+  1053→                    <YAxis
+  1054→                      yAxisId="right"
+  1055→                      orientation="right"
+  1056→                      tick={{ fontSize: 12 }}
+  1057→                      stroke="#f59e0b"
+  1058→                    />
+  1059→                    <Tooltip
+  1060→                      contentStyle={{
+  1061→                        borderRadius: '8px',
+  1062→                        border: '1px solid #e5e7eb',
+  1063→                        fontSize: '13px',
+  1064→                        backgroundColor: 'rgba(255,255,255,0.95)',
+  1065→                      }}
+  1066→                      formatter={(value: number, name: string) => {
+  1067→                        if (name.includes('Prihodki') || name.includes('prihodki')) return [`${currency}${value.toLocaleString('en-IN')}`, name];
+  1068→                        return [value.toString(), name];
+  1069→                      }}
+  1070→                    />
+  1071→                    <Legend />
+  1072→                    <Area
+  1073→                      yAxisId="left"
+  1074→                      type="monotone"
+  1075→                      dataKey="prevRevenue"
+  1076→                      name="Prejšnji prihodki"
+  1077→                      stroke="#94a3b8"
+  1078→                      strokeWidth={2}
+  1079→                      strokeDasharray="5 5"
+  1080→                      fillOpacity={1}
+  1081→                      fill="url(#compPrevGrad)"
+  1082→                    />
+  1083→                    <Area
+  1084→                      yAxisId="left"
+  1085→                      type="monotone"
+  1086→                      dataKey="revenue"
+  1087→                      name="Trenutni prihodki"
+  1088→                      stroke="#059669"
+  1089→                      strokeWidth={2}
+  1090→                      fillOpacity={1}
+  1091→                      fill="url(#compRevenueGrad)"
+  1092→                    />
+  1093→                    <Line
+  1094→                      yAxisId="right"
+  1095→                      type="monotone"
+  1096→                      dataKey="orders"
+  1097→                      name="Naročila"
+  1098→                      stroke="#f59e0b"
+  1099→                      strokeWidth={2}
+  1100→                      dot={{ r: 3, fill: '#f59e0b' }}
+  1101→                    />
+  1102→                  </ComposedChart>
+  1103→                </ResponsiveContainer>
+  1104→              ) : (
+  1105→                <ResponsiveContainer width="100%" height="100%">
+  1106→                  <AreaChart data={report.dailyBreakdown} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+  1107→                    <defs>
+  1108→                      <linearGradient id="reportRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+  1109→                        <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+  1110→                        <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+  1111→                      </linearGradient>
+  1112→                      <linearGradient id="reportOrdersGrad" x1="0" y1="0" x2="0" y2="1">
+  1113→                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+  1114→                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+  1115→                      </linearGradient>
+  1116→                    </defs>
+  1117→                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:stroke-gray-700" />
+  1118→                    <XAxis dataKey="label" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+  1119→                    <YAxis
+  1120→                      yAxisId="left"
+  1121→                      tick={{ fontSize: 12 }}
+  1122→                      stroke="#9ca3af"
+  1123→                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+  1124→                    />
+  1125→                    <YAxis
+  1126→                      yAxisId="right"
+  1127→                      orientation="right"
+  1128→                      tick={{ fontSize: 12 }}
+  1129→                      stroke="#f59e0b"
+  1130→                    />
+  1131→                    <Tooltip
+  1132→                      contentStyle={{
+  1133→                        borderRadius: '8px',
+  1134→                        border: '1px solid #e5e7eb',
+  1135→                        fontSize: '13px',
+  1136→                        backgroundColor: 'rgba(255,255,255,0.95)',
+  1137→                      }}
+  1138→                      formatter={(value: number, name: string) => {
+  1139→                        if (name === 'Prihodki') return [`${currency}${value.toLocaleString('en-IN')}`, name];
+  1140→                        return [value.toString(), name];
+  1141→                      }}
+  1142→                    />
+  1143→                    <Legend />
+  1144→                    <Area
+  1145→                      yAxisId="left"
+  1146→                      type="monotone"
+  1147→                      dataKey="revenue"
+  1148→                      name="Prihodki"
+  1149→                      stroke="#059669"
+  1150→                      strokeWidth={2}
+  1151→                      fillOpacity={1}
+  1152→                      fill="url(#reportRevenueGrad)"
+  1153→                    />
+  1154→                    <Area
+  1155→                      yAxisId="right"
+  1156→                      type="monotone"
+  1157→                      dataKey="orders"
+  1158→                      name="Naročila"
+  1159→                      stroke="#f59e0b"
+  1160→                      strokeWidth={2}
+  1161→                      fillOpacity={1}
+  1162→                      fill="url(#reportOrdersGrad)"
+  1163→                    />
+  1164→                  </AreaChart>
+  1165→                </ResponsiveContainer>
+  1166→              )}
+  1167→            </div>
+  1168→          </CardContent>
+  1169→        </Card>
+  1170→
+  1171→        {/* ── Two column: Top Items + Order Type Split ──── */}
+  1172→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  1173→          {/* Top Selling Items Table */}
+  1174→          <Card className="print-break-inside-avoid">
+  1175→            <CardHeader className="pb-2">
+  1176→              <div className="flex items-center justify-between">
+  1177→                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+  1178→                  <Zap className="h-5 w-5 text-orange-500" />
+  1179→                  Najbolj prodajani artikli
+  1180→                </CardTitle>
+  1181→              </div>
+  1182→            </CardHeader>
+  1183→            <CardContent>
+  1184→              <Table>
+  1185→                <TableHeader>
+  1186→                  <TableRow>
+  1187→                    <TableHead>Artikel</TableHead>
+  1188→                    <TableHead className="text-right">Količina</TableHead>
+  1189→                    <TableHead className="text-right">Prihodki</TableHead>
+  1190→                    {comparisonEnabled && previousData && <TableHead className="text-right">Sprememba</TableHead>}
+  1191→                  </TableRow>
+  1192→                </TableHeader>
+  1193→                <TableBody>
+  1194→                  {report.topItems.map((item, idx) => {
+  1195→                    const prevItem = previousData?.topItems[idx];
+  1196→                    const qtyDelta = prevItem ? ((item.quantity - prevItem.quantity) / prevItem.quantity) * 100 : 0;
+  1197→                    return (
+  1198→                      <TableRow key={item.id}>
+  1199→                        <TableCell>
+  1200→                          <div className="flex items-center gap-2">
+  1201→                            <span className={`w-2.5 h-2.5 rounded-sm border ${item.isVeg ? 'bg-green-500 border-green-600' : 'bg-red-500 border-red-600'}`} />
+  1202→                            <div>
+  1203→                              <span className="font-medium text-sm">{item.name}</span>
+  1204→                              <p className="text-xs text-muted-foreground">{item.course}</p>
+  1205→                            </div>
+  1206→                          </div>
+  1207→                        </TableCell>
+  1208→                        <TableCell className="text-right font-mono">
+  1209→                          {item.quantity}x
+  1210→                          {comparisonEnabled && prevItem && (
+  1211→                            <span className={`ml-1 text-[10px] ${qtyDelta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+  1212→                              ({qtyDelta >= 0 ? '+' : ''}{qtyDelta.toFixed(0)}%)
+  1213→                            </span>
+  1214→                          )}
+  1215→                        </TableCell>
+  1216→                        <TableCell className="text-right font-mono text-emerald-600">
+  1217→                          {currency}{item.revenue.toLocaleString('en-IN')}
+  1218→                        </TableCell>
+  1219→                        {comparisonEnabled && prevItem && (
+  1220→                          <TableCell className="text-right">
+  1221→                            <DeltaArrow current={item.revenue} previous={prevItem.revenue} />
+  1222→                          </TableCell>
+  1223→                        )}
+  1224→                      </TableRow>
+  1225→                    );
+  1226→                  })}
+  1227→                </TableBody>
+  1228→              </Table>
+  1229→            </CardContent>
+  1230→          </Card>
+  1231→
+  1232→          {/* Order Type Split */}
+  1233→          <Card className="print-break-inside-avoid">
+  1234→            <CardHeader className="pb-2">
+  1235→              <CardTitle className="text-lg font-semibold">Razdelitev po tipu naročila</CardTitle>
+  1236→            </CardHeader>
+  1237→            <CardContent>
+  1238→              <div ref={orderTypeChartRef} className="h-[220px] w-full" data-print-full-width>
+  1239→                <ResponsiveContainer width="100%" height="100%">
+  1240→                  <PieChart>
+  1241→                    <Pie
+  1242→                      data={report.orderTypeSplit}
+  1243→                      cx="50%"
+  1244→                      cy="50%"
+  1245→                      innerRadius={50}
+  1246→                      outerRadius={90}
+  1247→                      paddingAngle={3}
+  1248→                      dataKey="revenue"
+  1249→                      nameKey="type"
+  1250→                      label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}
+  1251→                    >
+  1252→                      {report.orderTypeSplit.map((_, index) => (
+  1253→                        <Cell key={`cell-${index}`} fill={['#059669', '#3b82f6', '#f59e0b'][index % 3]} />
+  1254→                      ))}
+  1255→                    </Pie>
+  1256→                    <Tooltip
+  1257→                      formatter={(value: number) => [`${currency}${value.toLocaleString('en-IN')}`, '']}
+  1258→                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '13px' }}
+  1259→                    />
+  1260→                  </PieChart>
+  1261→                </ResponsiveContainer>
+  1262→              </div>
+  1263→              <div className="space-y-2 mt-2">
+  1264→                {report.orderTypeSplit.map((o, idx) => {
+  1265→                  const prevO = previousData?.orderTypeSplit[idx];
+  1266→                  return (
+  1267→                    <div key={o.type} className="flex items-center justify-between text-sm">
+  1268→                      <div className="flex items-center gap-2">
+  1269→                        <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: ['#059669', '#3b82f6', '#f59e0b'][idx % 3] }} />
+  1270→                        <span>{o.type}</span>
+  1271→                      </div>
+  1272→                      <div className="flex items-center gap-3">
+  1273→                        <span className="text-xs text-muted-foreground">{o.count} naročil</span>
+  1274→                        <span className="font-mono font-medium">{currency}{o.revenue.toLocaleString('en-IN')}</span>
+  1275→                        {comparisonEnabled && prevO && (
+  1276→                          <DeltaArrow current={o.revenue} previous={prevO.revenue} />
+  1277→                        )}
+  1278→                      </div>
+  1279→                    </div>
+  1280→                  );
+  1281→                })}
+  1282→              </div>
+  1283→            </CardContent>
+  1284→          </Card>
+  1285→        </div>
+  1286→
+  1287→        {/* ── Payment Split + Course Revenue ────────────── */}
+  1288→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print-break-before">
+  1289→          {/* Payment Method Split */}
+  1290→          <Card className="print-break-inside-avoid">
+  1291→            <CardHeader className="pb-2">
+  1292→              <CardTitle className="text-lg font-semibold">Načini plačila</CardTitle>
+  1293→            </CardHeader>
+  1294→            <CardContent>
+  1295→              <div className="h-[200px] w-full" data-print-full-width>
+  1296→                <ResponsiveContainer width="100%" height="100%">
+  1297→                  <BarChart data={report.paymentSplit} layout="vertical" margin={{ left: 20 }}>
+  1298→                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+  1299→                    <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+  1300→                    <YAxis type="category" dataKey="method" tick={{ fontSize: 12 }} width={70} />
+  1301→                    <Tooltip
+  1302→                      formatter={(value: number) => [`${currency}${value.toLocaleString('en-IN')}`, 'Znesek']}
+  1303→                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '13px' }}
+  1304→                    />
+  1305→                    <Bar dataKey="amount" name="Znesek" radius={[0, 4, 4, 0]}>
+  1306→                      {report.paymentSplit.map((entry, index) => (
+  1307→                        <Cell key={`cell-${index}`} fill={entry.color} />
+  1308→                      ))}
+  1309→                    </Bar>
+  1310→                  </BarChart>
+  1311→                </ResponsiveContainer>
+  1312→              </div>
+  1313→              <div className="space-y-2 mt-2">
+  1314→                {report.paymentSplit.map((p) => {
+  1315→                  const totalAmount = report.paymentSplit.reduce((sum, p) => sum + p.amount, 0);
+  1316→                  const percentage = totalAmount > 0 ? ((p.amount / totalAmount) * 100).toFixed(1) : '0';
+  1317→                  const prevP = previousData?.paymentSplit.find((pp) => pp.method === p.method);
+  1318→                  return (
+  1319→                    <div key={p.method} className="flex items-center justify-between text-sm">
+  1320→                      <div className="flex items-center gap-2">
+  1321→                        <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: p.color }} />
+  1322→                        <span>{p.method}</span>
+  1323→                      </div>
+  1324→                      <div className="flex items-center gap-3">
+  1325→                        <span className="text-xs text-muted-foreground">{p.count} transakcij ({percentage}%)</span>
+  1326→                        <span className="font-mono font-medium">{currency}{p.amount.toLocaleString('en-IN')}</span>
+  1327→                        {comparisonEnabled && prevP && (
+  1328→                          <DeltaArrow current={p.amount} previous={prevP.amount} />
+  1329→                        )}
+  1330→                      </div>
+  1331→                    </div>
+  1332→                  );
+  1333→                })}
+  1334→              </div>
+  1335→            </CardContent>
+  1336→          </Card>
+  1337→
+  1338→          {/* Course Revenue */}
+  1339→          <Card className="print-break-inside-avoid">
+  1340→            <CardHeader className="pb-2">
+  1341→              <CardTitle className="text-lg font-semibold">Prihodki po kategorijah</CardTitle>
+  1342→            </CardHeader>
+  1343→            <CardContent>
+  1344→              <div ref={courseChartRef} className="h-[200px] w-full" data-print-full-width>
+  1345→                <ResponsiveContainer width="100%" height="100%">
+  1346→                  <BarChart data={report.courseRevenue}>
+  1347→                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+  1348→                    <XAxis dataKey="course" tick={{ fontSize: 11 }} />
+  1349→                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+  1350→                    <Tooltip
+  1351→                      formatter={(value: number, name: string) => {
+  1352→                        if (name === 'Prihodki') return [`${currency}${value.toLocaleString('en-IN')}`, name];
+  1353→                        return [value.toString(), name];
+  1354→                      }}
+  1355→                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '13px' }}
+  1356→                    />
+  1357→                    <Legend />
+  1358→                    <Bar dataKey="revenue" name="Prihodki" fill="#059669" radius={[4, 4, 0, 0]}>
+  1359→                      {report.courseRevenue.map((_, idx) => (
+  1360→                        <Cell key={`cell-${idx}`} fill={courseColors[idx % courseColors.length]} />
+  1361→                      ))}
+  1362→                    </Bar>
+  1363→                  </BarChart>
+  1364→                </ResponsiveContainer>
+  1365→              </div>
+  1366→              <Table>
+  1367→                <TableHeader>
+  1368→                  <TableRow>
+  1369→                    <TableHead>Kategorija</TableHead>
+  1370→                    <TableHead className="text-right">Prihodki</TableHead>
+  1371→                    <TableHead className="text-right">Artikli</TableHead>
+  1372→                    {comparisonEnabled && previousData && <TableHead className="text-right">Sprememba</TableHead>}
+  1373→                  </TableRow>
+  1374→                </TableHeader>
+  1375→                <TableBody>
+  1376→                  {report.courseRevenue.map((c, idx) => {
+  1377→                    const prevC = previousData?.courseRevenue[idx];
+  1378→                    return (
+  1379→                      <TableRow key={c.course}>
+  1380→                        <TableCell>
+  1381→                          <div className="flex items-center gap-2">
+  1382→                            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: courseColors[idx % courseColors.length] }} />
+  1383→                            <span className="font-medium text-sm">{c.course}</span>
+  1384→                          </div>
+  1385→                        </TableCell>
+  1386→                        <TableCell className="text-right font-mono text-emerald-600">
+  1387→                          {currency}{c.revenue.toLocaleString('en-IN')}
+  1388→                        </TableCell>
+  1389→                        <TableCell className="text-right text-muted-foreground">{c.items}</TableCell>
+  1390→                        {comparisonEnabled && previousData && prevC && (
+  1391→                          <TableCell className="text-right">
+  1392→                            <DeltaArrow current={c.revenue} previous={prevC.revenue} />
+  1393→                          </TableCell>
+  1394→                        )}
+  1395→                      </TableRow>
+  1396→                    );
+  1397→                  })}
+  1398→                </TableBody>
+  1399→              </Table>
+  1400→            </CardContent>
+  1401→          </Card>
+  1402→        </div>
+  1403→
+  1404→        {/* ── Comparison Detail Section ────────────────── */}
+  1405→        {comparisonEnabled && previousData && (
+  1406→          <Card className="border-emerald-200 dark:border-emerald-800 print-break-inside-avoid">
+  1407→            <CardHeader className="pb-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-t-xl">
+  1408→              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-white">
+  1409→                <GitCompareArrows className="h-5 w-5" />
+  1410→                Primerjava obdobij — {comparisonLabels[activePeriodKey]}
+  1411→              </CardTitle>
+  1412→            </CardHeader>
+  1413→            <CardContent className="p-4">
+  1414→              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1415→                {/* Revenue comparison */}
+  1416→                <div className="space-y-3">
+  1417→                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Prihodki</h4>
+  1418→                  <div className="flex items-center gap-4">
+  1419→                    <div className="flex-1">
+  1420→                      <p className="text-xs text-muted-foreground">Trenutno obdobje</p>
+  1421→                      <p className="text-xl font-bold text-emerald-600">{currency}{report.totalRevenue.toLocaleString('en-IN')}</p>
+  1422→                    </div>
+  1423→                    <div className="text-2xl text-muted-foreground">vs</div>
+  1424→                    <div className="flex-1">
+  1425→                      <p className="text-xs text-muted-foreground">Prejšnje obdobje</p>
+  1426→                      <p className="text-xl font-bold text-muted-foreground">{currency}{previousData.totalRevenue.toLocaleString('en-IN')}</p>
+  1427→                    </div>
+  1428→                  </div>
+  1429→                  <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
+  1430→                    <div
+  1431→                      className="h-full bg-emerald-500 rounded-l-full"
+  1432→                      style={{ width: `${Math.min(100, (report.totalRevenue / Math.max(report.totalRevenue, previousData.totalRevenue)) * 100)}%` }}
+  1433→                    />
+  1434→                    <div
+  1435→                      className="h-full bg-gray-300 dark:bg-gray-600 rounded-r-full"
+  1436→                      style={{ width: `${Math.min(100, (previousData.totalRevenue / Math.max(report.totalRevenue, previousData.totalRevenue)) * 100)}%` }}
+  1437→                    />
+  1438→                  </div>
+  1439→                </div>
+  1440→
+  1441→                {/* Orders comparison */}
+  1442→                <div className="space-y-3">
+  1443→                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Naročila</h4>
+  1444→                  <div className="flex items-center gap-4">
+  1445→                    <div className="flex-1">
+  1446→                      <p className="text-xs text-muted-foreground">Trenutno obdobje</p>
+  1447→                      <p className="text-xl font-bold text-amber-600">{report.totalOrders.toLocaleString('en-IN')}</p>
+  1448→                    </div>
+  1449→                    <div className="text-2xl text-muted-foreground">vs</div>
+  1450→                    <div className="flex-1">
+  1451→                      <p className="text-xs text-muted-foreground">Prejšnje obdobje</p>
+  1452→                      <p className="text-xl font-bold text-muted-foreground">{previousData.totalOrders.toLocaleString('en-IN')}</p>
+  1453→                    </div>
+  1454→                  </div>
+  1455→                  <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
+  1456→                    <div
+  1457→                      className="h-full bg-amber-500 rounded-l-full"
+  1458→                      style={{ width: `${Math.min(100, (report.totalOrders / Math.max(report.totalOrders, previousData.totalOrders)) * 100)}%` }}
+  1459→                    />
+  1460→                    <div
+  1461→                      className="h-full bg-gray-300 dark:bg-gray-600 rounded-r-full"
+  1462→                      style={{ width: `${Math.min(100, (previousData.totalOrders / Math.max(report.totalOrders, previousData.totalOrders)) * 100)}%` }}
+  1463→                    />
+  1464→                  </div>
+  1465→                </div>
+  1466→              </div>
+  1467→            </CardContent>
+  1468→          </Card>
+  1469→        )}
+  1470→      </div>
+  1471→    </>
+  1472→  );
+  1473→}
+  1474→
