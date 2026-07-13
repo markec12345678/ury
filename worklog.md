@@ -344,3 +344,31 @@ Stage Summary:
 - Lazy-loaded: separate chunk, not in main bundle
 - 71 new AI tests (33 service + 38 store)
 - Total: 1619 tests, 90 files, all green
+
+---
+Task ID: 17
+Agent: Main Agent + Subagents
+Task: AIInsightsPanel tests + menu-management-store + reports-store coverage improvements
+
+Work Log:
+- Created AIInsightsPanel.test.tsx: 42 tests (closed/open state, quick actions, messages display, markdown rendering, input handling, loading, error, clear/close, empty state)
+- Expanded menu-management-store.test.ts: 13→46 tests, coverage 59%→100%
+  - Added error paths for all async operations
+  - Added _server_messages parsing tests
+  - Added fetchAvailableItems, toggleMenuStatus, updateCourseItem coverage
+  - Added loading state transitions and optional parameter handling
+- Expanded reports-store.test.ts: 38→80 tests, coverage 39%→94.5%
+  - Added exportToPdf client-side generation (expense, P&L, inventory, sales)
+  - Added exportToCsv with full data scenarios + special character escaping
+  - Added getPreviousPeriodDates for all period types
+  - Added fetchCurrentReport without custom dates
+  - Added error handling paths for all export functions
+- Git push failed — GitHub token expired (user needs to update)
+- Git commits: dc04d71, de6d963
+
+Stage Summary:
+- AIInsightsPanel: 42 tests, fully covered
+- menu-management-store: 100% coverage (46 tests)
+- reports-store: 94.5% coverage (80 tests)
+- Total: 1718 tests, 91 files, all green
+- GitHub token expired — push pending
