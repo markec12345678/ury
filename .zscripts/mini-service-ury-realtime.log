@@ -371,3 +371,164 @@ $ bun --hot index.ts
 🪑 Table 17: occupied
 🔄 KOT status: KOT-240 → ready
 🍳 New KOT: KOT-446 — Jeera Rice, Dal Makhani
+🪑 Table 17: occupied
+🍳 New KOT: KOT-447 — Naan, Dal Makhani, Chicken Tikka, Fish Curry
+🔄 KOT status: KOT-296 → served
+🍳 New KOT: KOT-448 — Mutton Rogan Josh, Chicken Biryani
+🔄 KOT status: KOT-261 → preparing
+🪑 Table 12: occupied
+🍳 New KOT: KOT-449 — Kadai Paneer, Dal Makhani, Kulcha
+🔄 KOT status: KOT-298 → ready
+🍳 New KOT: KOT-450 — Gulab Jamun, Chicken Tikka, Kadai Paneer
+🪑 Table 15: occupied
+🔄 KOT status: KOT-271 → preparing
+🍳 New KOT: KOT-451 — Fish Curry
+🍳 New KOT: KOT-452 — Kadai Paneer, Gulab Jamun, Chicken Biryani, Jeera Rice
+🔄 KOT status: KOT-247 → ready
+🍳 New KOT: KOT-453 — Chicken Biryani, Butter Chicken
+🪑 Table 8: occupied
+🔄 KOT status: KOT-292 → preparing
+🍳 New KOT: KOT-454 — Dal Makhani
+🪑 Table 19: occupied
+🔄 KOT status: KOT-259 → served
+🍳 New KOT: KOT-455 — Dal Makhani, Chicken Tikka
+🪑 Table 28: free
+🍳 New KOT: KOT-456 — Dal Makhani, Jeera Rice
+🔄 KOT status: KOT-272 → preparing
+🔄 KOT status: KOT-254 → ready
+🪑 Table 16: attention
+🍳 New KOT: KOT-457 — Raita, Tandoori Roti, Mixed Grill
+🔄 KOT status: KOT-289 → served
+🪑 Table 13: free
+🍳 New KOT: KOT-458 — Tandoori Roti, Chicken Tikka
+🔄 KOT status: KOT-284 → served
+🪑 Table 30: attention
+🍳 New KOT: KOT-459 — Tandoori Roti, Mutton Rogan Josh, Chicken Tikka
+🔄 KOT status: KOT-283 → preparing
+🪑 Table 14: attention
+🍳 New KOT: KOT-460 — Kadai Paneer, Butter Chicken
+🔄 KOT status: KOT-285 → preparing
+🍳 New KOT: KOT-461 — Tandoori Roti, Kulcha, Dal Makhani, Raita
+🪑 Table 18: occupied
+🔄 KOT status: KOT-261 → served
+🍳 New KOT: KOT-462 — Jeera Rice, Mutton Rogan Josh
+🍳 New KOT: KOT-463 — Kadai Paneer, Raita
+🪑 Table 21: occupied
+🔄 KOT status: KOT-248 → served
+🍳 New KOT: KOT-464 — Mango Lassi, Naan, Raita
+🪑 Table 31: attention
+🔄 KOT status: KOT-264 → preparing
+🍳 New KOT: KOT-465 — Mutton Rogan Josh, Naan, Gulab Jamun, Chicken Biryani
+🔄 KOT status: KOT-293 → ready
+🍳 New KOT: KOT-466 — Fish Curry, Naan
+🪑 Table 1: occupied
+🔄 KOT status: KOT-293 → served
+🍳 New KOT: KOT-467 — Paneer Tikka, Fish Curry, Jeera Rice, Mango Lassi
+🔄 KOT status: KOT-273 → preparing
+🪑 Table 23: attention
+🍳 New KOT: KOT-468 — Mixed Grill, Mango Lassi
+🍳 New KOT: KOT-469 — Chicken Biryani, Mutton Rogan Josh
+🔄 KOT status: KOT-256 → ready
+🪑 Table 30: attention
+🍳 New KOT: KOT-470 — Mutton Rogan Josh, Dal Makhani, Fish Curry
+🔄 KOT status: KOT-256 → preparing
+🪑 Table 9: attention
+🔄 KOT status: KOT-298 → preparing
+🍳 New KOT: KOT-471 — Raita, Tandoori Roti, Chicken Biryani, Butter Chicken
+🍳 New KOT: KOT-472 — Paneer Tikka, Chicken Tikka, Raita, Kulcha
+🪑 Table 17: free
+🔄 KOT status: KOT-295 → ready
+🍳 New KOT: KOT-473 — Chicken Tikka
+🔄 KOT status: KOT-278 → ready
+🍳 New KOT: KOT-474 — Chicken Biryani, Gulab Jamun
+🪑 Table 27: free
+🍳 New KOT: KOT-475 — Fish Curry, Chicken Tikka, Mixed Grill
+🔄 KOT status: KOT-245 → served
+🪑 Table 19: free
+🍳 New KOT: KOT-476 — Chicken Tikka
+🔄 KOT status: KOT-242 → preparing
+🍳 New KOT: KOT-477 — Raita
+🪑 Table 24: attention
+🍳 New KOT: KOT-478 — Naan
+🔄 KOT status: KOT-244 → ready
+🍳 New KOT: KOT-479 — Naan, Dal Makhani, Kadai Paneer
+🪑 Table 1: occupied
+🔄 KOT status: KOT-273 → preparing
+🍳 New KOT: KOT-480 — Paneer Tikka
+🔄 KOT status: KOT-295 → ready
+🍳 New KOT: KOT-481 — Chicken Biryani
+🪑 Table 18: attention
+🍳 New KOT: KOT-482 — Paneer Tikka
+🔄 KOT status: KOT-249 → ready
+🍳 New KOT: KOT-483 — Chicken Tikka, Raita
+🔄 KOT status: KOT-251 → served
+🍳 New KOT: KOT-484 — Fish Curry, Jeera Rice, Naan, Mixed Grill
+🪑 Table 29: attention
+🍳 New KOT: KOT-485 — Chicken Tikka
+🔄 KOT status: KOT-260 → preparing
+🪑 Table 28: attention
+🍳 New KOT: KOT-486 — Butter Chicken, Jeera Rice, Paneer Tikka, Naan
+🔄 KOT status: KOT-246 → preparing
+🪑 Table 18: occupied
+🍳 New KOT: KOT-487 — Kadai Paneer
+🔄 KOT status: KOT-284 → ready
+🪑 Table 20: occupied
+🍳 New KOT: KOT-488 — Dal Makhani
+🍳 New KOT: KOT-489 — Paneer Tikka, Gulab Jamun
+🔄 KOT status: KOT-296 → served
+🪑 Table 1: free
+🍳 New KOT: KOT-490 — Kulcha
+🔄 KOT status: KOT-299 → ready
+🪑 Table 1: occupied
+🍳 New KOT: KOT-491 — Butter Chicken, Paneer Tikka, Naan, Mango Lassi
+🔄 KOT status: KOT-251 → ready
+🪑 Table 11: free
+🍳 New KOT: KOT-492 — Mixed Grill
+🍳 New KOT: KOT-493 — Mutton Rogan Josh
+🪑 Table 5: occupied
+🔄 KOT status: KOT-244 → ready
+🍳 New KOT: KOT-494 — Mango Lassi, Dal Makhani, Raita, Chicken Biryani
+🔄 KOT status: KOT-297 → ready
+🍳 New KOT: KOT-495 — Kadai Paneer
+🪑 Table 24: occupied
+🍳 New KOT: KOT-496 — Tandoori Roti, Mango Lassi
+🔄 KOT status: KOT-265 → ready
+🍳 New KOT: KOT-497 — Mutton Rogan Josh, Jeera Rice, Mixed Grill, Chicken Biryani
+🪑 Table 3: occupied
+🔄 KOT status: KOT-278 → ready
+🍳 New KOT: KOT-498 — Dal Makhani, Chicken Biryani, Mixed Grill
+🪑 Table 22: occupied
+🔄 KOT status: KOT-258 → ready
+🍳 New KOT: KOT-499 — Chicken Tikka, Butter Chicken
+🪑 Table 27: free
+🍳 New KOT: KOT-500 — Gulab Jamun, Raita, Paneer Tikka, Mixed Grill
+🔄 KOT status: KOT-295 → ready
+🍳 New KOT: KOT-501 — Tandoori Roti, Fish Curry, Chicken Biryani
+🪑 Table 25: free
+🔄 KOT status: KOT-251 → ready
+🔄 KOT status: KOT-243 → served
+🍳 New KOT: KOT-502 — Chicken Tikka, Kadai Paneer, Mixed Grill
+🪑 Table 4: attention
+🔄 KOT status: KOT-296 → preparing
+🪑 Table 19: occupied
+🍳 New KOT: KOT-503 — Gulab Jamun, Butter Chicken
+🍳 New KOT: KOT-504 — Fish Curry
+🔄 KOT status: KOT-279 → served
+🪑 Table 26: occupied
+🔄 KOT status: KOT-241 → ready
+🍳 New KOT: KOT-505 — Mutton Rogan Josh, Gulab Jamun, Butter Chicken
+🪑 Table 15: occupied
+🔄 KOT status: KOT-245 → ready
+🍳 New KOT: KOT-506 — Mixed Grill
+🪑 Table 22: attention
+🍳 New KOT: KOT-507 — Mixed Grill, Mutton Rogan Josh
+🔄 KOT status: KOT-263 → served
+🍳 New KOT: KOT-508 — Kulcha, Fish Curry
+🪑 Table 17: free
+🍳 New KOT: KOT-509 — Raita
+🔄 KOT status: KOT-247 → ready
+🪑 Table 21: occupied
+🍳 New KOT: KOT-510 — Raita
+🔄 KOT status: KOT-261 → preparing
+🍳 New KOT: KOT-511 — Gulab Jamun, Raita
+🪑 Table 30: occupied
