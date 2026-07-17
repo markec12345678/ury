@@ -372,3 +372,32 @@ Stage Summary:
 - reports-store: 94.5% coverage (80 tests)
 - Total: 1718 tests, 91 files, all green
 - GitHub token expired — push pending
+
+---
+Task ID: 19
+Agent: Main Agent
+Task: MSW integration + Playwright E2E tests
+
+Work Log:
+- Installed msw@2.15.0 and @playwright/test with Chromium
+- Created src/mocks/ directory with:
+  - fixtures.ts: Realistic mock data for all 12 domains
+  - handlers.ts: 60+ HTTP handlers using wildcard URL patterns (*/api/...)
+  - browser.ts: setupWorker for dev/e2e
+  - server.ts: setupServer for Vitest
+  - msw-api.test.ts: 24 integration tests
+- Key architectural fix: MSW service worker can only intercept same-origin requests
+  - Changed frappe-sdk.ts to use lazy initialization (reads env at call time, not import time)
+  - main.tsx overrides VITE_FRAPPE_BASE_URL to window.location.origin when MSW is active
+  - Added data-msw-ready attribute for E2E test synchronization
+- Vite config: disabled proxy when VITE_MSW_ENABLED=true to prevent redirect loops
+- Created Playwright config and 5 smoke E2E tests covering all pages
+- All 1742 Vitest tests + 5 Playwright E2E tests passing
+- TypeScript: zero errors, production build: successful
+- Git commit: f1c39e5
+
+Stage Summary:
+- MSW fully working in both browser (SW) and Node (setupServer) environments
+- Playwright E2E tests verify all 5 main pages load with mock data
+- Lazy frappe-sdk.ts allows runtime URL override for MSW same-origin requirement
+- Total: 1742 Vitest + 5 Playwright tests, all green
