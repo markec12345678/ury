@@ -1,0 +1,50 @@
+# Composite Action: Setup Node.js + Yarn + Cache
+# Reusable setup step for all CI workflows — eliminates duplication across jobs.
+#
+# Usage:
+#   - uses: ./.github/actions/setup-node
+#     with:
+#       node-version: '22'
+
+name: 'Setup Node.js + Yarn + Cache'
+description: 'Install Node.js, enable Corepack, restore Yarn cache, and install dependencies'
+
+inputs:
+  node-version:
+    description: 'Node.js version to install'
+    required: false
+    default: '22'
+  install-deps:
+    description: 'Whether to run yarn install (set to "false" to skip)'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Enable Corepack
+      shell: bash
+      run: corepack enable
+
+    - name: Get yarn cache directory
+      id: yarn-cache
+      shell: bash
+      run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+    - name: Restore yarn cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.yarn-cache.outputs.dir }}
+        key: yarn-${{ runner.os }}-node${{ inputs.node-version }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+        restore-keys: |
+          yarn-${{ runner.os }}-node${{ inputs.node-version }}-
+
+    - name: Install dependencies
+      if: inputs.install-deps == 'true'
+      shell: bash
+      run: yarn install --immutable --immutable-cache || yarn install --frozen-lockfile || yarn install

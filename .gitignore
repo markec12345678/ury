@@ -40,3 +40,9 @@ eslint-report.json
 # Docker volumes
 postgres-data/
 redis-data/
+
+# Prettier
+.prettiercache
+
+# OS
+Thumbs.db

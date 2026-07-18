@@ -51,8 +51,8 @@ make dev
 ury/
 ├── packages/ui/          # @ury/ui — Shared React component library
 │   └── src/
-│       ├── components/    # Button, Card, Badge, Input, Textarea, Loader, Spinner
-│       ├── __stories__/   # Storybook stories (7 components, 29 stories)
+│       ├── components/    # Button, Card, Badge, Input, Textarea, Loader, Spinner, Dialog, Select, Toast
+│       ├── __stories__/   # Storybook stories (10 components, 40 stories)
 │       ├── styles/        # Theme CSS, Tailwind preset
 │       └── lib/           # Utilities (cn, etc.)
 ├── packages/core/         # @ury/core — Frappe SDK, storage, formatting
@@ -106,6 +106,16 @@ chore(deps): bump react to 19.1
 make lint
 ```
 
+### Formatting
+
+```bash
+# Format code with Prettier
+make format
+
+# Check formatting without writing
+make format-check
+```
+
 ### Type Checking
 
 ```bash
@@ -116,6 +126,13 @@ make typecheck
 
 ```bash
 make test
+```
+
+### Run All Checks
+
+```bash
+# Lint + type-check + format-check + test in one command
+make check-all
 ```
 
 ### Storybook

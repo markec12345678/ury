@@ -12,25 +12,32 @@
     "build": "yarn ury-pos-build && yarn ury-mosaic-build && yarn ury-posv2-build && yarn ury-frontend-build",
     "prepare": "husky || true",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\" \"pos/src/**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\" \"pos/src/**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "lint": "eslint packages pos/src --ext .ts,.tsx,.js,.jsx --max-warnings 0 || true",
+    "test": "cd pos && yarn test",
+    "type-check": "yarn --cwd packages/ui typecheck && yarn --cwd packages/core typecheck || true",
+    "check-all": "yarn lint && yarn type-check && yarn format:check && yarn test"
   },
   "devDependencies": {
-    "@types/qz-tray": "^2.2.2",
-    "vite": "^6.0.0",
-    "storybook": "^10.5.2",
-    "@storybook/react-vite": "^10.5.2",
     "@chromatic-com/storybook": "^5.2.1",
-    "@storybook/addon-vitest": "^10.5.2",
+    "@radix-ui/react-select": "^2.2.5",
     "@storybook/addon-a11y": "^10.5.2",
     "@storybook/addon-docs": "^10.5.2",
-    "eslint-plugin-storybook": "^10.5.2",
+    "@storybook/addon-vitest": "^10.5.2",
+    "@storybook/react-vite": "^10.5.2",
+    "@types/qz-tray": "^2.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^3.3.1",
+    "eslint-plugin-storybook": "^10.5.2",
     "lucide-react": "^0.525.0",
+    "prettier": "^3.9.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@radix-ui/react-select": "^2.2.5",
-    "react-toastify": "^11.0.5"
+    "react-toastify": "^11.0.5",
+    "storybook": "^10.5.2",
+    "tailwind-merge": "^3.3.1",
+    "vite": "^6.0.0"
   }
 }

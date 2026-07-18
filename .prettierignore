@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+storybook-static/
+.next/
+out/
+
+# Generated files
+coverage/
+*.min.js
+*.min.css
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.prettiercache
+
+# Environment
+.env
+.env.*
+!.env.dev
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Vendored / generated
+pos/src/mocks/handlers.ts
+ury/
+urypos/
+URYMosaic/
+frontend/
+bundle-analysis/
+
+# Config that should not be reformatted
+CHANGELOG.md

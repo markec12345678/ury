@@ -125,12 +125,17 @@ ury/
 | `make dev-up` | Start Docker dev stack |
 | `make dev-down` | Stop Docker containers |
 | `make dev-logs` | Tail container logs |
+| `make dev-restart` | Restart all containers |
 | `make storybook` | Start Storybook on port 6006 |
 | `make build-storybook` | Build static Storybook site |
 | `make lint` | Run ESLint |
 | `make test` | Run unit tests |
 | `make build` | Production build |
 | `make typecheck` | TypeScript check (UI package) |
+| `make format` | Format code with Prettier |
+| `make format-check` | Check formatting without writing |
+| `make check-all` | Run all checks (lint + typecheck + format + test) |
+| `make clean` | Remove build artifacts and cache |
 | `make install` | Install all dependencies |
 
 ### CI/CD Pipelines
@@ -154,6 +159,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Key points:
 2. Make changes and add tests
 3. Submit a PR — CI will run automatically
 4. Get a code review before merging
+
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold this code.
 
 ### Storybook Components
 
