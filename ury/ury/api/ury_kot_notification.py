@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+import html as _html
 
 
 def get_users_with_role(role_name):
@@ -40,7 +41,7 @@ def order_delay_notification(id):
     subject = _("Order #{0} Delayed").format(order_id)
 
     item_lines = "\n".join(
-        f"<li>{i.item_name} x {i.quantity}</li>" for i in items
+        f"<li>{_html.escape(str(i.item_name))} x {_html.escape(str(i.quantity))}</li>" for i in items
     )
 
     message = _("""<ul>
@@ -49,7 +50,7 @@ def order_delay_notification(id):
 </ul>
 <ul>
     {4}
-</ul>""").format(_("Table"), table, _("Type"), kot.type, item_lines)
+</ul>""").format(_("Table"), _html.escape(str(table)), _("Type"), _html.escape(str(kot.type)), item_lines)
 
     recipients = frappe.get_all(
         "URY Notification Recipient",

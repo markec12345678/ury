@@ -150,6 +150,10 @@ export const posClosing = defineStore("posClose", {
     savePosClosing() {
       const invoiceData = useInvoiceDataStore();
       const alert = useAlert();
+      if (!this.selectedPosOpenEntry) {
+        alert.createAlert("Message", "Please select a POS Opening Entry", "OK");
+        return;
+      }
       let formattedTime;
       if (this.postingTime) {
         const date = new Date(this.postingTime);

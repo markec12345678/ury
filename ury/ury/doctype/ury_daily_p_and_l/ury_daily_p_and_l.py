@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import flt
 import calendar
 from datetime import datetime
+import html as _html
 
 def _inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=None):
     if visited is None:
@@ -370,7 +371,7 @@ class URYDailyPandL(Document):
                         ("BUNDLE SUB ITEMS", unset_pb_item_prices),
                         ("BOM SUB ITEMS", unset_bom_item_prices)
                 ]
-                remarks = _("BUYING PRICE NOT SET") + "<br><br>" + "<br><br>".join(f"{label}:-<br>{items}" for label, items in unset_prices if items)
+                remarks = _("BUYING PRICE NOT SET") + "<br><br>" + "<br><br>".join(f"{_html.escape(str(label))}:-<br>{_html.escape(str(items))}" for label, items in unset_prices if items)
                 if any(items for label, items in unset_prices):
                         remarks += "<br><br>" + _("Update the item prices and then submit the document again to ensure accurate Cost of Goods")
                         self.remarks = remarks

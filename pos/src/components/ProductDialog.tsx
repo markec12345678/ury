@@ -76,12 +76,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
 
   // State for the full item doc (used for all dialog content)
   const [itemDoc, setItemDoc] = useState<FrappeItemDoc | null>(null);
-  const [, setIsItemLoading] = useState(false);
-  const [, setItemError] = useState<string | null>(null);
+  const [isItemLoading, setIsItemLoading] = useState(false);
+  const [itemError, setItemError] = useState<string | null>(null);
 
   // Fetch Item doc once when dialog opens or selectedItem changes
   // (previously two separate useEffects fetching the same doc)
-  const [, setAddonItemCodes] = useState<string[]>([]);
   const [isAddonLoading, setIsAddonLoading] = useState(false);
   const [addonError, setAddonError] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
@@ -100,8 +99,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     setIsAddonLoading(true);
     setItemError(null);
     setAddonError(null);
-    db.getDoc('Item', selectedItem.item)
-      .then((doc: FrappeItemDoc) => {
+    db.getDoc<FrappeItemDoc>('Item', selectedItem.item)
+      .then((doc) => {
         if (cancelled) return;
         setItemDoc(doc);
       })

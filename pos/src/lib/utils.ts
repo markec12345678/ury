@@ -6,6 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function setCurrencySymbol(symbol: string): void {
+  storage.setItem('currencySymbol', symbol);
+}
+
 export function formatCurrency(amount: number): string {
   const symbol = storage.getItem('currencySymbol');
   if (isNaN(amount)) return symbol ? `${symbol} 0` : '0';

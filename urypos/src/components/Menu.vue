@@ -104,75 +104,75 @@
           </button>
         </div>
       </div>
-      <div
-        v-if="menu.showDialog"
-        class="fixed inset-0 z-10 mt-20 overflow-y-auto bg-gray-100"
-      >
-        <div class="mt-10 flex items-center justify-center">
-          <div class="w-full rounded-lg bg-white p-6 shadow-lg md:max-w-md">
-            <div class="flex justify-end">
-              <span class="sr-only">Close</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                @click="menu.showDialog = false"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </div>
-
-            <h2
-              class="mt-1 block text-left text-xl font-medium text-gray-900 dark:text-white"
+    </div>
+    <div
+      v-if="menu.showDialog"
+      class="fixed inset-0 z-10 mt-20 overflow-y-auto bg-gray-100"
+    >
+      <div class="mt-10 flex items-center justify-center">
+        <div class="w-full rounded-lg bg-white p-6 shadow-lg md:max-w-md">
+          <div class="flex justify-end">
+            <span class="sr-only">Close</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              @click="menu.showDialog = false"
             >
-              Enter Details
-            </h2>
-            <div class="relative">
-              <label
-                for="quantity"
-                class="mt-6 block text-left text-gray-900 dark:text-white"
-              >
-                Quantity
-              </label>
-              <input
-                type="number"
-                id="quantity"
-                class="mt-4 w-full appearance-none rounded border p-2 leading-tight text-gray-900 shadow focus:outline-none"
-                v-model="this.menu.quantity"
-                v-bind:readonly="
-                  this.recentOrders.editPrintedInvoice === 1 &&
-                  this.auth.removeTableOrderItem === 0
-                "
-                :disabled="this.recentOrders.restaurantTable"
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
               />
-              <label
-                for="comments"
-                class="mt-6 block text-left text-gray-900 dark:text-white"
-              >
-                Comments
-              </label>
-              <input
-                type="text"
-                id="Comments"
-                class="mt-4 w-full rounded border p-2 leading-tight text-gray-900 shadow focus:outline-none"
-                v-model="this.menu.itemComments"
-              />
-            </div>
-            <div class="flex justify-end">
-              <button
-                @click="this.menu.addToCartAndUpdateQty(item)"
-                class="mt-8 rounded bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
-              >
-                Add
-              </button>
-            </div>
+            </svg>
+          </div>
+
+          <h2
+            class="mt-1 block text-left text-xl font-medium text-gray-900 dark:text-white"
+          >
+            Enter Details
+          </h2>
+          <div class="relative">
+            <label
+              for="quantity"
+              class="mt-6 block text-left text-gray-900 dark:text-white"
+            >
+              Quantity
+            </label>
+            <input
+              type="number"
+              id="quantity"
+              class="mt-4 w-full appearance-none rounded border p-2 leading-tight text-gray-900 shadow focus:outline-none"
+              v-model="this.menu.quantity"
+              v-bind:readonly="
+                this.recentOrders.editPrintedInvoice === 1 &&
+                this.auth.removeTableOrderItem === 0
+              "
+              :disabled="this.recentOrders.restaurantTable"
+            />
+            <label
+              for="comments"
+              class="mt-6 block text-left text-gray-900 dark:text-white"
+            >
+              Comments
+            </label>
+            <input
+              type="text"
+              id="Comments"
+              class="mt-4 w-full rounded border p-2 leading-tight text-gray-900 shadow focus:outline-none"
+              v-model="this.menu.itemComments"
+            />
+          </div>
+          <div class="flex justify-end">
+            <button
+              @click="this.menu.addToCartAndUpdateQty()"
+              class="mt-8 rounded bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
+            >
+              Add
+            </button>
           </div>
         </div>
       </div>
@@ -263,8 +263,8 @@ export default {
   },
 };
 </script>
-<style>
-.bg-gray-100 {
+<style scoped>
+.modal-backdrop {
   background-color: rgba(0, 0, 0, 0.2);
 }
 </style>

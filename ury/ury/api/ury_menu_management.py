@@ -46,6 +46,9 @@ def get_menu_detail(menu_name):
     """Get a single URY Menu with full details."""
     frappe.only_for("Restaurant Manager", "Restaurant User")
     menu = frappe.get_doc("URY Menu", menu_name)
+    user_branch = _get_user_branch()
+    if menu.branch != user_branch:
+        frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
     return {
         "name": menu.name,
         "enabled": menu.enabled,
@@ -93,6 +96,9 @@ def toggle_menu(menu_name, enabled):
     """Enable or disable a menu."""
     frappe.only_for("Restaurant Manager")
     menu = frappe.get_doc("URY Menu", menu_name)
+    user_branch = _get_user_branch()
+    if menu.branch != user_branch:
+        frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
     menu.enabled = enabled
     menu.save(ignore_permissions=True)
     return {"name": menu.name, "enabled": menu.enabled}
@@ -130,6 +136,9 @@ def update_menu_item(menu_name, item_row_name, rate=None, special_dish=None, dis
     """Update a menu item's properties."""
     frappe.only_for("Restaurant Manager")
     menu = frappe.get_doc("URY Menu", menu_name)
+    user_branch = _get_user_branch()
+    if menu.branch != user_branch:
+        frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
     for item in menu.items:
         if item.name == item_row_name:
             if rate is not None:
@@ -153,6 +162,9 @@ def remove_menu_item(menu_name, item_row_name):
     """Remove an item from a URY Menu."""
     frappe.only_for("Restaurant Manager")
     menu = frappe.get_doc("URY Menu", menu_name)
+    user_branch = _get_user_branch()
+    if menu.branch != user_branch:
+        frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
     original_count = len(menu.items)
 
     menu.items = [item for item in menu.items if item.name != item_row_name]
@@ -176,6 +188,9 @@ def batch_update_prices(menu_name, updates):
         frappe.throw(_("Maximum 500 price updates per batch"))
 
     menu = frappe.get_doc("URY Menu", menu_name)
+    user_branch = _get_user_branch()
+    if menu.branch != user_branch:
+        frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
     updated = 0
 
     for update in updates:

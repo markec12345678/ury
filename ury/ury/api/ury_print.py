@@ -138,9 +138,14 @@ def qz_print_update(invoice):
         frappe.throw(_("An error occurred. Please check the error log."))
 
 
+ALLOWED_PRINT_DOCTYPES = {"POS Invoice"}
+
+
 @frappe.whitelist()
 def print_pos_page(doctype, name, print_format):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    if doctype not in ALLOWED_PRINT_DOCTYPES:
+        frappe.throw(_("Invalid doctype for printing"), frappe.ValidationError)
     data = {"name": name, "doctype": doctype, "print_format": print_format}
 
     result = frappe.db.get_value(
@@ -167,17 +172,32 @@ def print_pos_page(doctype, name, print_format):
 
 @frappe.whitelist()
 def qz_certificate():
-    if "System Manager" not in frappe.get_roles():
-        frappe.throw(_("Not permitted"), frappe.PermissionError)
+    frappe.only_for("System Manager")
     site_config = frappe.get_site_config()
     qz_key_value = site_config.get("qz_cert")
     return qz_key_value
 
 
 @frappe.whitelist()
-def signature_promise():
-    if "System Manager" not in frappe.get_roles():
-        frappe.throw(_("Not permitted"), frappe.PermissionError)
+def sign_message(message):
+    """Sign a message with the QZ private key server-side. Never expose the key."""
+    frappe.only_for("System Manager")
     site_config = frappe.get_site_config()
-    key_value = site_config.get("qz_private_key")
-    return key_value
+    private_key_pem = site_config.get("qz_private_key")
+    if not private_key_pem:
+        frappe.throw(_("QZ private key not configured"))
+    try:
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import padding
+        import base64
+        private_key = serialization.load_pem_private_key(
+            private_key_pem.encode() if isinstance(private_key_pem, str) else private_key_pem,
+            password=None
+        )
+        signature = private_key.sign(
+            message.encode(), padding.PKCS1v15(), hashes.SHA256()
+        )
+        return base64.b64encode(signature).decode()
+    except Exception as e:
+        frappe.log_error(f"QZ signing failed: {e}")
+        frappe.throw(_("Failed to sign message"), frappe.ValidationError)

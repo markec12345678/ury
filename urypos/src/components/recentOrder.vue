@@ -656,8 +656,8 @@ export default {
   },
 };
 </script>
-<style>
-.bg-gray-100 {
+<style scoped>
+.modal-backdrop {
   background-color: rgba(0, 0, 0, 0.2);
 }
 </style>

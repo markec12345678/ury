@@ -55,6 +55,7 @@
           <!-- New Dropdown Menu Style -->
           <div
             v-show="this.auth.activeDropdown"
+            ref="dropdownMenu"
             class="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
           >
             <div class="py-1">
@@ -125,6 +126,24 @@ export default {
     reload() {
       this.$router.push(this.$route.path).catch(() => {});
     },
+    handleClickOutside(event) {
+      const dropdownEl = this.$refs.dropdownMenu;
+      const buttonEl = this.$refs.dropdownButton;
+      if (
+        dropdownEl &&
+        !dropdownEl.contains(event.target) &&
+        buttonEl &&
+        !buttonEl.contains(event.target)
+      ) {
+        this.auth.hideDropdown();
+      }
+    },
+  },
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside);
   },
 };
 </script>

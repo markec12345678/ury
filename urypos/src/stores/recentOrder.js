@@ -360,6 +360,16 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
       this.showDiscount = false;
     },
 
+    updatePercentage() {
+      if (this.percentage && this.grandTotal) {
+        this.discount_amount = (this.percentage / 100) * this.grandTotal;
+      }
+    },
+    applyDiscount() {
+      this.updatePercentage();
+      this.showInput = false;
+      this.showDiscount = true;
+    },
     toggleDiscount() {
       if (this.showInput) {
         this.showInput = false;
@@ -402,7 +412,6 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
     billing: async function () {
       const alert = useAlert();
       this.modeOfPaymentList=[]
-      this.openPaymentModal()
       const getOrderInvoice = {
         doctype: "POS Invoice",
         name: this.invoiceNumber,
@@ -436,7 +445,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
             this.showPayment = false;
 
           } else {
-            this.showPayment = true;
+            this.openPaymentModal();
           }
         })
         .catch((error) => console.error(error));

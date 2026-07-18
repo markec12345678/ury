@@ -306,7 +306,14 @@ def sync_order(
         )
 
     invoice.db_set("owner", frappe.session.user)
-    return invoice.as_dict()
+    return {
+        "name": invoice.name,
+        "customer": invoice.customer,
+        "grand_total": invoice.grand_total,
+        "modified": invoice.modified,
+        "invoice_printed": invoice.invoice_printed,
+        "restaurant_table": invoice.restaurant_table,
+    }
 
 
 @frappe.whitelist()
@@ -445,9 +452,15 @@ def table_transfer(table, newTable, invoice):
     if not frappe.has_permission("POS Invoice", "write", invoice):
         frappe.throw(_("Not permitted to transfer tables"), frappe.PermissionError)
     current_room = frappe.db.get_value("URY Table", table, "restaurant_room")
-    new_table_room, new_table_occupied = frappe.db.get_value(
-        "URY Table", newTable, ["restaurant_room", "occupied"]
+    new_table_data = frappe.db.sql(
+        """SELECT restaurant_room, occupied FROM `tabURY Table`
+           WHERE name = %s FOR UPDATE""",
+        (newTable,), as_dict=True
     )
+    if not new_table_data:
+        frappe.throw(_("Table {0} not found").format(newTable))
+    new_table_room = new_table_data[0].restaurant_room
+    new_table_occupied = new_table_data[0].occupied
     pos_invoice = frappe.get_doc("POS Invoice", invoice)
 
     if current_room == new_table_room:
@@ -576,8 +589,25 @@ def cancel_order(invoice_id, reason):
 
 # Method for URY POS
 @frappe.whitelist()
-def make_invoice(customer, payments, cashier, pos_profile,owner, additionalDiscount=None, table=None, invoice=None):
+def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=None, table=None, invoice=None):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+
+    # Validate additional discount
+    if additionalDiscount is not None:
+        additionalDiscount = flt(additionalDiscount)
+        if additionalDiscount < 0 or additionalDiscount > 100:
+            frappe.throw(_("Additional discount must be between 0 and 100"))
+
+    # Validate payments
+    if isinstance(payments, str):
+        payments = json.loads(payments)
+    if not payments:
+        frappe.throw(_("At least one payment is required"))
+    for p in payments:
+        amount = flt(p.get("amount", 0))
+        if amount < 0:
+            frappe.throw(_("Payment amount cannot be negative"))
+
     order_type = frappe.get_value("POS Invoice", invoice, "order_type")
     invoice = get_order_invoice(table, invoice, order_type, "Payments")
 

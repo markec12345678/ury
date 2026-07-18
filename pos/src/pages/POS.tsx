@@ -117,6 +117,7 @@ export default function POS() {
       </div>
       <OrderPanel />
       {isDialogOpen && <ProductDialog onClose={() => setIsDialogOpen(false)} />}
+      </div>
     </div>
   );
 }

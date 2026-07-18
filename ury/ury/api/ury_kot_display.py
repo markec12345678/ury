@@ -6,7 +6,7 @@ from frappe.utils import get_datetime
 
 # Function to set order status in a KOT document
 @frappe.whitelist()
-def serve_kot(name, time):
+def serve_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
     current_time = get_datetime()
     creation_time = frappe.db.get_value("URY KOT", name, "creation")
@@ -16,7 +16,7 @@ def serve_kot(name, time):
     production_time = current_time - creation_time
     production_time_minutes = production_time.total_seconds() / 60
     frappe.db.set_value("URY KOT", name, {
-        "start_time_serv": time,
+        "start_time_serv": current_time,
         "production_time": production_time_minutes,
         "order_status": "Served",
     })
@@ -34,6 +34,9 @@ def confirm_cancel_kot(name):
 @frappe.whitelist()
 def get_site_name():
     frappe.only_for("Restaurant Manager", "Restaurant User")
+    # Intentional: site name is returned for KDS display identification purposes only.
+    # This is a low-risk info leak; the site name is needed to distinguish between
+    # multiple KDS displays in multi-site deployments.
     return {"site_name": frappe.local.site}
 
 

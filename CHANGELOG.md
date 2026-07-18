@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (Round 35)
+
+- **POS React (2 CRITICAL)**: Broken JSX structure in POS.tsx — missing `</div>` closing tag causing build failure. Missing `setCurrencySymbol` export in utils.ts causing Vite build failure.
+- **POS React (4 HIGH)**: ProductDialog `isItemLoading`/`itemError` state values discarded (loading/error never shown). Dead `setAddonItemCodes` state removed. Type-unsafe `db.getDoc` call fixed with generic param. Stale request guard added to search branch of `fetchOrders`.
+- **POS React (3 MEDIUM)**: ErrorBoundary missing default export. LayoutView hardcoded zoom strings wrapped with `t()` i18n. Table.tsx hardcoded error string wrapped with `t()`.
+- **Mosaic KDS (2 CRITICAL)**: Missing `updatePercentage`/`applyDiscount` methods in recentOrder store caused TypeError crash on discount input. `isPrinting` stuck `true` after successful network print — overlay permanently blocked.
+- **Mosaic KDS (6 HIGH)**: Dialog moved outside `v-for` in Menu.vue (N duplicate DOM nodes eliminated). Store instances removed from `invoiceData.js` state (circular deps fixed, `$reset()`/devtools restored). Click-outside handler added to Header.vue dropdown. Password cleared from memory after login. Payment modal shown only after API response in `billing()`. Deep copy of reactive cart for API payload.
+- **Mosaic KDS (3 MEDIUM)**: Unscoped `.bg-gray-100` CSS overrides → renamed to `.modal-backdrop` with `<style scoped>`. `posClosing.savePosClosing()` validates `selectedPosOpenEntry` before API call. Typo `showUpdateButtton` → `showUpdateButton` (9 occurrences).
+- **Mosaic KDS (1 LOW)**: `Menu.js showAllItems()` sets `selectedCourse` to `null` (was `""`, inconsistent with initial state).
+- **Backend (2 CRITICAL)**: QZ private key no longer exposed via `signature_promise()` API — replaced with `sign_message()` server-side signing. XSS in KOT notification HTML — all dynamic values escaped with `html.escape()`.
+- **Backend (7 HIGH)**: Branch validation added to 5 menu management functions (cross-branch data access prevented). Discount/payment validation added to `make_invoice()`. Race condition in `table_transfer()` fixed with `SELECT FOR UPDATE`. `sync_order()` returns limited fields instead of full `invoice.as_dict()` (data leak fix). Stored XSS in P&L remarks escaped. Dead `owner` parameter removed from `make_invoice()` signature.
+- **Backend (3 MEDIUM)**: `serve_kot()` uses server-side time instead of client-supplied `time` param. `print_pos_page()` whitelists allowed doctypes (`POS Invoice` only). 33 dead `# import frappe` comments removed across doctypes.
+
+### Changed (Round 35)
+
+- **frappe-sdk-retry** — Search branch of `fetchOrders` now respects stale-request guard sequence counter.
+- **Mosaic KDS stores** — `invoiceData.js` no longer stores other Pinia instances in state; uses local `useXxxStore()` calls.
+- **Backend `ury_print.py`** — `signature_promise()` removed; replaced with `sign_message()` for server-side signing.
+
 ### Added (Round 34)
 
 - **2 new UI components** (`@ury/ui`) — Sheet (5 stories) with slide-in panel (top/bottom/left/right), overlay, Header/Footer/Title/Description/Close sub-components. Calendar (5 stories) with date grid, month navigation, min/max dates, controlled mode. Total: 30 components, 129 stories.

@@ -322,7 +322,7 @@ export const useMenuStore = defineStore("menu", {
       this.priority = false;
       this.displayAll = true;
       this.searchTerm = "";
-      this.selectedCourse = "";
+      this.selectedCourse = null;
     },
     showSpecialItems() {
       this.priority = true;

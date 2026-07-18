@@ -84,6 +84,8 @@ export const createOrdersSlice: StateCreator<
       if (orderSearchQuery && orderSearchQuery.trim()) {
         // Use search API
         const res = await searchPosInvoice(orderSearchQuery, selectedStatus);
+        // Discard stale response if a newer request was started
+        if (get()._fetchOrdersSeq !== seq) return;
         set({
           orders: res.data || [],
           pagination: {

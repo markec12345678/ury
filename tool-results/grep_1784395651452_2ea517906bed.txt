@@ -1,0 +1,252 @@
+/home/z/my-project/pos/src/lib/customer-api.test.ts:9:    getDocList: (...args: any[]) => mockGetDocList(...args),
+/home/z/my-project/pos/src/lib/customer-api.test.ts:12:    post: (...args: any[]) => mockPost(...args),
+/home/z/my-project/pos/src/i18n/i18n.test.ts:90:    expect(resolveKey(null as any, 'common.loading')).toBeUndefined();
+/home/z/my-project/pos/src/lib/table-api.test.ts:9:    getDocList: (...args: any[]) => mockGetDocList(...args),
+/home/z/my-project/pos/src/lib/table-api.test.ts:10:    updateDoc: (...args: any[]) => mockUpdateDoc(...args),
+/home/z/my-project/pos/src/store/reports-store.test.ts:979:      vi.mocked(exportReportPdf).mockResolvedValue(null as any);
+/home/z/my-project/pos/src/store/reports-store.test.ts:1003:      vi.mocked(jsPDF).mockImplementationOnce(throwImpl as any);
+/home/z/my-project/pos/src/lib/role-utils.test.ts:6:    const result = isUserRestrictedFromTableOrders(null, { role_restricted_for_table_order: [{ role: 'Waiter' }] } as any);
+/home/z/my-project/pos/src/lib/role-utils.test.ts:11:    const result = isUserRestrictedFromTableOrders({ name: 'test', roles: ['Waiter'] } as any, null);
+/home/z/my-project/pos/src/lib/role-utils.test.ts:17:      { name: 'test', roles: [] } as any,
+/home/z/my-project/pos/src/lib/role-utils.test.ts:18:      { role_restricted_for_table_order: [{ role: 'Waiter' }] } as any
+/home/z/my-project/pos/src/lib/role-utils.test.ts:25:      { name: 'test', roles: ['Waiter'] } as any,
+/home/z/my-project/pos/src/lib/role-utils.test.ts:26:      {} as any
+/home/z/my-project/pos/src/lib/role-utils.test.ts:33:      { name: 'test', roles: ['Waiter', 'Cashier'] } as any,
+/home/z/my-project/pos/src/lib/role-utils.test.ts:34:      { role_restricted_for_table_order: [{ role: 'Waiter' }] } as any
+/home/z/my-project/pos/src/lib/role-utils.test.ts:41:      { name: 'test', roles: ['Cashier', 'Manager'] } as any,
+/home/z/my-project/pos/src/lib/role-utils.test.ts:42:      { role_restricted_for_table_order: [{ role: 'Waiter' }] } as any
+/home/z/my-project/pos/src/lib/role-utils.test.ts:49:      { name: 'test', roles: ['Manager'] } as any,
+/home/z/my-project/pos/src/lib/role-utils.test.ts:50:      { role_restricted_for_table_order: [{ role: 'Waiter' }, { role: 'Manager' }] } as any
+/home/z/my-project/pos/src/lib/role-utils.test.ts:62:      { name: 'test', roles: ['Delivery'] } as any,
+/home/z/my-project/pos/src/lib/role-utils.test.ts:63:      { role_restricted_for_table_order: [{ role: 'Delivery' }] } as any
+/home/z/my-project/pos/src/store/reports-store.ts:579:  return (doc as any).lastAutoTable?.finalY || 80;
+/home/z/my-project/pos/src/store/reports-store.ts:1112:      didParseCell: (data: any) => {
+/home/z/my-project/pos/src/lib/role-utils.ts:15:  // Check if the user has any of the restricted roles
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:30:    delete (window as any).location;
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:31:    (window as any).location = { href: '' };
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:42:    (getLoggedUser as any).mockResolvedValue('user@example.com');
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:43:    (getUserRoles as any).mockResolvedValue({ roles: ['Cashier'], full_name: 'Test User' });
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:54:    (getLoggedUser as any).mockResolvedValue('user@example.com');
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:55:    (getUserRoles as any).mockResolvedValue({ roles: ['Cashier'], full_name: 'Test User' });
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:62:    (getLoggedUser as any).mockResolvedValue('user@example.com');
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:63:    (getUserRoles as any).mockResolvedValue({ roles: ['Cashier', 'Waiter'], full_name: 'John Doe' });
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:74:    (getLoggedUser as any).mockResolvedValue(null);
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:81:    (getLoggedUser as any).mockRejectedValue(new Error('Network error'));
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:88:    (getLoggedUser as any).mockRejectedValue(new Error('Network error'));
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:96:    (getLoggedUser as any).mockResolvedValue('user@example.com');
+/home/z/my-project/pos/src/store/slices/auth-slice.test.ts:97:    (getUserRoles as any).mockResolvedValue({ roles: ['Cashier'], full_name: 'Test' });
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:65:    selectedOrderType: 'Take Away' as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:109:      useTestStore.setState({ posProfile: { name: 'test-profile' } as any });
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:116:        posProfile: { name: 'profile-1', restaurant: 'rest-1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:129:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:166:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:187:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:207:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:227:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:247:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:268:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:288:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/menu-slice.test.ts:301:        posProfile: { name: 'p1', restaurant: 'r1' } as any,
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:60:    (getPOSInvoices as any).mockResolvedValue({ invoices: [], hasMore: false });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:70:    (getPOSInvoices as any).mockResolvedValue({ invoices: [], hasMore: false });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:84:    (searchPosInvoice as any).mockResolvedValue({ data: [] });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:92:    (getPOSInvoices as any).mockRejectedValue(new Error('API Error'));
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:102:    (getPOSInvoices as any).mockResolvedValue({ invoices: [], hasMore: false });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:121:    (getPOSInvoices as any).mockResolvedValue({ invoices: [], hasMore: true });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:139:    (getPOSInvoices as any).mockResolvedValue({ invoices: [], hasMore: false });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:147:      selectedOrder: { name: 'INV-001' } as any,
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:149:    (getPOSInvoices as any).mockResolvedValue({ invoices: [], hasMore: false });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:156:    const mockOrder = { name: 'INV-001', status: 'Draft' } as any;
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:157:    (getPOSInvoiceItems as any).mockResolvedValue({
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:174:    const mockOrder = { name: 'INV-001', status: 'Draft' } as any;
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:175:    (getPOSInvoiceItems as any).mockRejectedValue(new Error('Not found'));
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:184:      selectedOrder: { name: 'INV-001' } as any,
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:203:    (getPOSInvoices as any).mockResolvedValue({ invoices: [], hasMore: false });
+/home/z/my-project/pos/src/store/slices/orders-slice.test.ts:205:    (call.post as any).mockResolvedValue({});
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:124:      vi.mocked(getCombinedPosProfile).mockResolvedValueOnce(mockProfile as any);
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:137:      vi.mocked(getCombinedPosProfile).mockResolvedValueOnce(mockProfile as any);
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:160:      vi.mocked(getCombinedPosProfile).mockResolvedValueOnce(mockProfile as any);
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:174:      vi.mocked(getCombinedPosProfile).mockResolvedValueOnce({ name: 'POS-001', currency: 'USD' } as any);
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:186:      vi.mocked(getCombinedPosProfile).mockResolvedValueOnce({ name: 'POS-001', currency: 'USD' } as any);
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:208:      vi.mocked(getCombinedPosProfile).mockResolvedValueOnce({ name: 'POS-NO-CUR' } as any);
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:291:        selectedCustomer: { name: 'John' } as any,
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:294:        selectedAggregator: { name: 'Swiggy' } as any,
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:297:        activeOrders: [{ id: '1' }] as any,
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:298:        selectedItem: { id: 'item-1' } as any,
+/home/z/my-project/pos/src/store/slices/app-slice.test.ts:301:        selectedOrderType: 'Dine In' as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:172:      useTestStore.getState().setSelectedItem(item as any);
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:178:      useTestStore.getState().setSelectedItem(item as any);
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:234:        tableOrder: { message: { name: 'ORD-001' } } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:237:        activeOrders: [{ id: 'x' }] as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:256:        posProfile: { name: 'TestProfile', restaurant: 'Rest1' } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:272:      useTestStore.setState({ activeOrders: [{ id: 'x', uniqueId: 'uid' }] as any });
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:290:        posProfile: { name: 'TestProfile', restaurant: 'Rest1' } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:303:        posProfile: { name: 'TestProfile', restaurant: 'Rest1' } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:305:      useTestStore.getState().setSelectedOrderType('Aggregators' as any);
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:333:        } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:361:        } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:400:      let resolveApi: (val: any) => void;
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:404:      vi.mocked(getTableOrder).mockReturnValueOnce(apiPromise as any);
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:450:        } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:479:        } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:492:        tableOrder: { message: { name: 'ORD-001' } } as any,
+/home/z/my-project/pos/src/store/slices/selection-slice.test.ts:493:        activeOrders: [{ id: 'x' }] as any,
+/home/z/my-project/pos/src/store/slices/config-slice.test.ts:98:    (getCombinedPosProfile as any).mockResolvedValue(mockProfile);
+/home/z/my-project/pos/src/store/slices/config-slice.test.ts:125:    (getCombinedPosProfile as any).mockResolvedValue(freshProfile);
+/home/z/my-project/pos/src/store/slices/config-slice.test.ts:139:    (getCombinedPosProfile as any).mockResolvedValue(freshProfile);
+/home/z/my-project/pos/src/store/slices/config-slice.test.ts:147:    (getCombinedPosProfile as any).mockRejectedValue(new Error('API Error'));
+/home/z/my-project/pos/src/store/slices/config-slice.test.ts:161:    (getCombinedPosProfile as any).mockResolvedValue(mockProfile);
+/home/z/my-project/pos/src/store/slices/config-slice.ts:87:    // Check if user has any of the allowed roles
+/home/z/my-project/pos/src/components/POSOpeningProvider.test.tsx:11:  checkPOSOpening: (...args: any[]) => mockCheckPOSOpening(...args),
+/home/z/my-project/pos/src/components/POSOpeningProvider.test.tsx:12:  validatePOSClose: (...args: any[]) => mockValidatePOSClose(...args),
+/home/z/my-project/pos/src/components/POSOpeningProvider.test.tsx:24:  default: ({ onReload, type }: any) => (
+/home/z/my-project/pos/src/components/AuthGuard.test.tsx:15:  Button: ({ children, onClick, variant, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/AuthGuard.test.tsx:24:  Spinner: ({ className }: any) => <div data-testid="spinner" className={className}>Loading</div>,
+/home/z/my-project/pos/src/components/dashboard/RevenueChart.test.tsx:18:  AreaChart: ({ children, data }: any) => <div data-testid="area-chart" data-length={data?.length}>{children}</div>,
+/home/z/my-project/pos/src/components/dashboard/RevenueChart.test.tsx:19:  Area: ({ dataKey, name }: any) => <div data-testid={`area-${dataKey}`} data-name={name} />,
+/home/z/my-project/pos/src/components/dashboard/RevenueChart.test.tsx:20:  XAxis: ({ dataKey }: any) => <div data-testid="x-axis" />,
+/home/z/my-project/pos/src/components/dashboard/RevenueChart.test.tsx:21:  YAxis: ({ dataKey }: any) => <div data-testid="y-axis" />,
+/home/z/my-project/pos/src/components/dashboard/RevenueChart.test.tsx:24:  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
+/home/z/my-project/pos/src/components/dashboard/PaymentMethodChart.test.tsx:10:  getPaymentMethodChart: (...args: any[]) => mockGetPaymentMethodChart(...args),
+/home/z/my-project/pos/src/components/dashboard/PaymentMethodChart.test.tsx:27:  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+/home/z/my-project/pos/src/components/dashboard/PaymentMethodChart.test.tsx:32:  PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
+/home/z/my-project/pos/src/components/dashboard/PaymentMethodChart.test.tsx:33:  Pie: ({ children, data }: any) => (
+/home/z/my-project/pos/src/components/dashboard/PaymentMethodChart.test.tsx:36:  Cell: ({ fill }: any) => <div data-testid="chart-cell" data-fill={fill} />,
+/home/z/my-project/pos/src/components/dashboard/PaymentMethodChart.test.tsx:38:  ResponsiveContainer: ({ children }: any) => (
+/home/z/my-project/pos/src/components/reports/Reports.test.tsx:44:  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+/home/z/my-project/pos/src/components/reports/Reports.test.tsx:68:  Button: ({ children, onClick, disabled, ...props }: any) => (
+/home/z/my-project/pos/src/components/reports/Reports.test.tsx:73:  Input: (props: any) => <input {...props} />,
+/home/z/my-project/pos/src/components/dashboard/CategorySalesChart.test.tsx:29:  PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
+/home/z/my-project/pos/src/components/dashboard/CategorySalesChart.test.tsx:30:  Pie: ({ children, data }: any) => (
+/home/z/my-project/pos/src/components/dashboard/CategorySalesChart.test.tsx:33:  Cell: ({ fill }: any) => <div data-testid="chart-cell" data-fill={fill} />,
+/home/z/my-project/pos/src/components/dashboard/CategorySalesChart.test.tsx:35:  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
+/home/z/my-project/pos/src/components/reports/InventoryReportView.test.tsx:26:  Badge: ({ children, variant, size, className }: any) => (
+/home/z/my-project/pos/src/components/dashboard/OrderTypeChart.test.tsx:26:  BarChart: ({ children, data }: any) => (
+/home/z/my-project/pos/src/components/dashboard/OrderTypeChart.test.tsx:29:  Bar: ({ dataKey, name, fill }: any) => (
+/home/z/my-project/pos/src/components/dashboard/OrderTypeChart.test.tsx:32:  XAxis: ({ dataKey }: any) => <div data-testid="x-axis" data-key={dataKey} />,
+/home/z/my-project/pos/src/components/dashboard/OrderTypeChart.test.tsx:33:  YAxis: ({ dataKey }: any) => <div data-testid="y-axis" data-key={dataKey} />,
+/home/z/my-project/pos/src/components/dashboard/OrderTypeChart.test.tsx:35:  Tooltip: ({ content }: any) => <div data-testid="tooltip" />,
+/home/z/my-project/pos/src/components/dashboard/OrderTypeChart.test.tsx:36:  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
+/home/z/my-project/pos/src/components/dashboard/OrderTypeChart.test.tsx:37:  Legend: ({ formatter }: any) => <div data-testid="legend" />,
+/home/z/my-project/pos/src/components/reports/SalesReportView.test.tsx:26:  BarChart: ({ children, data }: any) => (
+/home/z/my-project/pos/src/components/reports/SalesReportView.test.tsx:31:  Bar: ({ dataKey, name }: any) => (
+/home/z/my-project/pos/src/components/reports/SalesReportView.test.tsx:38:  ResponsiveContainer: ({ children }: any) => (
+/home/z/my-project/pos/src/components/dashboard/Dashboard.test.tsx:67:  Button: ({ children, onClick, disabled, variant, size, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/dashboard/Dashboard.test.tsx:72:  Spinner: ({ className }: any) => <div data-testid="spinner" className={className}>Loading</div>,
+/home/z/my-project/pos/src/components/dashboard/Dashboard.test.tsx:73:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/dashboard/OrdersChart.test.tsx:15:  BarChart: ({ children, data }: any) => (
+/home/z/my-project/pos/src/components/dashboard/OrdersChart.test.tsx:18:  Bar: ({ dataKey, name, fill }: any) => (
+/home/z/my-project/pos/src/components/dashboard/OrdersChart.test.tsx:21:  XAxis: ({ dataKey }: any) => <div data-testid="x-axis" data-key={dataKey} />,
+/home/z/my-project/pos/src/components/dashboard/OrdersChart.test.tsx:25:  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
+/home/z/my-project/pos/src/components/AggregatorSelect.test.tsx:21:  Select: ({ children, value, onValueChange, disabled, placeholder }: any) => (
+/home/z/my-project/pos/src/components/AggregatorSelect.test.tsx:31:  SelectItem: ({ children, value, ...props }: any) => (
+/home/z/my-project/pos/src/components/InitialLoader.test.tsx:15:  Spinner: ({ className, message }: any) => (
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:88:  Button: ({ children, onClick, disabled, variant, size, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:93:  Input: ({ value, onChange, placeholder, disabled, type, min, step, className, size, onFocus, ...props }: any) => (
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:108:  Dialog: ({ children, open, onOpenChange }: any) => open ? <div data-testid="dialog">{children}</div> : null,
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:109:  DialogContent: ({ children, variant, className, showCloseButton }: any) => (
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:115:  Select: ({ children, value, onValueChange }: any) => (
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:120:  Badge: ({ children, variant }: any) => <span data-testid="badge" data-variant={variant}>{children}</span>,
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:121:  Textarea: ({ value, onChange, placeholder, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/PaymentDialog.test.tsx:124:  Card: ({ children, className }: any) => <div className={className}>{children}</div>,
+/home/z/my-project/pos/src/components/TableSelectionDialog.test.tsx:24:  TableShapeIcon: ({ shape, className }: any) => (
+/home/z/my-project/pos/src/components/TableSelectionDialog.test.tsx:31:  Dialog: ({ children, open, onOpenChange }: any) => open ? (
+/home/z/my-project/pos/src/components/TableSelectionDialog.test.tsx:34:  DialogContent: ({ children, className }: any) => (
+/home/z/my-project/pos/src/components/TableSelectionDialog.test.tsx:40:  Button: ({ children, onClick, disabled, variant, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/TableSelectionDialog.test.tsx:48:  Spinner: ({ message }: any) => <div data-testid="spinner">{message || 'Loading...'}</div>,
+/home/z/my-project/pos/src/components/TableSelectionDialog.test.tsx:52:  Badge: ({ children, variant, className }: any) => (
+/home/z/my-project/pos/src/components/Header.test.tsx:16:  Link: ({ children, to, ...props }: any) => <a href={to} {...props}>{children}</a>,
+/home/z/my-project/pos/src/components/Header.test.tsx:36:  Button: ({ children, onClick, disabled, variant, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/Header.test.tsx:41:  Input: ({ value, onChange, placeholder, ...props }: any) => (
+/home/z/my-project/pos/src/components/Header.test.tsx:59:  useRootStore: (selector: any) => {
+/home/z/my-project/pos/src/components/Header.test.tsx:66:  usePOSStore: (selector: any) => {
+/home/z/my-project/pos/src/components/OrderTypeSelect.test.tsx:15:  default: ({ onClose }: any) => (
+/home/z/my-project/pos/src/components/OrderTypeSelect.test.tsx:57:  useRootStore: (selector?: any) => {
+/home/z/my-project/pos/src/components/OrderTypeSelect.test.tsx:67:  Button: ({ children, onClick, disabled, variant, className, title, ...props }: any) => (
+/home/z/my-project/pos/src/components/LayoutView.test.tsx:15:  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+/home/z/my-project/pos/src/components/LayoutView.test.tsx:28:  Button: ({ children, onClick, ...props }: any) => (
+/home/z/my-project/pos/src/components/LayoutView.test.tsx:33:  Input: (props: any) => <input {...props} />,
+/home/z/my-project/pos/src/components/LayoutView.test.tsx:34:  Badge: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+/home/z/my-project/pos/src/components/MenuList.test.tsx:27:  default: ({ name, price, course, onClick, disabled }: any) => (
+/home/z/my-project/pos/src/components/MenuList.test.tsx:38:  Spinner: ({ message }: any) => <div data-testid="spinner">{message || 'Loading...'}</div>,
+/home/z/my-project/pos/src/components/menu-management/AddItemDialog.test.tsx:26:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/AddItemDialog.test.tsx:31:  Input: (props: any) => {
+/home/z/my-project/pos/src/components/menu-management/AddItemDialog.test.tsx:35:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/Footer.test.tsx:15:  NavLink: ({ children, to, className, ...props }: any) => {
+/home/z/my-project/pos/src/components/menu-management/BulkActionsToolbar.test.tsx:15:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/BulkActionsToolbar.test.tsx:20:  Input: (props: any) => {
+/home/z/my-project/pos/src/components/menu-management/BulkActionsToolbar.test.tsx:24:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:42:  Button: ({ children, onClick, disabled, variant, size, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:47:  Input: ({ value, onChange, placeholder, disabled, type, min, max, className, id, onBlur, ...props }: any) => (
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:62:  Dialog: ({ children, open, onOpenChange }: any) => open ? <div data-testid="dialog">{children}</div> : null,
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:63:  DialogContent: ({ children, variant, className, showCloseButton, ref, ...props }: any) => (
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:69:  Select: ({ children, value, onValueChange, placeholder, disabled }: any) => (
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:70:    <select value={value} onChange={(e: any) => onValueChange?.(e.target.value)} disabled={disabled} data-testid="select">
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:74:  SelectItem: ({ children, value, className }: any) => (
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:77:  Badge: ({ children, variant }: any) => <span data-testid="badge">{children}</span>,
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:78:  Textarea: ({ value, onChange, placeholder, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/ProductDialog.test.tsx:81:  Card: ({ children, className }: any) => <div className={className}>{children}</div>,
+/home/z/my-project/pos/src/components/menu-management/MenuItemsList.test.tsx:27:  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+/home/z/my-project/pos/src/components/menu-management/MenuItemsList.test.tsx:33:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuItemsList.test.tsx:38:  Input: (props: any) => {
+/home/z/my-project/pos/src/components/menu-management/MenuItemsList.test.tsx:42:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuItemsList.test.tsx:89:  let confirmMock: any;
+/home/z/my-project/pos/src/components/TableShapeIcon.test.tsx:7:  Circle: ({ className }: any) => <svg data-testid="circle-icon" className={className} />,
+/home/z/my-project/pos/src/components/TableShapeIcon.test.tsx:8:  Square: ({ className }: any) => <svg data-testid="square-icon" className={className} />,
+/home/z/my-project/pos/src/components/TableShapeIcon.test.tsx:9:  RectangleHorizontal: ({ className }: any) => <svg data-testid="rectangle-icon" className={className} />,
+/home/z/my-project/pos/src/components/TableShapeIcon.test.tsx:34:    render(<TableShapeIcon shape={'Unknown' as any} />);
+/home/z/my-project/pos/src/components/menu-management/CourseManager.test.tsx:15:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/CourseManager.test.tsx:20:  Input: (props: any) => {
+/home/z/my-project/pos/src/components/menu-management/CourseManager.test.tsx:24:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/CourseManager.test.tsx:43:  let confirmMock: any;
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:61:  AggregatorSelect: ({ disabled }: any) => (
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:68:  Button: ({ children, onClick, disabled, variant, size, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:73:  Input: ({ value, onChange, placeholder, disabled, type, className, id, ...props }: any) => (
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:85:  Dialog: ({ children, open, onOpenChange }: any) => open ? <div data-testid="dialog">{children}</div> : null,
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:86:  DialogContent: ({ children, className }: any) => (
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:89:  Select: ({ children, value, onValueChange, placeholder, disabled }: any) => (
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:90:    <select value={value} onChange={(e: any) => onValueChange?.(e.target.value)} disabled={disabled} data-testid="select" aria-placeholder={placeholder}>
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:94:  SelectItem: ({ children, value, className }: any) => (
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:98:  Badge: ({ children, variant }: any) => <span data-testid="badge">{children}</span>,
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:99:  Textarea: ({ value, onChange, placeholder, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/CustomerSelect.test.tsx:102:  Card: ({ children, className }: any) => <div className={className}>{children}</div>,
+/home/z/my-project/pos/src/components/menu-management/BatchPriceUpdateDialog.test.tsx:26:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/BatchPriceUpdateDialog.test.tsx:31:  Input: (props: any) => {
+/home/z/my-project/pos/src/components/menu-management/BatchPriceUpdateDialog.test.tsx:35:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:21:  Button: ({ children, onClick, disabled, variant, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:26:  Input: ({ value, onChange, placeholder, disabled, type, ...props }: any) => (
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:29:  Dialog: ({ children, open, onOpenChange }: any) => open ? <div data-testid="dialog">{children}</div> : null,
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:30:  DialogContent: ({ children, className }: any) => (
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:34:  Select: ({ children, value, onValueChange, placeholder, disabled }: any) => (
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:35:    <select value={value} onChange={(e: any) => onValueChange?.(e.target.value)} disabled={disabled} data-testid="select">
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:39:  SelectItem: ({ children, value, className }: any) => (
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:42:  Badge: ({ children, variant }: any) => <span data-testid="badge">{children}</span>,
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:43:  Textarea: ({ value, onChange, placeholder, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/CommentDialog.test.tsx:46:  Card: ({ children, className }: any) => <div className={className}>{children}</div>,
+/home/z/my-project/pos/src/components/menu-management/EditItemDialog.test.tsx:15:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/EditItemDialog.test.tsx:20:  Input: (props: any) => {
+/home/z/my-project/pos/src/components/menu-management/EditItemDialog.test.tsx:24:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/OrderPanel.test.tsx:68:  Button: ({ children, onClick, disabled, variant, size, className, title, ...props }: any) => (
+/home/z/my-project/pos/src/components/OrderPanel.test.tsx:76:  Spinner: ({ message }: any) => <div data-testid="spinner">{message || 'Loading...'}</div>,
+/home/z/my-project/pos/src/components/OrderPanel.test.tsx:81:  CustomerSelect: ({ disabled }: any) => (
+/home/z/my-project/pos/src/components/OrderPanel.test.tsx:88:  default: ({ disabled }: any) => (
+/home/z/my-project/pos/src/components/OrderPanel.test.tsx:95:  default: ({ isOpen, onClose, onSave, initialComment }: any) => (
+/home/z/my-project/pos/src/components/OrderPanel.test.tsx:102:  default: ({ onClose, editMode }: any) => (
+/home/z/my-project/pos/src/components/OrderPanel.test.tsx:126:  useRootStore: (_selector: any) => {
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:45:  useMenuManagementStore: (...args: any[]) => mockUseMenuManagementStore(...args),
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:57:  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:65:  default: ({ items, menuName, onEditItem }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:67:      {items.map((item: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:82:  default: ({ menuName, onClose }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:91:  default: ({ item, menuName, onClose }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:100:  default: ({ selectedCount, onClearSelection }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:109:  default: ({ menuName, onClose }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:118:  Button: ({ children, onClick, ...props }: any) => (
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:123:  Input: (props: any) => <input {...props} />,
+/home/z/my-project/pos/src/components/menu-management/MenuManagement.test.tsx:124:  Badge: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+/home/z/my-project/pos/src/components/Sidebar.test.tsx:15:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/Sidebar.test.tsx:20:  Badge: ({ children, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/OrderStatusSidebar.test.tsx:15:  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+/home/z/my-project/pos/src/components/POSOpeningDialog.test.tsx:15:  Button: ({ children, onClick, disabled, variant, className, ...props }: any) => (
+
+[Showing results with pagination = limit: 250]

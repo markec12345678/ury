@@ -52,6 +52,7 @@ export const useAuthStore = defineStore("auth", {
         });
         this.userAuth = true;
         localStorage.setItem("userAuth", "true");
+        this.currentPassword = "";
         await this.fetchUserDetails();
       } catch (error) {
         alert.createAlert("Message", error.message, "OK");

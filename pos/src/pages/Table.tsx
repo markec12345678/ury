@@ -164,7 +164,7 @@ const TableView = () => {
     event.stopPropagation();
 
     if (!posProfile) {
-      showToast.error('POS profile not loaded yet');
+      showToast.error(t('errors.pos_profile_not_loaded'));
       return;
     }
 
