@@ -1,5 +1,32 @@
 # Worklog
 
+---
+Task ID: 25
+Agent: Main Agent
+Task: CI v2 improvements, fork sync schedule, Dialog/Select/Toast stories
+
+Work Log:
+- Analyzed current fork state: Fork CI ✅, CI ✅, Release ❌ (Node 20 + npm ci fails on monorepo)
+- Fixed Release workflow: Node 22, yarn + corepack, split validate+release+docker jobs, categorized changelog (features/fixes/docs/refactor/CI/other), dynamic Docker image refs using fork context
+- Enhanced CI workflow: Node 22, added yarn caching to all jobs, core typecheck, build output verification table in step summary
+- Enhanced Fork CI: added yarn caching to storybook/build jobs, upload Storybook artifact for review
+- Enhanced Fork Sync: added weekly cron schedule (Monday 07:00 UTC), conflict detection with auto-branch creation, action chooser dropdown (sync-upstream vs create-upstream-pr)
+- Added Dialog.stories.tsx: 4 stories (Default, LargeContent, WithoutCloseButton, CustomSize)
+- Added Select.stories.tsx: 7 stories (Default, WithPreselected, ErrorState, SmallSize, LargeSize, Disabled, ManyOptions)
+- Added Toast.stories.tsx: 4 stories (Success, Error, Info, AllTypes)
+- Updated README: Storybook badge 29→40 stories, added Dialog/Select/Toast component rows, Fork Sync pipeline entry
+- Updated dependabot: reviewer changed from ury-erp/core to markec12345678
+- Pushed to fork develop, both CI pipelines green
+- Cleaned up remote branch infra/ci-v2-improvements
+
+Stage Summary:
+- 9 files changed, 608 insertions, 121 deletions
+- Storybook: 29 → 40 stories across 10 components
+- CI workflows: all use Node 22, yarn caching, proper error handling
+- Fork Sync: automated weekly upstream sync with conflict detection
+- Both Fork CI and CI pipelines fully green ✅
+- 3 branches remaining: dashboard, develop, main
+
 ## Mosaic KDS — Critical Issue Fixes
 
 **Date:** 2025-01-XX
