@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs (rebuilt in Docker)
+dist/
+build/
+storybook-static/
+.next/
+out/
+coverage/
+
+# Python backend (not needed in frontend Docker image)
+ury/
+urypos/
+URYMosaic/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+*.md
+!packages/ui/README.md
+LICENSE
+
+# Test and CI
+.github/
+.test/
+playwright-report/
+test-results.json
+
+# Development files
+.env
+.env.*
+!.env.production
+.husky/
+.prettierrc
+.prettierignore
+.editorconfig
+.nvmrc
+Makefile
+scripts/
+ury-fork/
+skills/
+upload/
+worklog.md
+bundle-analysis/
+AGENTS.MD
+CLAUDE.MD

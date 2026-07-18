@@ -45,6 +45,16 @@ npm run build
 make dev
 ```
 
+### Production Docker Build
+
+```bash
+# Build production image
+docker build -t ury:latest .
+
+# Run production container
+docker run -p 3000:3000 ury:latest
+```
+
 ## Repository Structure
 
 ```
