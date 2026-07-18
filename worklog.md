@@ -1,6 +1,42 @@
 # Worklog
 
 ---
+Task ID: 26
+Agent: Main Agent
+Task: Composite CI action, security audit, Prettier, EditorConfig, CoC, new UI components
+
+Work Log:
+- Created .github/actions/setup-node composite action (Node 22, Corepack, Yarn cache, install) — eliminates ~20 lines of duplicated setup per CI job
+- Refactored fork-ci.yml, ci.yml, release.yml, chromatic.yml to use the composite action
+- Added Security Audit job to CI (yarn npm audit for high/critical severity)
+- Added Dependency Review job to CI (PRs only, fails on critical, denies GPL-2.0/AGPL-1.0)
+- Added CI Summary job aggregating all CI results into a single GitHub Step Summary
+- Created .editorconfig (2-space indent, LF, UTF-8, Python 4-space exception, Makefile tabs)
+- Created .prettierrc (single quotes, trailing commas, 100 char width, 2-space indent)
+- Created .prettierignore (node_modules, dist, generated files, CHANGELOG.md)
+- Created .nvmrc (Node 22) for nvm/volta users
+- Created CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
+- Added format/format:check/type-check/check-all scripts to package.json
+- Added format/format-check/check-all/clean targets to Makefile
+- Fixed CONTRIBUTING.md: updated 7→10 components, 29→40 stories, added formatting section
+- Updated README.md: expanded Make commands table, added Code of Conduct link
+- Updated .gitignore: added .prettiercache, Thumbs.db
+- Added Tooltip component: 6 variants, 4 sides, 3 alignments, rich content, ARIA accessible
+- Added Switch component: controlled/uncontrolled, 3 sizes, optional label, ARIA accessible
+- Tooltip stories: 5 stories (Default, AllSides, AllVariants, WithAlignment, RichContent)
+- Switch stories: 6 stories (Default, Checked, Disabled, AllSizes, Controlled, FormExample)
+- Updated README: 40→50 stories, 10→12 components
+- Pushed to fork/develop (2 commits)
+
+Stage Summary:
+- 21 files changed across 2 commits
+- CI workflows: ~80 lines of duplication eliminated via composite action
+- CI pipeline: now has 7 jobs (lint, security, test, build, e2e, ci-summary + fork ci)
+- @ury/ui: 10 → 12 components, 40 → 50 stories
+- New tooling: Prettier, EditorConfig, .nvmrc, check-all script
+- Open-source governance: CODE_OF_CONDUCT.md added
+
+---
 Task ID: 25
 Agent: Main Agent
 Task: CI v2 improvements, fork sync schedule, Dialog/Select/Toast stories
