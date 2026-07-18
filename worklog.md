@@ -409,3 +409,24 @@ Stage Summary:
 - Mosaic KDS: Cancel confirmation now works, markRaw on stores, async/await refactor, taxes accumulation fix
 - @ury/ui: 24 → 26 components, 97 → 109 stories
 - Cumulative across all 31 rounds: ~395+ issues fixed
+
+---
+Task ID: 32
+Agent: Main Agent
+Task: Round 32 — 16 MEDIUM fixes across 3 codebases + 53 unit tests for Alert/Breadcrumb
+
+Work Log:
+- Added 53 unit tests: Alert (27), Breadcrumb (26) — all passing
+- Copied Alert/Breadcrumb components to pos/src/components/ui/ for testing
+- Fixed import paths (cn → ../../lib/utils) for pos compatibility
+- POS React: POST dedup skips critical endpoints, POSOpening retry uses useEffect, paymentModesError state, dashboard partialErrors tracking
+- Mosaic KDS: setColorForBilledInvoice boolean logic (|| → &&), setBackground reactive, timer IDs to module-level, printWithQz double rejection, fetchItems .catch(), validateInput Number()
+- Backend: N+1 BOM/Product Bundle queries eliminated with batch caching, BOM recursion depth limit + circular detection, COGS skip on before_submit if already run, unknown period warning, dead filters removed, multi-branch detection
+- TypeScript: 0 errors, Python: all files compile
+- Committed as ad05e8b and pushed to fork/develop
+
+Stage Summary:
+- 16 files changed, 828 insertions, 99 deletions
+- 53 new unit tests (all passing)
+- 16 MEDIUM fixes across 3 codebases
+- Cumulative across all 32 rounds: ~411+ issues fixed

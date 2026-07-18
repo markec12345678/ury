@@ -1,0 +1,596 @@
+     1→# Copyright (c) 2023, Tridz Technologies Pvt. Ltd. and contributors
+     2→# For license information, please see license.txt
+     3→
+     4→import frappe
+     5→from frappe import _
+     6→from frappe.model.document import Document
+     7→from frappe.utils import flt
+     8→import json
+     9→import calendar
+    10→from datetime import datetime
+    11→
+    12→def inner_bom_process(buying_price_list, bom):
+    13→    unset_bom_items = []
+    14→    bom_buying_price = 0
+    15→
+    16→    for bom_item in bom.items:
+    17→        bom_item_qty = bom_item.qty
+    18→        bom_item_name = bom_item.item_name
+    19→        boms = frappe.db.get_all("BOM", fields=["name", "item"], filters={'item': bom_item.item_code, 'is_active': 1, 'is_default': 1, 'docstatus': 1})
+    20→        
+    21→        if len(boms) > 0:
+    22→            inner_bom = frappe.get_doc("BOM", boms[0].name)
+    23→            inner_bom_data = inner_inner_bom_process(buying_price_list, inner_bom)
+    24→            inner_bom_buying_price = inner_bom_data['bom_buying_price']
+    25→            inner_unset_bom_items = inner_bom_data['unset_bom_items']
+    26→            bom_buying_price += float(inner_bom_buying_price) * bom_item_qty
+    27→
+    28→            for item in inner_unset_bom_items:
+    29→                if item not in unset_bom_items:
+    30→                    unset_bom_items.append(item)
+    31→        else:
+    32→            bom_items_price = frappe.db.get_all("Item Price", fields=['name', 'price_list_rate'], filters={'price_list': buying_price_list, 'item_code': bom_item.item_code})
+    33→
+    34→            if len(bom_items_price) == 0:
+    35→                if bom_item_name not in unset_bom_items:
+    36→                    unset_bom_items.append(bom_item_name)
+    37→            else:
+    38→                bom_buying_price += float(bom_items_price[0].price_list_rate) * bom_item_qty
+    39→
+    40→    if not bom.quantity:
+    41→        return {"bom_buying_price": 0, "unset_bom_items": unset_bom_items}
+    42→    bom_buying_price = bom_buying_price / bom.quantity
+    43→    return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
+    44→
+    45→
+    46→def inner_inner_bom_process(buying_price_list, bom):
+    47→    unset_bom_items = []
+    48→    bom_buying_price = 0
+    49→
+    50→    for bom_item in bom.items:
+    51→        bom_item_qty = bom_item.qty
+    52→        bom_item_name = bom_item.item_name
+    53→        bom_items_price = frappe.db.get_all("Item Price", fields=['name', 'price_list_rate'], filters={'price_list': buying_price_list, 'item_code': bom_item.item_code})
+    54→        if len(bom_items_price) == 0:
+    55→            if bom_item_name not in unset_bom_items:
+    56→                unset_bom_items.append(bom_item_name)
+    57→        else:
+    58→            bom_buying_price += float(bom_items_price[0].price_list_rate) * bom_item_qty
+    59→
+    60→    if not bom.quantity:
+    61→        return {"bom_buying_price": 0, "unset_bom_items": unset_bom_items}
+    62→    bom_buying_price = bom_buying_price / bom.quantity
+    63→    return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
+    64→
+    65→
+    66→class URYDailyPandL(Document):
+    67→        def cogs_sold(self):
+    68→                # Cache on self so before_submit can reuse without re-fetching
+    69→                if not hasattr(self, '_report_settings'):
+    70→                        self._report_settings = frappe.get_doc("URY Report Settings", self.branch)
+    71→                report_settings = self._report_settings
+    72→                self.cost_of_goods = []
+    73→                cogs = 0
+    74→                electricity_reading = self.electricity_closing - self.electricity_opening
+    75→                if electricity_reading <= 0:
+    76→                        frappe.throw(_("Invalid Electricity Reading"))
+    77→
+    78→                # Append materials consumed
+    79→                for expense in self.materials_consumed:
+    80→                        if expense.units_consumed <= 0:
+    81→                                frappe.throw(_("Invalid Units Consumed for {0}").format(expense.material))
+    82→                non_pb_item_sales = frappe.db.sql('''
+    83→                        SELECT
+    84→                                c.item_group AS "Item Group",
+    85→                                c.item_code AS "Item Code",
+    86→                                c.item_name AS "Item Name",
+    87→                                SUM(b.qty) AS "Qty"
+    88→                        FROM `tabPOS Invoice` a
+    89→                        INNER JOIN `tabPOS Invoice Item` b ON a.name = b.parent
+    90→                        LEFT JOIN `tabItem` c ON c.item_code = b.item_code
+    91→                        LEFT JOIN `tabProduct Bundle` d ON d.new_item_code = b.item_code
+    92→                        LEFT JOIN `tabBOM` e ON (
+    93→                                e.item = b.item_code
+    94→                                AND e.is_active = 1
+    95→                                AND e.is_default = 1
+    96→                                AND e.docstatus = 1
+    97→                        )
+    98→                        LEFT JOIN `tabURY Report Settings` rs ON (
+    99→                                rs.`branch` = %(branch)s
+   100→                        )
+   101→                        WHERE 
+   102→                                a.`branch` = %(branch)s
+   103→                                AND a.`status` IN ("Consolidated", "Paid") 
+   104→                                AND a.`docstatus` = 1
+   105→                                AND
+   106→                                (
+   107→                                        ((rs.`hours` IS NULL OR rs.`hours` = 0) AND a.`posting_date` = %(date)s)
+   108→                                        OR (rs.`hours` > 0 AND TIMESTAMP(a.`posting_date`, a.`posting_time`) <= TIMESTAMP(DATE_ADD(%(date)s, INTERVAL 1 DAY), CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')) AND TIMESTAMP(a.`posting_date`, a.`posting_time`) >= TIMESTAMP(%(date)s, CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')))
+   109→                                        OR (rs.`branch` IS NULL AND a.`posting_date` = %(date)s)
+   110→                                )
+   111→                                AND d.new_item_code IS NULL
+   112→                                AND e.item IS NULL
+   113→                        GROUP BY 
+   114→                                c.item_name
+   115→                        ORDER BY 
+   116→                                c.item_group ASC, b.item_name ASC
+   117→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   118→
+   119→                bom_item_sales = frappe.db.sql('''
+   120→                        SELECT
+   121→                                c.item_group AS "Item Group",
+   122→                                c.item_code AS "Item Code",
+   123→                                c.item_name AS "Item Name",
+   124→                                SUM(b.qty) AS "Qty"
+   125→                        FROM `tabPOS Invoice` a
+   126→                        INNER JOIN `tabPOS Invoice Item` b ON a.name = b.parent
+   127→                        LEFT JOIN `tabItem` c ON c.item_code = b.item_code
+   128→                        LEFT JOIN `tabProduct Bundle` d ON d.new_item_code = b.item_code
+   129→                        LEFT JOIN `tabBOM` e ON (
+   130→                                e.item = b.item_code
+   131→                                AND e.is_active = 1
+   132→                                AND e.is_default = 1
+   133→                                AND e.docstatus = 1
+   134→                        )
+   135→                        LEFT JOIN `tabURY Report Settings` rs ON (
+   136→                                rs.`branch` = %(branch)s
+   137→                        )
+   138→                        WHERE 
+   139→                                a.`branch` = %(branch)s
+   140→                                AND a.`status` IN ("Consolidated", "Paid") 
+   141→                                AND a.`docstatus` = 1
+   142→                                AND
+   143→                                (
+   144→                                        ((rs.`hours` IS NULL OR rs.`hours` = 0) AND a.`posting_date` = %(date)s)
+   145→                                        OR (rs.`hours` > 0 AND TIMESTAMP(a.`posting_date`, a.`posting_time`) <= TIMESTAMP(DATE_ADD(%(date)s, INTERVAL 1 DAY), CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')) AND TIMESTAMP(a.`posting_date`, a.`posting_time`) >= TIMESTAMP(%(date)s, CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')))
+   146→                                        OR (rs.`branch` IS NULL AND a.`posting_date` = %(date)s)
+   147→                                )
+   148→                                AND d.new_item_code IS NULL
+   149→                                AND e.item IS NOT NULL
+   150→                        GROUP BY 
+   151→                                c.item_name
+   152→                        ORDER BY 
+   153→                                c.item_group ASC, b.item_name ASC
+   154→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   155→
+   156→                pb_item_sales = frappe.db.sql('''
+   157→                        SELECT
+   158→                                c.item_group AS "Item Group",
+   159→                                c.item_code AS "Item Code",
+   160→                                c.item_name AS "Item Name",
+   161→                                SUM(b.qty) AS "Qty"
+   162→                        FROM `tabPOS Invoice` a
+   163→                        INNER JOIN `tabPOS Invoice Item` b ON a.name = b.parent
+   164→                        LEFT JOIN `tabItem` c ON c.item_code = b.item_code
+   165→                        LEFT JOIN `tabProduct Bundle` d ON d.new_item_code = b.item_code
+   166→                        LEFT JOIN `tabURY Report Settings` rs ON (
+   167→                                rs.`branch` = %(branch)s
+   168→                        )
+   169→                        WHERE 
+   170→                                a.`branch` = %(branch)s
+   171→                                AND a.`status` IN ("Consolidated", "Paid") 
+   172→                                AND a.`docstatus` = 1
+   173→                                AND
+   174→                                (
+   175→                                        ((rs.`hours` IS NULL OR rs.`hours` = 0) AND a.`posting_date` = %(date)s)
+   176→                                        OR (rs.`hours` > 0 AND TIMESTAMP(a.`posting_date`, a.`posting_time`) <= TIMESTAMP(DATE_ADD(%(date)s, INTERVAL 1 DAY), CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')) AND TIMESTAMP(a.`posting_date`, a.`posting_time`) >= TIMESTAMP(%(date)s, CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')))
+   177→                                        OR (rs.`branch` IS NULL AND a.`posting_date` = %(date)s)
+   178→                                )
+   179→                                AND d.new_item_code IS NOT NULL
+   180→                        GROUP BY 
+   181→                                c.item_name
+   182→                        ORDER BY 
+   183→                                c.item_group ASC, b.item_name ASC
+   184→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   185→                
+   186→                unset_item_prices = []
+   187→                # Batch-fetch all item prices for non-PB items (avoids N+1)
+   188→                non_pb_item_codes = [item['Item Code'] for item in non_pb_item_sales]
+   189→                item_prices_map = {}
+   190→                if non_pb_item_codes:
+   191→                    price_rows = frappe.db.get_all(
+   192→                        "Item Price",
+   193→                        fields=['item_code', 'price_list_rate'],
+   194→                        filters={'price_list': report_settings.buying_price_list, 'item_code': ('in', non_pb_item_codes)}
+   195→                    )
+   196→                    item_prices_map = {r.item_code: r.price_list_rate for r in price_rows}
+   197→
+   198→                for item in non_pb_item_sales:
+   199→                        item_name = item['Item Name']
+   200→                        rate = item_prices_map.get(item['Item Code'])
+   201→                        if not rate:
+   202→                                unset_item_prices.append(item_name)
+   203→                        else:
+   204→                                qty = flt(item['Qty'])
+   205→                                self.append("cost_of_goods" ,{
+   206→                                        "item_code":item['Item Code'],
+   207→                                        "item_name":item['Item Name'],
+   208→                                        "item_group":item['Item Group'],
+   209→                                        "qty":qty,
+   210→                                        "buying_price":rate,
+   211→                                        "amount":rate * qty
+   212→                                })
+   213→                                cogs = cogs + rate * qty
+   214→                
+   215→                unset_bom_item_prices = []
+   216→                # Batch-fetch all BOMs needed for bom_item_sales
+   217→                bom_item_codes = [item['Item Code'] for item in bom_item_sales]
+   218→                bom_map = {}
+   219→                if bom_item_codes:
+   220→                        bom_rows = frappe.db.get_all(
+   221→                                "BOM",
+   222→                                filters={"item": ("in", bom_item_codes), "is_active": 1, "is_default": 1, "docstatus": 1},
+   223→                                fields=["name", "item"],
+   224→                        )
+   225→                        for row in bom_rows:
+   226→                                if row.item not in bom_map:
+   227→                                        bom_map[row.item] = row.name
+   228→
+   229→                for item in bom_item_sales:
+   230→                        # TODO: N+1 query — frappe.get_doc("BOM", ...) is called inside this loop
+   231→                        # for each bom_item_sales entry. Consider batch-loading all BOM docs upfront
+   232→                        # and caching them in a dict to avoid repeated DB round-trips.
+   233→                        buying_price = 0
+   234→                        buying_price_list = report_settings.buying_price_list
+   235→                        bom_name = bom_map.get(item['Item Code'])
+   236→                        if not bom_name:
+   237→                                continue
+   238→                        bom = frappe.get_doc("BOM", bom_name)
+   239→                        bom_data = inner_bom_process(buying_price_list,bom)
+   240→                        bom_buying_price = bom_data['bom_buying_price']
+   241→                        unset_bom_items = bom_data['unset_bom_items']
+   242→                        buying_price += float(bom_buying_price)
+   243→                        for unset_item in unset_bom_items:
+   244→                                if unset_item not in unset_bom_item_prices:
+   245→                                        unset_bom_item_prices.append(unset_item)
+   246→                        if buying_price > 0:
+   247→                                qty = float(item['Qty'])
+   248→                                self.append("cost_of_goods" ,{
+   249→                                        "item_code":item['Item Code'],
+   250→                                        "item_name":item['Item Name'],
+   251→                                        "item_group":item['Item Group'],
+   252→                                        "qty":qty,
+   253→                                        "buying_price":buying_price,
+   254→                                        "amount":buying_price * qty
+   255→                                })
+   256→                                cogs = cogs + buying_price * qty
+   257→
+   258→                unset_pb_item_prices = []
+   259→                # Batch-fetch all Product Bundles needed
+   260→                pb_item_codes = [item['Item Code'] for item in pb_item_sales]
+   261→                pb_map = {}
+   262→                if pb_item_codes:
+   263→                        pb_rows = frappe.db.get_all(
+   264→                                "Product Bundle",
+   265→                                filters={"new_item_code": ("in", pb_item_codes)},
+   266→                                fields=["name", "new_item_code"],
+   267→                        )
+   268→                        for row in pb_rows:
+   269→                                pb_map[row.new_item_code] = row.name
+   270→
+   271→                for item in pb_item_sales:
+   272→                        pb_name = pb_map.get(item['Item Code'])
+   273→                        if not pb_name:
+   274→                                continue
+   275→                        pb = frappe.get_doc("Product Bundle", pb_name)
+   276→                        buying_price = 0
+   277→                        for pb_item in pb.items:
+   278→                                item_qty = pb_item.qty
+   279→                                boms = frappe.db.get_all("BOM",fields = ["name"],filters = {'item':pb_item.item_code,'is_active':1,'is_default':1,'docstatus':1})
+   280→                                if len(boms) > 0:
+   281→                                        buying_price_list = report_settings.buying_price_list
+   282→                                        bom = frappe.get_doc("BOM",boms[0].name)
+   283→                                        bom_data = inner_bom_process(buying_price_list,bom)
+   284→                                        bom_buying_price = bom_data['bom_buying_price']
+   285→                                        unset_bom_items = bom_data['unset_bom_items']
+   286→                                        buying_price += float(bom_buying_price)*item_qty
+   287→                                        for unset_item in unset_bom_items:
+   288→                                                if unset_item not in unset_bom_item_prices:
+   289→                                                        unset_bom_item_prices.append(unset_item)
+   290→                                else:
+   291→                                        item_name = frappe.db.get_value("Item", pb_item.item_code, "item_name") or pb_item.item_code
+   292→                                        items_price = frappe.db.get_all("Item Price",fields = ['price_list_rate'],filters = {'price_list':report_settings.buying_price_list,'item_code':pb_item.item_code})
+   293→                                        if len(items_price) == 0:
+   294→                                                if item_name not in unset_pb_item_prices:
+   295→                                                        unset_pb_item_prices.append(item_name)
+   296→                                        else:
+   297→                                                buying_price += float(items_price[0].price_list_rate)*item_qty
+   298→                        
+   299→                        if buying_price > 0:
+   300→                                qty = float(item['Qty'])
+   301→                                self.append("cost_of_goods" ,{
+   302→                                        "item_code":item['Item Code'],
+   303→                                        "item_name":item['Item Name'],
+   304→                                        "item_group":item['Item Group'],
+   305→                                        "qty":qty,
+   306→                                        "buying_price":buying_price,
+   307→                                        "amount":buying_price * qty
+   308→                                })
+   309→                                cogs = cogs + buying_price * qty
+   310→                self.cogs = cogs
+   311→                
+   312→                unset_prices = [
+   313→                        ("ITEMS", unset_item_prices),
+   314→                        ("BUNDLE SUB ITEMS", unset_pb_item_prices),
+   315→                        ("BOM SUB ITEMS", unset_bom_item_prices)
+   316→                ]
+   317→                remarks = _("BUYING PRICE NOT SET") + "<br><br>" + "<br><br>".join(f"{label}:-<br>{items}" for label, items in unset_prices if items)
+   318→                if any(items for label, items in unset_prices):
+   319→                        remarks += "<br><br>" + _("Update the item prices and then submit the document again to ensure accurate Cost of Goods")
+   320→                        self.remarks = remarks
+   321→                else:
+   322→                        self.remarks = ""
+   323→
+   324→        
+   325→        def before_save(self):
+   326→                self.cogs_sold()
+   327→                if self.remarks != "":
+   328→                        frappe.msgprint(title=_('Set Buying Price'), msg=_("Please review the remarks below for the items. Submitting now will exclude these items from the cost of goods."))
+   329→        
+   330→        def before_submit(self):
+   331→                self.cogs_sold()
+   332→                
+   333→                # Reuse cached report_settings from cogs_sold()
+   334→                report_settings = self._report_settings
+   335→
+   336→                self.direct_expenses_breakup = []
+   337→                self.employee_costs_breakup = []
+   338→                self.indirect_expenses_breakup = []
+   339→
+   340→                '''Total Sales Of the Day'''
+   341→                gross_sales = frappe.db.sql('''
+   342→                        SELECT
+   343→                                %(date)s AS "Date",
+   344→                                COUNT(b.`name`) AS "Total Invoices",
+   345→                                ROUND(SUM(b.`net_total`),2) AS "Item Total",
+   346→                                ROUND(SUM(b.`grand_total` - b.`net_total`),2) AS "Tax",
+   347→                                ROUND(SUM(b.`grand_total`),2) AS "Grand Total",
+   348→                                ROUND(SUM(b.`grand_total` - b.`rounded_total`),2) AS "Round Off",
+   349→                                ROUND(SUM(b.`rounded_total`),2) AS "Rounded Total",
+   350→                                ROUND(SUM(b.`rounded_total` - b.`paid_amount` + b.`change_amount`),2) AS "Cash Discounts"
+   351→                        FROM `tabPOS Invoice` b
+   352→                        LEFT JOIN `tabURY Report Settings` rs ON (
+   353→                                rs.`branch` = %(branch)s
+   354→                        )
+   355→                        WHERE 
+   356→                                b.`branch` = %(branch)s
+   357→                                AND b.`status` IN ("Consolidated", "Paid") 
+   358→                                AND b.`docstatus` = 1
+   359→                                AND
+   360→                                (
+   361→                                        ((rs.`hours` IS NULL OR rs.`hours` = 0) AND b.`posting_date` = %(date)s)
+   362→                                        OR (rs.`hours` > 0 AND TIMESTAMP(b.`posting_date`, b.`posting_time`) <= TIMESTAMP(DATE_ADD(%(date)s, INTERVAL 1 DAY), CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')) AND TIMESTAMP(b.`posting_date`, b.`posting_time`) >= TIMESTAMP(%(date)s, CONCAT(LPAD(rs.`hours`, 2, '0'), ':00:00')))
+   363→                                        OR (rs.`branch` IS NULL AND b.`posting_date` = %(date)s)
+   364→                                )
+   365→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   366→
+   367→
+   368→                # GROSS AND NET SALES
+   369→                self.gross_sales = 0.0
+   370→                if not gross_sales:
+   371→                        self.cash_discount_round_off = 0.0
+   372→                        self.tax = 0.0
+   373→                        self.net_sales = 0.0
+   374→                else:
+   375→                        gross_sales_all = gross_sales[0]
+   376→                        if gross_sales_all['Total Invoices'] == 0:
+   377→                                self.gross_sales = 0.0
+   378→                                gross_sales_all["Round Off"] = gross_sales_all["Cash Discounts"] = gross_sales_all["Tax"] = 0.0
+   379→                        else:
+   380→                                self.gross_sales = gross_sales_all["Grand Total"]
+   381→
+   382→                        self.cash_discount_round_off = round((gross_sales_all["Round Off"] + gross_sales_all["Cash Discounts"]),2)
+   383→                        self.tax = gross_sales_all["Tax"]
+   384→                        self.net_sales = self.gross_sales - self.cash_discount_round_off - self.tax
+   385→
+   386→                if self.net_sales == 0.0:
+   387→                        self.gross_sales_percent = self.cash_discount_round_off_percent = self.tax_percent = self.cogs_percent = self.total_direct_expenses_percent = self.gross_profit_percent = self.total_employee_costs_percent = self.other_expenses_percent = self.depreciation_percent = self.total_indirect_expenses_percent = self.net_profit_percent = 0.0
+   388→                else:
+   389→                        self.gross_sales_percent = round(((self.gross_sales / self.net_sales) * 100),2)
+   390→                        self.cash_discount_round_off_percent = round(((self.cash_discount_round_off / self.net_sales) * 100),2)
+   391→                        self.tax_percent = round(((self.tax / self.net_sales) * 100),2)
+   392→
+   393→                        self.cogs_percent = round(((self.cogs / self.net_sales) * 100),2)
+   394→
+   395→                self.net_sales_percent = 100.0
+   396→
+   397→
+   398→                # DIRECT EXPENSES
+   399→                self.total_direct_expenses = 0
+   400→                electricity_reading = self.electricity_closing - self.electricity_opening
+   401→
+   402→                # Append materials consumed
+   403→                for expense in self.materials_consumed:
+   404→                        self.append("direct_expenses_breakup", {"breakup": expense.material, "amount": expense.amount})
+   405→                        self.total_direct_expenses += expense.amount
+   406→
+   407→                # Append other fixed expenses
+   408→                for expense in report_settings.direct_fixed_expenses:
+   409→                        self.append("direct_expenses_breakup", {"breakup": expense.expense, "amount": expense.amount})
+   410→                        self.total_direct_expenses += expense.amount
+   411→
+   412→
+   413→                # GROSS PROFIT
+   414→                self.gross_profit = self.net_sales - self.total_direct_expenses - self.cogs
+   415→                
+   416→                if self.net_sales != 0.0:               
+   417→                        self.total_direct_expenses_percent = round(((self.total_direct_expenses / self.net_sales) * 100),2)
+   418→                        self.gross_profit_percent = round(((self.gross_profit / self.net_sales) * 100),2)
+   419→
+   420→
+   421→                '''INDIRECT EXPENSES'''
+   422→
+   423→                self.total_indirect_expenses = 0
+   424→
+   425→
+   426→                #EMPLOYEE COSTS
+   427→                salary_cost_gross = 0
+   428→                self.total_employee_costs = 0
+   429→
+   430→                attendance_count = frappe.db.sql('''
+   431→                        SELECT
+   432→                                %(date)s AS "Date",
+   433→                                COUNT(b.`name`) AS "Total Attendance"
+   434→                        FROM `tabAttendance` b
+   435→                        LEFT JOIN `tabEmployee` c ON 
+   436→                        c.name = b.employee
+   437→                        WHERE 
+   438→                                b.`attendance_date` = %(date)s
+   439→                                AND c.`branch` = %(branch)s
+   440→                                AND b.`docstatus` = 1
+   441→                                AND b.`status` IN ("Present", "Half Day")
+   442→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)    
+   443→
+   444→                attendance_count =  attendance_count[0]
+   445→
+   446→                if attendance_count['Total Attendance'] == 0:
+   447→                        frappe.throw(title=_('No Attendance'), msg=_("Attendance not marked"))
+   448→
+   449→                ns_employee_attendance_list = frappe.db.sql(''' 
+   450→                        SELECT
+   451→                                b.`employee_name` AS "Name"
+   452→                        FROM `tabAttendance` b
+   453→                        LEFT JOIN `tabEmployee` c ON (
+   454→                                c.name = b.employee
+   455→                                AND (
+   456→                                        (c.`payment_amount` IS NULL OR c.`payment_amount` = 0.0 ) 
+   457→                                        OR 
+   458→                                        (c.`payment_type` IS NULL OR c.`payment_type` = "")
+   459→                                )
+   460→                        )
+   461→                        WHERE 
+   462→                                b.`attendance_date` = %(date)s
+   463→                                AND c.`branch` = %(branch)s
+   464→                        GROUP BY
+   465→                                b.`employee_name`                
+   466→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   467→
+   468→                if len(ns_employee_attendance_list) > 0:
+   469→                        ns_employee_names = ", ".join(e["Name"] for e in ns_employee_attendance_list)
+   470→                        frappe.throw(title=_('Set Payment Type/Amount'), msg=_("Employees: {0}").format(ns_employee_names))
+   471→
+   472→                employee_attendance_dw_list = frappe.db.sql('''
+   473→                        SELECT
+   474→                                %(date)s AS "Date",
+   475→                                b.`employee` AS "Employee",
+   476→                                b.`status` AS "Status",
+   477→                                c.`payment_amount` AS "Salary"
+   478→                        FROM `tabAttendance` b
+   479→                        LEFT JOIN `tabEmployee` c ON c.name = b.employee
+   480→                        WHERE 
+   481→                                b.`attendance_date` = %(date)s
+   482→                                AND c.`branch` = %(branch)s
+   483→                                AND c.`payment_type` = "Daily Wage"                        
+   484→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   485→
+   486→                for attendance in employee_attendance_dw_list:
+   487→                        if attendance["Status"] == "Half Day":
+   488→                                salary_cost_gross = round((salary_cost_gross + 0.5 * attendance["Salary"]),2)
+   489→                        if attendance["Status"] == "Present":
+   490→                                salary_cost_gross = round((salary_cost_gross + attendance["Salary"]),2)
+   491→
+   492→                date_str =  self.date
+   493→                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+   494→                year = date_obj.year
+   495→                month_number = date_obj.month
+   496→                days = calendar.monthrange(year, month_number)[1]
+   497→
+   498→                employee_attendance_sl_list = frappe.db.sql('''
+   499→                        SELECT
+   500→                                %(date)s AS "Date",
+   501→                                b.`name` AS "Employee",
+   502→                                b.`payment_amount` AS "Salary"
+   503→                        FROM `tabEmployee` b
+   504→                        WHERE 
+   505→                                b.`branch` = %(branch)s
+   506→                                AND b.`payment_type` = "Salary"                        
+   507→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   508→
+   509→                for attendance in employee_attendance_sl_list:
+   510→                        salary_cost_gross = round((salary_cost_gross + attendance["Salary"]/days),2)
+   511→
+   512→                if self.net_sales != 0.0:
+   513→                        salary_cost_gross_percent = round(((salary_cost_gross / self.net_sales) * 100),3)
+   514→                else:
+   515→                        salary_cost_gross_percent = 0.0
+   516→                self.append("employee_costs_breakup", {"breakup": "Salary Cost Gross", "amount": salary_cost_gross,"percent":salary_cost_gross_percent})
+   517→                self.total_employee_costs += salary_cost_gross
+   518→
+   519→                for expense in report_settings.employee_costs:
+   520→                        if self.net_sales != 0.0:
+   521→                                expense_percent = round(((expense.amount / self.net_sales) * 100),3)
+   522→                        else:
+   523→                                expense_percent = 0.0
+   524→                        self.append("employee_costs_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
+   525→                        self.total_employee_costs += expense.amount
+   526→                if self.net_sales != 0.0:
+   527→                        self.total_employee_costs_percent = round(((self.total_employee_costs / self.net_sales) * 100),3)
+   528→                self.total_indirect_expenses += self.total_employee_costs
+   529→
+   530→                #INDIRECT EXPENSES
+   531→                
+   532→                # Calculate and append Electricity
+   533→                electricity_charges = electricity_reading * report_settings.electricity_charges
+   534→                if self.net_sales != 0.0:
+   535→                        electricity_percent = round(((electricity_charges / self.net_sales) * 100),3)
+   536→                else:
+   537→                        electricity_percent = 0.0
+   538→                self.append("indirect_expenses_breakup", {"breakup": "Electricity", "amount": electricity_charges,"percent":electricity_percent})
+   539→                self.total_indirect_expenses += electricity_charges
+   540→
+   541→                # Append indirect fixed expenses
+   542→                for expense in report_settings.indirect_fixed_expenses:
+   543→                        if self.net_sales != 0.0:
+   544→                                expense_percent = round(((expense.amount / self.net_sales) * 100),3)
+   545→                        else:
+   546→                                expense_percent = 0.0
+   547→                        self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
+   548→                        self.total_indirect_expenses += expense.amount
+   549→
+   550→                # Append indirect monthly fixed expenses
+   551→                for expense in report_settings.monthly_fixed_expenses:
+   552→                        expense_amount = round((expense.amount/days),2)
+   553→                        if self.net_sales != 0.0:
+   554→                                expense_percent = round(((expense_amount / self.net_sales) * 100),3)
+   555→                        else:
+   556→                                expense_percent = 0.0
+   557→                        self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense_amount,"percent":expense_percent})
+   558→                        self.total_indirect_expenses += expense_amount
+   559→
+   560→                # Calculate and append percentage expenses
+   561→                for expense in report_settings.percentage_expenses:
+   562→                        if expense.percentage_type in ["Gross Sales", "Net Sales"]:
+   563→                                base_amount = self.gross_sales if expense.percentage_type == "Gross Sales" else self.net_sales
+   564→                                amount = round((expense.percent * base_amount) / 100, 2)
+   565→                                if self.net_sales != 0.0:
+   566→                                        expense_percent = round(((amount / self.net_sales) * 100),3)
+   567→                                else:
+   568→                                        expense_percent = 0.0
+   569→                                self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": amount ,"percent":expense_percent})
+   570→                                self.total_indirect_expenses += amount
+   571→
+   572→                # OTHER EXPENSES
+   573→                self.total_other_expenses = 0
+   574→                for expense in self.other_expenses:
+   575→                        self.total_indirect_expenses += expense.amount
+   576→                        self.total_other_expenses += expense.amount
+   577→
+   578→                self.depreciation = report_settings.depreciation
+   579→                
+   580→                self.total_indirect_expenses = self.total_indirect_expenses + self.depreciation
+   581→
+   582→                # NET PROFIT
+   583→                self.net_profit = self.gross_profit - self.total_indirect_expenses
+   584→
+   585→                if self.net_sales != 0.0:
+   586→                        self.other_expenses_percent = round(((self.total_other_expenses / self.net_sales) * 100),3)
+   587→                        self.depreciation_percent = round(((self.depreciation / self.net_sales) * 100),3)
+   588→                        self.total_indirect_expenses_percent = round(((self.total_indirect_expenses / self.net_sales) * 100),2)
+   589→                        self.net_profit_percent = round(((self.net_profit / self.net_sales) * 100),2)
+   590→        
+   591→        @frappe.whitelist()
+   592→        def get_proft_loss_details(self):
+   593→                return frappe.render_template(
+   594→                        "ury/doctype/ury_daily_p_and_l/profit_loss_details.html",
+   595→                        {"data": self, "currency": "INR"},
+   596→                )
