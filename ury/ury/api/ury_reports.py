@@ -4,6 +4,7 @@ Generate daily/weekly/monthly reports with PDF export support.
 """
 
 import frappe
+from frappe import _
 import html as _html
 from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, flt, fmt_money
 import json
@@ -317,7 +318,7 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
     elif report_type == "profit_loss":
         data = get_profit_loss_report(from_date, to_date)
     else:
-        frappe.throw(f"Unknown report type: {report_type}", frappe.ValidationError)
+        frappe.throw(_("Unknown report type: {0}").format(report_type), frappe.ValidationError)
 
     # Store data in a temporary doc for PDF generation
     report_html = _generate_report_html(report_type, data)

@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import get_datetime, today, now
+from frappe.utils import today, now
 
 def validate(doc, method):
     set_cashier_room(doc, method)

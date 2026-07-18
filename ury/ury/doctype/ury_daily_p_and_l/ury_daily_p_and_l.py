@@ -8,7 +8,7 @@ from frappe.utils import flt
 import calendar
 from datetime import datetime
 
-def inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=None):
+def _inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=None):
     if visited is None:
         visited = set()
     unset_bom_items = []
@@ -37,7 +37,7 @@ def inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=Non
         
         if len(boms) > 0:
             inner_bom = frappe.get_doc("BOM", boms[0].name)
-            inner_bom_data = inner_bom_process(buying_price_list, inner_bom, depth=depth+1, max_depth=max_depth, visited=visited)
+            inner_bom_data = _inner_bom_process(buying_price_list, inner_bom, depth=depth+1, max_depth=max_depth, visited=visited)
             inner_bom_buying_price = inner_bom_data['bom_buying_price']
             inner_unset_bom_items = inner_bom_data['unset_bom_items']
             bom_buying_price += float(inner_bom_buying_price) * bom_item_qty
@@ -237,7 +237,7 @@ class URYDailyPandL(Document):
                         bom = bom_doc_cache.get(bom_name)
                         if not bom:
                                 continue
-                        bom_data = inner_bom_process(buying_price_list,bom)
+                        bom_data = _inner_bom_process(buying_price_list,bom)
                         bom_buying_price = bom_data['bom_buying_price']
                         unset_bom_items = bom_data['unset_bom_items']
                         buying_price += float(bom_buying_price)
@@ -335,7 +335,7 @@ class URYDailyPandL(Document):
                                         buying_price_list = report_settings.buying_price_list
                                         bom = bom_doc_cache.get(sub_bom_name)
                                         if bom:
-                                                bom_data = inner_bom_process(buying_price_list, bom)
+                                                bom_data = _inner_bom_process(buying_price_list, bom)
                                                 bom_buying_price = bom_data['bom_buying_price']
                                                 unset_bom_items = bom_data['unset_bom_items']
                                                 buying_price += float(bom_buying_price) * item_qty

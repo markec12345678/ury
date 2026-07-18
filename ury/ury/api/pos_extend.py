@@ -67,14 +67,15 @@ def overrided_past_order_list(search_term, status, limit=20):
 
     # Search by customer name OR invoice name
     if search_term:
-        filters["name"] = ("like", f"%{search_term}%")
+        escaped_term = search_term.replace('%', '\\%').replace('_', '\\_')
+        filters["name"] = ("like", f"%{escaped_term}%")
         # Also try customer search — union with a separate query
         invoices_by_name = frappe.db.get_all(
             "POS Invoice", filters=filters, fields=fields, limit=limit
         )
         customer_filters = dict(filters)
         customer_filters.pop("name", None)
-        customer_filters["customer"] = ("like", f"%{search_term}%")
+        customer_filters["customer"] = ("like", f"%{escaped_term}%")
         invoices_by_customer = frappe.db.get_all(
             "POS Invoice", filters=customer_filters, fields=fields, limit=limit
         )

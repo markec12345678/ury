@@ -50,6 +50,7 @@
           role="button"
           tabindex="0"
           @keydown.enter="rotateCard(kot)"
+          @keydown.space.prevent="rotateCard(kot)"
         >
           <div class="w-64">
             <div
@@ -124,7 +125,7 @@
               >
                 ( Duplicate KOT ( CHECK WITH CAPTAIN ) )
               </div>
-              <div v-show="kot.comments" class="text-[#6B7280] font-medium">
+              <div v-if="kot.comments" class="text-[#6B7280] font-medium">
                 ( {{ kot.comments }} )
               </div>
               <div>
@@ -165,7 +166,7 @@
                   </div>
                   <div>
                     <p
-                      v-show="kotitem.comments"
+                      v-if="kotitem.comments"
                       class="ml-2 text-[#6B7280] font-medium"
                     >
                       {{ kotitem.comments }}
@@ -222,7 +223,6 @@ let port = window.location.port;
 let protocol = window.location.protocol;
 let url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
 let siteName = '';
-let socketInitPromise = null;
 let alertAudio = null; 
 
 function debounce(fn, delay) {
@@ -267,8 +267,7 @@ async function initializeSocket() {
     }
 }
 
-// Start initialization but don't block module evaluation
-socketInitPromise = initializeSocket();
+
 
 
 const frappe = new FrappeApp(url);
@@ -281,7 +280,6 @@ export default {
       production: "",
       branch: "",
       kot_channel: "",
-      struckThroughItems: {},
       loggeduser: "",
       showModal: false,
       kot_alert_time: "",
@@ -335,7 +333,9 @@ export default {
               this.audio_alert = result.message.audio_alert;
               this.daily_order_number = result.message.daily_order_number;
               this.kot_channel = `kot_update_${this.branch}_${this.production}`;
-              this.kot = result.message.KOT;
+              this.kot = result.message.KOT.map(k => ({
+                isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...k
+              }));
               this.updateQtyColorTable();
               this.updateTimeRemaining();
               this.masonryLoading();
@@ -597,73 +597,72 @@ export default {
     window.addEventListener("resize", this._resizeHandler);
     this.masonryLoading();
 
-    // Wait for socket to be ready before attaching listeners
-    socketInitPromise.then((sock) => {
-      this._socket = sock;
-      if (this._socket) this._socket.on('connect_error', (err) => {
-        console.error("Socket connection error:", err);
-        this.setStatusMessage("Connection error. Retrying...");
-      });
-      if (this._socket) this._socket.on('disconnect', (reason) => {
-        console.warn("Socket disconnected:", reason);
-        this.setStatusMessage("Connection lost. Reconnecting...");
-      });
-      if (this._socket) this._socket.on('connect', () => {
-        this.setStatusMessage("Reconnected");
-        this.hideStatusMessageAfterDelay();
-      });
-      if (this._socket && this.socketHandler) {
-        this._socket.on(this.kot_channel, this.socketHandler);
-      }
-    });
+    // Initialize socket in mounted() so re-mount gets a fresh connection
+    this._socketInitPromise = initializeSocket();
 
-    this.auth()
+    // Wait for both socket init and auth before attaching listeners
+    Promise.all([this._socketInitPromise, this.auth()])
+      .then(([sock]) => {
+        this._socket = sock;
+        if (this._socket) this._socket.on('connect_error', (err) => {
+          console.error("Socket connection error:", err);
+          this.setStatusMessage("Connection error. Retrying...");
+        });
+        if (this._socket) this._socket.on('disconnect', (reason) => {
+          console.warn("Socket disconnected:", reason);
+          this.setStatusMessage("Connection lost. Reconnecting...");
+        });
+        if (this._socket) this._socket.on('connect', () => {
+          this.setStatusMessage("Reconnected");
+          this.hideStatusMessageAfterDelay();
+        });
+
+        return this.fetchKOT();
+      })
       .then(() => {
-        this.fetchKOT().then(() => {
-          if (this.audio_alert === 1) {
-            this.showAudioAlertMessage = true;
-          }
-          this.socketHandler = (doc) => {
-            try {
-              if (this.audio_alert === 1) {
-                this.playAlertSound(doc.audio_file);
-              }
-              let kottime = localStorage.getItem("kot_time");
-              if (doc.last_kot_time !== kottime) {
-                // Full refresh needed — skip intermediate mutations
-                this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
-              } else {
-                // Incremental update
-                const newKot = { isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
-                this.kot.unshift(newKot);
-                this.updateQtyColorTable();
-                this.updateTimeRemaining();
-                this.masonryLoading();
-              }
-              if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
-              this._cancelTimeout = setTimeout(() => {
-                if (doc.kot && doc.kot.type === "Cancelled") {
-                  this.fetchKOT().then(() => {
-                    this.masonryLoading();
-                  }).catch((e) => { console.error("KOT fetch failed:", e); });
-                }
-              }, 1500);
-              if (doc.kot) {
-                try {
-                  localStorage.setItem("kot_time", doc.kot.time);
-                } catch (e) {
-                  if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
-                }
-              }
-            } catch (err) {
-              if (import.meta.env?.DEV) console.error("Socket handler error:", err);
+        if (this.audio_alert === 1) {
+          this.showAudioAlertMessage = true;
+        }
+        this.socketHandler = (doc) => {
+          try {
+            if (this.audio_alert === 1) {
+              this.playAlertSound(doc.audio_file);
             }
-          };
-          if (this._socket) this._socket.on(this.kot_channel, this.socketHandler);
-        }).catch((e) => { console.error("KOT fetch failed:", e); });
+            let kottime = localStorage.getItem("kot_time");
+            if (doc.last_kot_time !== kottime) {
+              // Full refresh needed — skip intermediate mutations
+              this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
+            } else {
+              // Incremental update
+              const newKot = { isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
+              this.kot.unshift(newKot);
+              this.updateQtyColorTable();
+              this.updateTimeRemaining();
+              this.masonryLoading();
+            }
+            if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
+            this._cancelTimeout = setTimeout(() => {
+              if (doc.kot && doc.kot.type === "Cancelled") {
+                this.fetchKOT().then(() => {
+                  this.masonryLoading();
+                }).catch((e) => { console.error("KOT fetch failed:", e); });
+              }
+            }, 1500);
+            if (doc.kot) {
+              try {
+                localStorage.setItem("kot_time", doc.kot.time);
+              } catch (e) {
+                if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+              }
+            }
+          } catch (err) {
+            if (import.meta.env?.DEV) console.error("Socket handler error:", err);
+          }
+        };
+        if (this._socket) this._socket.on(this.kot_channel, this.socketHandler);
       })
       .catch((error) => {
-        console.error("Authentication error:", error);
+        console.error("Initialization or authentication error:", error);
         this.showModal = true;
       });
     this.timer = setInterval(this.updateTimeRemaining, 60000);
@@ -682,6 +681,7 @@ export default {
       this._socket.off('connect');
       this._socket.disconnect();
     }
+    this._socketInitPromise = null;
     if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
     if (this._statusTimeout) clearTimeout(this._statusTimeout);
     if (this.timer) clearInterval(this.timer);

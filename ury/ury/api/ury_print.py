@@ -35,7 +35,8 @@ def network_printing(
             cups.setPort(print_settings.port)
             conn = cups.Connection()
         except Exception as e:
-            frappe.throw(_("Failed to connect to the printer: {0}").format(str(e)))
+            frappe.log_error(str(e))
+            frappe.throw(_("An error occurred. Please check the error log."))
 
         try:
             output = PdfWriter()
@@ -73,7 +74,7 @@ def network_printing(
             return "Success"
         except Exception as e:
             frappe.log_error(message=frappe.get_traceback(), title="Network Printing - Print Error")
-            frappe.throw(_("Failed to print: {0}").format(str(e)))
+            frappe.throw(_("An error occurred. Please check the error log."))
         finally:
             if file_path and os.path.exists(file_path):
                 try:
@@ -82,7 +83,7 @@ def network_printing(
                     pass
     except Exception as e:
         frappe.log_error(message=frappe.get_traceback(), title="Network Printing Error")
-        frappe.throw(_("An error occurred: {0}").format(str(e)))
+        frappe.throw(_("An error occurred. Please check the error log."))
 
 
 @frappe.whitelist()
@@ -134,7 +135,7 @@ def qz_print_update(invoice):
 
     except Exception as e:
         frappe.log_error(message=e, title="Print Fail")
-        frappe.throw(_("Error while printing order: {0}").format(str(e)))
+        frappe.throw(_("An error occurred. Please check the error log."))
 
 
 @frappe.whitelist()

@@ -84,6 +84,7 @@ export default {
         if (!res.ok) {
           const text = await res.text().catch(() => '');
           this.error = text || `Server error (${res.status})`;
+          this.password = '';
           return;
         }
 
@@ -101,9 +102,11 @@ export default {
           this.$router.push(redirectPath);
         } else {
           this.error = data.message || "Login failed. Please try again.";
+          this.password = '';
         }
       } catch (err) {
         this.error = "Network error. Please check your connection.";
+        this.password = '';
       } finally {
         this.isLoading = false;
       }

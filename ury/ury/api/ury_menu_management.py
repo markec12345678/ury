@@ -15,7 +15,7 @@ def get_menus():
     frappe.only_for("Restaurant Manager", "Restaurant User")
     branch = _get_user_branch()
     if not branch:
-        frappe.throw("User branch not found", frappe.ValidationError)
+        frappe.throw(_("User branch not found"), frappe.ValidationError)
 
     menus = frappe.get_all(
         "URY Menu",
@@ -108,8 +108,7 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
         if existing_item.item == item:
             frappe.throw(_("Item {0} already exists in this menu").format(item), frappe.DuplicateEntryError)
 
-    item_doc = frappe.get_doc("Item", item)
-    item_name = item_doc.item_name
+    item_name = frappe.db.get_value("Item", item, "item_name")
 
     menu.append("items", {
         "item": item,

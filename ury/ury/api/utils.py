@@ -4,6 +4,7 @@ Common helper functions used across multiple API modules.
 """
 
 import frappe
+from frappe import _
 
 
 def _get_user_branch():
@@ -20,4 +21,6 @@ def _get_user_branch():
             "validated at the permission level.",
             "URY Multi-Branch Warning"
         )
-    return branches[0].parent if branches else None
+    if not branches:
+        frappe.throw(_("User is not associated with any branch"), frappe.ValidationError)
+    return branches[0].parent

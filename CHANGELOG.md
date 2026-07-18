@@ -9,28 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **2 new UI components** (`@ury/ui`) — Table (5 stories) with composable sub-components (Header/Body/Footer/Row/Head/Cell/Caption), Pagination (5 stories) with Content/Item/Link/Previous/Next/Ellipsis sub-components. Total: 28 components, 119 stories.
-- **32 unit tests** for Table (14) and Pagination (18) components.
+- **2 new UI components** (`@ury/ui`) — Sheet (5 stories) with slide-in panel (top/bottom/left/right), overlay, Header/Footer/Title/Description/Close sub-components. Calendar (5 stories) with date grid, month navigation, min/max dates, controlled mode. Total: 30 components, 129 stories.
+- **25 unit tests** for Sheet (12) and Calendar (13) components.
 
 ### Fixed
 
-- **POS React (1 CRITICAL)**: XSS via `dangerouslySetInnerHTML` in AIInsightsPanel — now sanitizes with DOMPurify before rendering.
-- **POS React (3 HIGH)**: Wrong `owner` prop in Orders.tsx PaymentDialog (passed `cashier` instead of `owner`), unsanitized LIKE pattern in `getscramblePattern` (escapes %, _, \), unguarded `console.error` in PaymentMethodChart (now gated behind `import.meta.env.DEV`).
-- **POS React (4 MEDIUM)**: Removed 8 unused underscore-prefixed variables across PaymentDialog/ProductDialog/POS/PaymentMethodChart/Table, PaymentDialog useEffect missing `paymentInputs` dependency, ErrorBoundary `errorCount` always resets to 0 (now properly increments), CommentDialog missing ARIA dialog semantics (added role/aria-modal/aria-labelledby).
-- **POS React (3 LOW)**: `QuickFilterButton` moved outside POS component body (prevents remounting), `formatCurrency` NaN guard added, inconsistent `}catch(e){` formatting fixed in auth-api.ts.
-- **Mosaic KDS (2 CRITICAL)**: Socket initialized at module scope never disconnected (moved to component lifecycle with `disconnect()` in `beforeUnmount`), async socket init not awaited (now handled with promise).
-- **Mosaic KDS (5 HIGH)**: `window.globalSiteName` replaced with module-scoped variable, `markRaw()` added for Masonry and Frappe call instances, Audio object leak in `playAlertSound` (cached single instance), stacking timeouts in `hideStatusMessageAfterDelay` (clears previous), invalid Tailwind classes (`text-gray` → `text-gray-700`, `justify` → `justify-center`).
-- **Mosaic KDS (5 MEDIUM)**: `v-if` inside `v-for` replaced with computed `visibleKots`, minutes not zero-padded in `calculateTimeRemaining`, negative time values clamped to 0, catch-all route added for unmatched paths, dead `style.css` deleted, password cleared after login.
-- **Mosaic KDS (4 LOW)**: `localStorage.setItem` wrapped in try/catch, ARIA attributes added on interactive KOT cards, `aria-live="polite"` added on status messages.
-- **Backend (3 HIGH)**: Missing `frappe.only_for()` on `get_order_invoice` and `customer_favourite_item` (exposes invoice creation and customer data to any user), raw SQL UPDATE bypasses document lifecycle in `cancel_kot` (now uses `frappe.get_doc().cancel()`).
-- **Backend (6 MEDIUM)**: `frappe.only_for()` added to 7 more whitelisted methods across `ury_order.py`, `sub_pos_closing.py`, `ury_daily_p_and_l.py`, `pos_extend.py`. Owner spoofing in KOT validation (`kotdoc.owner` set from waiter field, now uses `posInvoice.owner`). All 9 explicit `frappe.db.commit()` calls removed from `ury_menu_management.py`.
-- **Backend (6 LOW)**: Dead `inner_inner_bom_process` function removed, unused `json`/`nowdate` imports removed, 6 error messages internationalized (`f"..."` → `_().format()`), typo `get_proft_loss_details` → `get_profit_loss_details`, hardcoded `"INR"` → dynamic company currency, commented-out dead code removed.
+- **POS React (1 CRITICAL)**: Unused `DOMPurify` import removed from AIInsightsPanel (dead code after React-based rendering refactor).
+- **POS React (3 HIGH)**: 7 hardcoded English strings in Table.tsx wrapped with `t()` i18n, ProductDialog discarded tuple values fixed (`[, setter]` → `[value, setter]`), unused `setAddonItemCodes` state removed.
+- **POS React (3 MEDIUM)**: Unused `_colorMap` removed from Dashboard, `document.getElementById('root')!` replaced with guarded access, `shortcutRegistry.destroy()` added to clean up keydown listener.
+- **POS React (4 LOW)**: `getscramblePattern` renamed to `getScramblePattern`, `letterhead:"No Letterhead"` spacing fixed, aria-label added to payment inputs, TODO(i18n) comment on hardcoded utils string.
+- **Mosaic KDS (2 CRITICAL)**: Dead socket on re-mount — socket init moved from module scope to `mounted()`, socket+auth race condition fixed with `Promise.all`.
+- **Mosaic KDS (5 HIGH)**: Duplicate deps removed from package.json (autoprefixer/postcss/tailwindcss from deps, keep devDeps), unused flowbite/flowbite-vue removed, dead `vue.svg` deleted, dead `struckThroughItems` data property removed, `@keydown.space` handler added on KOT cards.
+- **Mosaic KDS (3 MEDIUM)**: `v-show` → `v-if` for comments, dead `__uryAuthState` type removed, Tailwind spacing override `'28':'28px'` → `'gutter':'28px'`, password cleared on login failure.
+- **Mosaic KDS (1 HIGH)**: KOT objects from API now have reactive defaults (`isRotated`, `showDiv`, `timecolor`, `timeRemaining`).
+- **Backend (2 CRITICAL)**: Owner spoofing in KOT validation — `kotdoc.db_set("owner", posInvoice.owner)` removed (Frappe sets owner automatically). Non-atomic `cancel_order` — wrapped in `frappe.db.savepoint()` with rollback.
+- **Backend (6 HIGH)**: Untranslated strings wrapped in `_()`, exception details no longer leaked to client (logged server-side + generic message), cross-branch data leak when branch is None (now throws ValidationError), LIKE wildcard injection fixed (escapes `%` and `_`).
+- **Backend (6 MEDIUM)**: Unused `datetime`/`get_datetime` imports removed, `inner_bom_process` → `_inner_bom_process` (private), dead code `"item_code": item.get("item", ...)` → `item.item_code`, `add_menu_item` optimized (`get_doc` → `db.get_value`), `frappe.only_for()` added to `table_transfer` and `captain_transfer`.
 
 ### Changed
 
-- **README.md** — Updated component count to 28, story count to 119, added Table and Pagination to component list.
-- **Barrel exports** (`packages/ui/src/index.ts`) — Added Table and Pagination component exports.
-- **DOMPurify** added as dependency to POS frontend for HTML sanitization.
+- **README.md** — Updated component count to 30, story count to 129, added Sheet and Calendar.
+- **Barrel exports** (`packages/ui/src/index.ts`) — Added Sheet and Calendar component exports.
+- **Mosaic KDS package.json** — Removed 5 unused/duplicate dependencies.
 
 ## [0.0.0] - 2025-01-01
 

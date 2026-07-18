@@ -287,7 +287,8 @@ def sync_order(
     try:
         invoice.save()
     except Exception as e:
-        frappe.throw(_("Error while updating order: {0}").format(e))   
+        frappe.log_error(str(e))
+        frappe.throw(_("An error occurred. Please check the error log."))   
 
 
     try:
@@ -440,6 +441,7 @@ def pos_opening_check():
 
 @frappe.whitelist()
 def table_transfer(table, newTable, invoice):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not frappe.has_permission("POS Invoice", "write", invoice):
         frappe.throw(_("Not permitted to transfer tables"), frappe.PermissionError)
     current_room = frappe.db.get_value("URY Table", table, "restaurant_room")
@@ -485,6 +487,7 @@ def table_transfer(table, newTable, invoice):
 
 @frappe.whitelist()
 def captain_transfer(currentCaptain, newCaptain, invoice):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not frappe.has_permission("POS Invoice", "write", invoice):
         frappe.throw(_("Not permitted to transfer captain"), frappe.PermissionError)
     pos_profile=frappe.get_value("POS Invoice", invoice,"pos_profile")
@@ -548,19 +551,20 @@ def cancel_order(invoice_id, reason):
         frappe.throw(_("Not permitted to cancel orders"), frappe.PermissionError)
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
 
+    frappe.db.savepoint("before_cancel")
     try:
-        cancel_kot(invoice_id)
-    except Exception as e:
-        frappe.log_error(f"Failed to create cancellation KOT for {invoice_id}: {frappe.get_traceback()}", "Cancel KOT Error")
+        try:
+            cancel_kot(invoice_id)
+        except Exception as e:
+            frappe.log_error(f"Failed to create cancellation KOT for {invoice_id}: {frappe.get_traceback()}", "Cancel KOT Error")
 
-    # Use standard Frappe cancellation instead of raw SQL
-    try:
+        # Use standard Frappe cancellation instead of raw SQL
         pos_invoice.cancel()
         if reason:
             frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason)
-    except Exception as e:
-        frappe.log_error(f"Failed to cancel invoice {invoice_id}: {frappe.get_traceback()}", "Cancel Invoice Error")
-        frappe.throw(_("Failed to cancel invoice: {0}").format(str(e)))
+    except Exception:
+        frappe.db.rollback(savepoint="before_cancel")
+        raise
 
     # Update table status
     if pos_invoice.restaurant_table:
@@ -602,7 +606,8 @@ def make_invoice(customer, payments, cashier, pos_profile,owner, additionalDisco
     try:
         invoice.submit()
     except Exception as e:
-        frappe.throw(_("Error while settling order: {0}").format(str(e)))
+        frappe.log_error(str(e))
+        frappe.throw(_("An error occurred. Please check the error log."))
     
     
 
@@ -618,7 +623,7 @@ def cancel_kot(invoice_id):
     # Create a list of items for the canceled KOT
     for item in pos_invoice.items:
         order_item = {
-            "item_code": item.get("item", item.get("item_code")),
+            "item_code": item.item_code,
             "qty": item.qty,
             "item_name": item.item_name,
         }
