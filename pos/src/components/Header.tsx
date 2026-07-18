@@ -117,8 +117,8 @@ const Header = () => {
             placeholder={searchPlaceholder}
             data-testid="header-search"
             className="h-fit p-0 w-full bg-transparent border-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-            value={searchValue}
-            onChange={searchOnChange}
+            value={searchValue ?? ''}
+            onChange={searchOnChange ?? (() => {})}
           />
           <div className="flex items-center gap-2 text-gray-400">
             <Command className="w-4 h-4" />

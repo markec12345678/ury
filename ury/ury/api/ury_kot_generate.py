@@ -133,6 +133,10 @@ def create_kot_doc(
     order_number = pos_invoice.custom_ury_order_number
     is_aggregator = 1 if pos_invoice.order_type == "Aggregators" else 0
 
+    # R36-FIX: Skip creating KOT with no items
+    if not items:
+        return
+
     kot_doc = frappe.new_doc(
         {
             "doctype": "URY KOT",
@@ -410,8 +414,8 @@ def kot_execute(
 
     branch = getBranch()
 
-    positive_qty_items = [item for item in final_array if int(item["qty"]) > 0]
-    negative_qty_items = [item for item in final_array if int(item["qty"]) <= 0]
+    positive_qty_items = [item for item in final_array if flt(item["qty"]) > 0]
+    negative_qty_items = [item for item in final_array if flt(item["qty"]) <= 0]
     total_cancel_items = negative_qty_items + removed_item
 
     # Common data fetched once and passed to both processors
@@ -478,7 +482,7 @@ def compare_two_array(array_1, array_2):
             # No change
             continue
 
-        item["qty"] = int(item["qty"]) - int(array_2_by_code[code]["qty"])
+        item["qty"] = flt(item["qty"]) - flt(array_2_by_code[code]["qty"])
         finalarray.append(item)
 
     return finalarray

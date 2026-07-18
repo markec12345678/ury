@@ -3,7 +3,7 @@ import { Sparkles, Send, X, Trash2, MessageSquare, AlertCircle, Loader2 } from '
 import { useAIStore } from '../../store/ai-store';
 import { cn } from '../../lib/utils';
 import { t } from '../../i18n';
-import DOMPurify from 'dompurify';
+// R36-FIX: Removed unused DOMPurify import (no dangerouslySetInnerHTML used)
 
 const AIInsightsPanel = () => {
   const {

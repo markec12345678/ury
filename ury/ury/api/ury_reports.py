@@ -586,7 +586,7 @@ def _generic_report_html(report_type, data, company, currency):
         </style>
     </head>
     <body>
-        <h1>{report_type.replace('_', ' ').title()} Report</h1>
+        <h1>{_html.escape(report_type.replace('_', ' ').title())} Report</h1>
         <pre>{_html.escape(json.dumps(data, indent=2, default=str))}</pre>
     </body>
     </html>"""

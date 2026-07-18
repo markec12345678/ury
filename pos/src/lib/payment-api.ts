@@ -24,7 +24,7 @@ export const getPaymentModes = async (): Promise<string[]> => {
   try {
     const response = await call.get<PaymentModeResponse>("ury.ury_pos.api.getModeOfPayment");
 
-    const paymentModes = response.message.map((mode:PaymentMode) => mode.mode_of_payment);
+    const paymentModes = (response.message || []).map((mode:PaymentMode) => mode.mode_of_payment);
     
     // Cache in session storage
     sessionStorage.setItem('payment_modes', JSON.stringify(paymentModes));

@@ -3,7 +3,7 @@ import { X, Percent, Coins } from 'lucide-react';
 import { usePOSStore } from '../store/pos-store';
 import { formatCurrency } from '../lib/utils';
 import { Button, Input, Dialog, DialogContent } from './ui';
-import { call } from '../lib/frappe-sdk';
+import { call } from '../lib/frappe-sdk-retry';
 import { DEFAULT_PAYMENT_MODE } from '../data/order-types';
 import { t } from '../i18n';
 import { showToast } from './ui/toast';
@@ -83,8 +83,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const roundedAdjustment = Math.round(adjustment * 100) / 100;
   const totalDiscount = appliedDiscount;
   const discountedTotal = Math.max(0, subtotal - totalDiscount);
-  // If discount is applied, round up; else, round normally
-  const finalTotal = appliedDiscount > 0 ? Math.ceil(discountedTotal) : Math.round(discountedTotal);
+  // R36-FIX: Use Math.round for both paths — Math.ceil silently overcharges customers
+  const finalTotal = Math.round(discountedTotal);
   const finalAdjustment = finalTotal - discountedTotal;
   const roundedFinalAdjustment = Math.round(finalAdjustment * 100) / 100;
   const showFinalAdjustment = Math.abs(roundedFinalAdjustment) > 0.001;

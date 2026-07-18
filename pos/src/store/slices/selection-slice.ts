@@ -100,7 +100,11 @@ export const createSelectionSlice: StateCreator<POSSliceAll, [], [], SelectionSl
     try {
       const response = await getTableOrder(table);
       // Discard stale response if a newer request was started
-      if (get()._loadTableOrderSeq !== seq) return;
+      if (get()._loadTableOrderSeq !== seq) {
+        // R36-FIX: Clear orderLoading on stale response to prevent stuck loading state
+        set({ orderLoading: false });
+        return;
+      }
       const order = response.message;
       if (order && order.name && order.items && order.items.length > 0) {
         const orderItems: OrderItem[] = order.items.map(item => {

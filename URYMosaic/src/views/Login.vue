@@ -74,9 +74,14 @@ export default {
       this.error = "";
 
       try {
+        // R36-FIX: Include CSRF token for Frappe compatibility
+        const csrfToken = window.csrf_token || '';
         const res = await fetch("/api/method/login", {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            ...(csrfToken ? { "X-Frappe-CSRF-Token": csrfToken } : {}),
+          },
           body: new URLSearchParams({
             usr: this.username,
             pwd: this.password,

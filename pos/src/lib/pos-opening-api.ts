@@ -17,7 +17,7 @@ export const checkPOSOpening = async (): Promise<POSOpeningResponse> => {
     
     return response;
   } catch (error) {
-    throw new Error(`Failed to check POS opening status: ${getErrorMessage(error)}`);
+    throw new Error(`Failed to check POS opening status: ${getErrorMessage(error)}`, { cause: error });
   }
 };
 
@@ -32,6 +32,6 @@ export const validatePOSClose = async (posProfile: string): Promise<POSCloseVali
     
     return response;
   } catch (error) {
-    throw new Error(`Failed to validate POS close status: ${getErrorMessage(error)}`);
+    throw new Error(`Failed to validate POS close status: ${getErrorMessage(error)}`, { cause: error });
   }
 }; 

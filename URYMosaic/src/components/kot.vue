@@ -290,21 +290,22 @@ export default {
       statusMessage: "",
       daily_order_number:0,
       socketHandler: null,
-      notifiedKots: new Set(),
-      _isMounted: false,
-      _fetchInProgress: null
     };
   },
   methods: {
     playAlertSound(path) {
       const currentDomain = window.location.origin;
       const audio_path = currentDomain + path;
-      if (!alertAudio) {
-        alertAudio = new Audio(audio_path);
+      // R36-FIX: Use instance-level audio to avoid cross-instance conflicts
+      if (!this._alertAudio) {
+        this._alertAudio = new Audio(audio_path);
       } else {
-        alertAudio.src = audio_path;
+        this._alertAudio.src = audio_path;
       }
-      alertAudio.play().catch(() => {});
+      this._alertAudio.play().catch(() => {
+        // R36-FIX: Show UI fallback when audio fails — kitchen staff need to know
+        this.showAudioAlertMessage = true;
+      });
     },
     auth() {
       return new Promise((resolve, reject) => {
@@ -495,8 +496,11 @@ export default {
         const minutes =
           parseInt(timeRemaining[0], 10) * 60 + parseInt(timeRemaining[1], 10);
 
+        // R36-FIX: Handle NaN from invalid time format — treat as elapsed time exceeded
+        const validMinutes = isNaN(minutes) ? Infinity : minutes;
+
         if (
-          minutes === Number(this.kot_alert_time) &&
+          validMinutes === Number(this.kot_alert_time) &&
           kot.type !== "Cancelled" &&
           kot.type !== "Partially cancelled" &&
           !this.notifiedKots.has(kot.name)
@@ -504,7 +508,7 @@ export default {
           this.notifiedKots.add(kot.name);
           this.orderDelayNotify(kot);
         }
-        if (minutes >= this.kot_alert_time) {
+        if (validMinutes >= this.kot_alert_time) {
           kot.timecolor = "text-[#DC0000]";
         } else {
           kot.timecolor = "text-black";
@@ -601,6 +605,10 @@ export default {
     },
   },
   created() {
+    // R36-FIX: Initialize as non-reactive instance properties (no Proxy overhead)
+    this._isMounted = false;
+    this._fetchInProgress = null;
+    this.notifiedKots = new Set();
     // API client as non-reactive instance property (avoids Proxy overhead)
     this.call = markRaw(frappe.call());
   },
@@ -609,9 +617,8 @@ export default {
     window.addEventListener("online", this.handleOnline);
     window.addEventListener("offline", this.handleOffline);
     document.addEventListener("click", this.hideAudioAlertMessage);
-    const currentUrl = window.location.href;
-    const parts = currentUrl.split("/");
-    const production = parts[parts.length - 1];
+    // R36-FIX: Use route params instead of fragile URL parsing
+    const production = this.$route?.params?.production || '';
     const decodedProduction = decodeURIComponent(production);
     this.production = decodedProduction;
 
@@ -626,16 +633,21 @@ export default {
     // Wait for both socket init and auth before attaching listeners
     Promise.all([this._socketInitPromise, this.auth()])
       .then(([sock]) => {
+        // R36-FIX: Guard against post-unmount execution
+        if (!this._isMounted) return;
         this._socket = sock;
         if (this._socket) this._socket.on('connect_error', (err) => {
+          if (!this._isMounted) return;
           console.error("Socket connection error:", err);
           this.setStatusMessage("Connection error. Retrying...");
         });
         if (this._socket) this._socket.on('disconnect', (reason) => {
+          if (!this._isMounted) return;
           console.warn("Socket disconnected:", reason);
           this.setStatusMessage("Connection lost. Reconnecting...");
         });
         if (this._socket) this._socket.on('connect', () => {
+          if (!this._isMounted) return;
           this.setStatusMessage("Reconnected");
           this.hideStatusMessageAfterDelay();
         });
@@ -643,23 +655,41 @@ export default {
         return this.fetchKOT();
       })
       .then(() => {
+        if (!this._isMounted) return;
         if (this.audio_alert === 1) {
           this.showAudioAlertMessage = true;
         }
         this.socketHandler = (doc) => {
+          if (!this._isMounted) return;
           try {
             if (this.audio_alert === 1) {
               this.playAlertSound(doc.audio_file);
             }
-            let kottime = localStorage.getItem("kot_time");
+            // R36-FIX: Namespace localStorage key per production station to avoid cross-tab collision
+            let kottime = localStorage.getItem("kot_time_" + this.production);
             if (doc.last_kot_time !== kottime) {
               // Full refresh needed — skip intermediate mutations
               this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
             } else {
+              // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
+              if (!doc.kot) {
+                this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
+                return;
+              }
               // Incremental update — deduplicate to avoid duplicate cards
               const existingIndex = this.kot.findIndex(k => k.name === doc.kot.name);
               if (existingIndex !== -1) {
+                // R36-FIX: Preserve strikethrough state before Object.assign overwrites kot_items
+                const strikeMap = new Map(
+                  (this.kot[existingIndex].kot_items || []).map(i => [i.name, i.striked])
+                );
                 Object.assign(this.kot[existingIndex], { timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot });
+                // Restore strikethrough state after Object.assign
+                if (this.kot[existingIndex].kot_items) {
+                  this.kot[existingIndex].kot_items.forEach(i => {
+                    if (strikeMap.has(i.name)) i.striked = strikeMap.get(i.name);
+                  });
+                }
               } else {
                 const newKot = { isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
                 this.kot.unshift(newKot);
@@ -670,6 +700,7 @@ export default {
             }
             if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
             this._cancelTimeout = setTimeout(() => {
+              if (!this._isMounted) return;
               if (doc.kot && doc.kot.type === "Cancelled") {
                 this.fetchKOT().then(() => {
                   this.masonryLoading();
@@ -678,7 +709,7 @@ export default {
             }, 1500);
             if (doc.kot) {
               try {
-                localStorage.setItem("kot_time", doc.kot.time);
+                localStorage.setItem("kot_time_" + this.production, doc.kot.time);
               } catch (e) {
                 if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
               }
@@ -691,7 +722,7 @@ export default {
       })
       .catch((error) => {
         console.error("Initialization or authentication error:", error);
-        this.showModal = true;
+        if (this._isMounted) this.showModal = true;
       });
     this.timer = setInterval(this.updateTimeRemaining, 60000);
   },
@@ -714,7 +745,7 @@ export default {
     if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
     if (this._statusTimeout) clearTimeout(this._statusTimeout);
     if (this.timer) clearInterval(this.timer);
-    alertAudio = null;
+    if (this._alertAudio) { this._alertAudio.pause(); this._alertAudio = null; }
   },
   computed: {
     sortedKotItems() {

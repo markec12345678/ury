@@ -63,6 +63,9 @@ def _inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=No
 
 class URYDailyPandL(Document):
         def cogs_sold(self):
+                # R36-FIX: Validate required fields before running SQL
+                if not self.branch or not self.date:
+                        frappe.throw(_("Branch and Date are required"))
                 # Cache on self so before_submit can reuse without re-fetching
                 if not hasattr(self, '_report_settings'):
                         self._report_settings = frappe.get_doc("URY Report Settings", self.branch)
