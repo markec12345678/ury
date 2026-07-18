@@ -23,11 +23,13 @@ def serve_kot(name, time):
 
 # Function to mark it as verified by a user in cancel type KOT
 @frappe.whitelist()
-def confirm_cancel_kot(name, user):
-    frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": user})
+def confirm_cancel_kot(name, user=None):
+    # Use server-side identity instead of client-supplied user parameter
+    verified_by = frappe.session.user
+    frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by})
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_site_name():
     return {"site_name": frappe.local.site}
 

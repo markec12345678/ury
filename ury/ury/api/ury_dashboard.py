@@ -74,6 +74,7 @@ def get_revenue_chart(period="this_month", granularity="daily"):
     """Get revenue data for charts.
     granularity: hourly, daily, weekly, monthly
     """
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     from_date, to_date = _get_period_dates(period)
     branch = _get_user_branch()
 
@@ -354,6 +355,7 @@ def _get_order_type_breakdown(from_date, to_date, branch=None):
 
 def _get_hourly_breakdown(from_date, to_date, branch=None):
     """Get hourly revenue/order breakdown."""
+    branch_clause = "AND branch = %s" if branch else ""
     filters = {
         "posting_date": ["between", [from_date, to_date]],
         "docstatus": 1,
@@ -369,19 +371,19 @@ def _get_hourly_breakdown(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY HOUR(posting_time)
         ORDER BY hour
-    """.format(
-        branch_filter=f"AND branch = '{branch}'" if branch else ""
-    ), (from_date, to_date), as_dict=True)
+    """,
+    (from_date, to_date, branch) if branch else (from_date, to_date),
+    as_dict=True)
 
     return data
 
 
 def _get_daily_revenue(from_date, to_date, branch=None):
     """Get daily revenue data."""
-    branch_filter = f"AND branch = '{branch}'" if branch else ""
+    branch_clause = "AND branch = %s" if branch else ""
 
     data = frappe.db.sql("""
         SELECT 
@@ -403,7 +405,7 @@ def _get_daily_revenue(from_date, to_date, branch=None):
 
 def _get_weekly_revenue(from_date, to_date, branch=None):
     """Get weekly revenue data."""
-    branch_filter = f"AND branch = '{branch}'" if branch else ""
+    branch_clause = "AND branch = %s" if branch else ""
 
     data = frappe.db.sql("""
         SELECT 
@@ -425,7 +427,7 @@ def _get_weekly_revenue(from_date, to_date, branch=None):
 
 def _get_monthly_revenue(from_date, to_date, branch=None):
     """Get monthly revenue data."""
-    branch_filter = f"AND branch = '{branch}'" if branch else ""
+    branch_clause = "AND branch = %s" if branch else ""
 
     data = frappe.db.sql("""
         SELECT 
@@ -445,7 +447,7 @@ def _get_monthly_revenue(from_date, to_date, branch=None):
 
 def _get_daily_orders(from_date, to_date, branch=None):
     """Get daily order counts with status breakdown."""
-    branch_filter = f"AND branch = '{branch}'" if branch else ""
+    branch_clause = "AND branch = %s" if branch else ""
 
     data = frappe.db.sql("""
         SELECT 

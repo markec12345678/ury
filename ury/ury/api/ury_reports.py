@@ -4,6 +4,7 @@ Generate daily/weekly/monthly reports with PDF export support.
 """
 
 import frappe
+import html as _html
 from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, flt, fmt_money
 import json
 
@@ -13,6 +14,7 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
     """Get sales report for the given period.
     period: daily, weekly, monthly, custom
     """
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     if not from_date or not to_date:
         from_date, to_date = _get_report_dates(period, from_date, to_date)
     else:
@@ -20,7 +22,7 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         to_date = getdate(to_date)
 
     branch = _get_user_branch()
-    branch_filter = f"AND branch = '{branch}'" if branch else ""
+    branch_clause = "AND branch = %s" if branch else ""
 
     # Overall summary
     summary = frappe.db.sql("""
@@ -34,8 +36,8 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+        {branch_clause}
+    """, (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     summary_data = summary[0] if summary else {}
     summary_data["total_revenue"] = flt(summary_data.get("total_revenue", 0), 2)
@@ -96,8 +98,8 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 2
-        {branch_filter}
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+        {branch_clause}
+    """, (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     cancelled_data = cancelled[0] if cancelled else {}
 
@@ -154,6 +156,7 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
 @frappe.whitelist()
 def get_inventory_report(from_date=None, to_date=None):
     """Get inventory/material usage report."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     if not from_date:
         from_date = getdate()
     if not to_date:
@@ -183,6 +186,7 @@ def get_inventory_report(from_date=None, to_date=None):
 @frappe.whitelist()
 def get_expense_report(from_date=None, to_date=None):
     """Get expense report (fixed + variable)."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     if not from_date:
         from_date = get_first_day(getdate())
     if not to_date:
@@ -225,6 +229,7 @@ def get_expense_report(from_date=None, to_date=None):
 @frappe.whitelist()
 def get_profit_loss_report(from_date=None, to_date=None):
     """Get profit and loss report."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     if not from_date:
         from_date = get_first_day(getdate())
     if not to_date:
@@ -233,7 +238,7 @@ def get_profit_loss_report(from_date=None, to_date=None):
     from_date = getdate(from_date)
     to_date = getdate(to_date)
     branch = _get_user_branch()
-    branch_filter = f"AND branch = '{branch}'" if branch else ""
+    branch_clause = "AND branch = %s" if branch else ""
 
     # Revenue
     revenue_data = frappe.db.sql("""
@@ -244,8 +249,8 @@ def get_profit_loss_report(from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+        {branch_clause}
+    """, (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     revenue = revenue_data[0] if revenue_data else {}
     total_revenue = flt(revenue.get("total_revenue", 0), 2)
@@ -286,6 +291,7 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
     """Generate and return a PDF report.
     Returns the PDF file URL for download.
     """
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     # Get report data
     if report_type == "sales":
         data = get_sales_report(period, from_date, to_date)
@@ -303,7 +309,7 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
 
     # Save the HTML as a temporary file
     import os
-    temp_dir = frappe.get_site_path("public", "reports")
+    temp_dir = frappe.get_site_path("private", "reports")
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
 
@@ -373,7 +379,7 @@ def _sales_report_html(data, company, currency):
     for item in data.get("item_sales", []):
         item_rows += f"""
         <tr>
-            <td>{item.get('item_name', '')}</td>
+            <td>_html.escape(str(item.get('item_name', '')))</td>
             <td class="number">{flt(item.get('total_qty', 0), 1)}</td>
             <td class="number">{fmt_money(flt(item.get('avg_rate', 0), 2), currency=currency)}</td>
             <td class="number">{fmt_money(flt(item.get('total_amount', 0), 2), currency=currency)}</td>
@@ -447,7 +453,7 @@ def _sales_report_html(data, company, currency):
                 <tr><th>Order Type</th><th>Orders</th><th>Revenue</th></tr>
             </thead>
             <tbody>
-                {"".join(f'<tr><td>{o.get("order_type", "")}</td><td class="number">{int(o.get("order_count", 0))}</td><td class="number">{fmt_money(flt(o.get("revenue", 0), 2), currency=currency)}</td></tr>' for o in data.get('order_type_sales', []))}
+                {"".join(f'<tr><td>_html.escape(str(o.get("order_type", "")))</td><td class="number">{int(o.get("order_count", 0))}</td><td class="number">{fmt_money(flt(o.get("revenue", 0), 2), currency=currency)}</td></tr>' for o in data.get('order_type_sales', []))}
             </tbody>
         </table>
     </body>

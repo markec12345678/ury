@@ -67,6 +67,7 @@ def get_menu_detail(menu_name):
 @frappe.whitelist()
 def create_menu(branch, enabled=1):
     """Create a new URY Menu."""
+    frappe.only_for("Restaurant Manager")
     existing = frappe.get_all("URY Menu", filters={"branch": branch})
     if existing:
         frappe.throw(f"Menu already exists for branch {branch}", frappe.DuplicateEntryError)
@@ -84,6 +85,7 @@ def create_menu(branch, enabled=1):
 @frappe.whitelist()
 def toggle_menu(menu_name, enabled):
     """Enable or disable a menu."""
+    frappe.only_for("Restaurant Manager")
     menu = frappe.get_doc("URY Menu", menu_name)
     menu.enabled = enabled
     menu.save(ignore_permissions=True)
@@ -94,6 +96,7 @@ def toggle_menu(menu_name, enabled):
 @frappe.whitelist()
 def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
     """Add an item to a URY Menu."""
+    frappe.only_for("Restaurant Manager")
     menu = frappe.get_doc("URY Menu", menu_name)
 
     for existing_item in menu.items:
@@ -119,6 +122,7 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
 @frappe.whitelist()
 def update_menu_item(menu_name, item_row_name, rate=None, special_dish=None, disabled=None, course=None):
     """Update a menu item's properties."""
+    frappe.only_for("Restaurant Manager")
     menu = frappe.get_doc("URY Menu", menu_name)
     for item in menu.items:
         if item.name == item_row_name:
@@ -142,6 +146,7 @@ def update_menu_item(menu_name, item_row_name, rate=None, special_dish=None, dis
 @frappe.whitelist()
 def remove_menu_item(menu_name, item_row_name):
     """Remove an item from a URY Menu."""
+    frappe.only_for("Restaurant Manager")
     menu = frappe.get_doc("URY Menu", menu_name)
     original_count = len(menu.items)
 
@@ -160,6 +165,7 @@ def batch_update_prices(menu_name, updates):
     """Batch update prices for menu items.
     updates: list of dicts with {item_row_name, rate}
     """
+    frappe.only_for("Restaurant Manager")
     if isinstance(updates, str):
         updates = json.loads(updates)
 
@@ -192,6 +198,7 @@ def get_courses_detail():
 @frappe.whitelist()
 def create_menu_course(course, serving_priority=0, indicate_in_kds=0):
     """Create a new menu course/category."""
+    frappe.only_for("Restaurant Manager")
     existing = frappe.get_all("URY Menu Course", filters={"course": course})
     if existing:
         frappe.throw(f"Course '{course}' already exists", frappe.DuplicateEntryError)
@@ -210,6 +217,7 @@ def create_menu_course(course, serving_priority=0, indicate_in_kds=0):
 @frappe.whitelist()
 def update_menu_course(course_name, course=None, serving_priority=None, indicate_in_kds=None):
     """Update a menu course."""
+    frappe.only_for("Restaurant Manager")
     doc = frappe.get_doc("URY Menu Course", course_name)
     if course is not None:
         doc.course = course
@@ -225,6 +233,7 @@ def update_menu_course(course_name, course=None, serving_priority=None, indicate
 @frappe.whitelist()
 def delete_menu_course(course_name):
     """Delete a menu course if not used by any menu items."""
+    frappe.only_for("Restaurant Manager")
     used_items = frappe.get_all(
         "URY Menu Item",
         filters={"course": course_name},
