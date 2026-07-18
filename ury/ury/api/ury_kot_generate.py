@@ -9,7 +9,10 @@ from ury.ury_pos.api import getBranch
 def load_json(data):
     """Parse JSON string or return as-is if already a dict."""
     if isinstance(data, str):
-        return json.loads(data)
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            frappe.throw(_("Invalid JSON data"), frappe.ValidationError)
     return data
 
 
@@ -381,6 +384,7 @@ def kot_execute(
     comments=None,
 ):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    frappe.db.savepoint("before_kot_execute")
     # Avoid mutable default argument pitfall
     current_items = load_json(current_items or [])
     previous_items = load_json(previous_items or [])
@@ -421,22 +425,26 @@ def kot_execute(
         "branch": branch,
     }
 
-    if positive_qty_items:
-        process_items_for_kot(
-            **shared_kwargs,
-            items=positive_qty_items,
-            kot_naming_series=kot_naming_series,
-            kot_type="New Order",
-        )
+    try:
+        if positive_qty_items:
+            process_items_for_kot(
+                **shared_kwargs,
+                items=positive_qty_items,
+                kot_naming_series=kot_naming_series,
+                kot_type="New Order",
+            )
 
-    if total_cancel_items:
-        process_items_for_cancel_kot(
-            **shared_kwargs,
-            items=total_cancel_items,
-            cancel_kot_naming_series=cancel_kot_naming_series,
-            kot_type="Partially cancelled",
-            invoiceItems=new_invoice_items_array,
-        )
+        if total_cancel_items:
+            process_items_for_cancel_kot(
+                **shared_kwargs,
+                items=total_cancel_items,
+                cancel_kot_naming_series=cancel_kot_naming_series,
+                kot_type="Partially cancelled",
+                invoiceItems=new_invoice_items_array,
+            )
+    except Exception:
+        frappe.db.rollback(savepoint="before_kot_execute")
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -447,7 +455,14 @@ def compare_two_array(array_1, array_2):
     """Return items in array_1 whose qty differs from array_2."""
     finalarray = []
     # Build a lookup for array_2 keyed by item_code
-    array_2_by_code = {item["item_code"]: item for item in array_2}
+    # Aggregate quantities for duplicate item codes (BE-R36-010)
+    array_2_by_code = {}
+    for item in array_2:
+        code = item["item_code"]
+        if code in array_2_by_code:
+            array_2_by_code[code]["qty"] += item["qty"]
+        else:
+            array_2_by_code[code] = dict(item)
 
     for x in array_1:
         code = x["item_code"]

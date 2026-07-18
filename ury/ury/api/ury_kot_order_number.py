@@ -1,3 +1,4 @@
+import time
 import frappe
 from frappe import _
 
@@ -6,8 +7,13 @@ def set_order_number(doc, event):
     pos_profile = doc.pos_profile
     # Use a cache lock to prevent duplicate order numbers under concurrent inserts
     lock_key = f"ury_order_number_lock:{pos_profile}"
-    if frappe.cache().get_value(lock_key):
-        # Retry after a short delay; if still locked, skip (next save will fix)
+    # Retry up to 10 times with 0.5s delay instead of silently skipping (BE-R36-005)
+    for _ in range(10):
+        if not frappe.cache().get_value(lock_key):
+            break
+        time.sleep(0.5)
+    else:
+        frappe.log_error(f"Order number lock timeout for {pos_profile}", "URY Order Number")
         return
     frappe.cache().set_value(lock_key, True, expires_in_sec=10)
 
@@ -65,6 +71,9 @@ def _do_set_order_number(doc, pos_profile):
             {"pos_profile": pos_profile, "status": "Open"},
             "name",
         )
+        if not pos_open_name:
+            frappe.log_error(f"No open POS Opening Entry for profile {pos_profile}", "Order Number Error")
+            return
 
         if doc.order_type == "Aggregators":
             try:

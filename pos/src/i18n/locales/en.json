@@ -71,7 +71,7 @@
     "click_to_add": "Click items to add them",
     "double_click_hint": "Double-click for customization options",
     "clear_cart": "Clear cart",
-    "total": "Total",
+    "subtotal": "Subtotal",
     "add_new_order": "Add New Order",
     "update_order": "Update Order",
     "updating_order": "Updating Order...",

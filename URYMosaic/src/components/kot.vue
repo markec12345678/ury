@@ -49,6 +49,7 @@
           style="margin-top: 28px"
           role="button"
           tabindex="0"
+          :aria-label="`${kot.tableortakeaway}, Order ${kot.order_no || (kot.invoice ? kot.invoice.slice(-4) : '—')}, ${kot.timeRemaining} elapsed`"
           @keydown.enter="rotateCard(kot)"
           @keydown.space.prevent="rotateCard(kot)"
         >
@@ -59,7 +60,7 @@
               class="absolute inset-0 bg-white z-50 opacity-80 rounded-2xl flex flex-col justify-center items-center"
             >
               <button
-                @click="
+                @click.stop="
                   kot.type === 'Cancelled' || kot.type === 'Partially cancelled'
                     ? confirmOrder(kot)
                     : serveOrder(kot)
@@ -288,7 +289,10 @@ export default {
       isOnline: navigator.onLine,
       statusMessage: "",
       daily_order_number:0,
-      socketHandler: null
+      socketHandler: null,
+      notifiedKots: new Set(),
+      _isMounted: false,
+      _fetchInProgress: null
     };
   },
   methods: {
@@ -322,12 +326,14 @@ export default {
       });
     },
     fetchKOT() {
-      return new Promise((resolve, reject) => {
+      // Deduplicate concurrent fetchKOT calls to prevent state corruption
+      if (this._fetchInProgress) return this._fetchInProgress;
+      this._fetchInProgress = new Promise((resolve, reject) => {
         try {
           this.call
             .get("ury.ury.api.ury_kot_display.kot_list", {})
             .then((result) => {
-              // result processed successfully
+              if (!this._isMounted) { resolve(); return; }
               this.branch = result.message.Branch;
               this.kot_alert_time = result.message.kot_alert_time;
               this.audio_alert = result.message.audio_alert;
@@ -338,7 +344,7 @@ export default {
               }));
               this.updateQtyColorTable();
               this.updateTimeRemaining();
-              this.masonryLoading();
+              this.masonryLoading(true);
               resolve();
             })
             .catch((error) => {
@@ -348,7 +354,10 @@ export default {
         } catch (error) {
           reject(error);
         }
+      }).finally(() => {
+        this._fetchInProgress = null;
       });
+      return this._fetchInProgress;
     },
     rotateCard(kot) {
       this.masonryLoading();
@@ -358,11 +367,11 @@ export default {
       this.call
         .post("ury.ury.api.ury_kot_display.confirm_cancel_kot", {
           name: kot.name,
-          user: this.loggeduser,
         })
         .then((result) => {
-          kot.showDiv = !kot.showDiv;
-
+          if (!this._isMounted) return;
+          const idx = this.kot.findIndex(k => k.name === kot.name);
+          if (idx !== -1) this.kot.splice(idx, 1);
           this.removeAllItemsFromLocalStorage(kot);
           this.masonryLoading();
         })
@@ -372,16 +381,14 @@ export default {
         });
     },
     serveOrder(kot) {
-      const currentTime = new Date().toLocaleTimeString();
-
       this.call
         .post("ury.ury.api.ury_kot_display.serve_kot", {
           name: kot.name,
-          time: currentTime,
         })
         .then((result) => {
-          kot.showDiv = !kot.showDiv;
-
+          if (!this._isMounted) return;
+          const idx = this.kot.findIndex(k => k.name === kot.name);
+          if (idx !== -1) this.kot.splice(idx, 1);
           this.removeAllItemsFromLocalStorage(kot);
           this.masonryLoading();
         })
@@ -491,8 +498,10 @@ export default {
         if (
           minutes === Number(this.kot_alert_time) &&
           kot.type !== "Cancelled" &&
-          kot.type !== "Partially cancelled"
+          kot.type !== "Partially cancelled" &&
+          !this.notifiedKots.has(kot.name)
         ) {
+          this.notifiedKots.add(kot.name);
           this.orderDelayNotify(kot);
         }
         if (minutes >= this.kot_alert_time) {
@@ -506,7 +515,7 @@ export default {
       if (!targetTime || !targetTime.includes(":")) return '— : —';
       const currentTime = new Date();
       const [targetHours, targetMinutes, targetSeconds] = targetTime.split(":");
-      const targetDate = new Date(
+      let targetDate = new Date(
         currentTime.getFullYear(),
         currentTime.getMonth(),
         currentTime.getDate(),
@@ -514,6 +523,10 @@ export default {
         targetMinutes,
         targetSeconds
       );
+      // Handle cross-midnight KOTs: if target is in the future, it was created yesterday
+      if (targetDate > currentTime) {
+        targetDate = new Date(targetDate.getTime() - 86400000);
+      }
 
       const timeDifference = Math.max(0, currentTime - targetDate);
       const hoursRemaining = Math.floor(timeDifference / 3600000);
@@ -529,9 +542,18 @@ export default {
     redirectToLogin() {
       const currentDomain = window.location.origin;
       window.location.href =
-        currentDomain + "/login?redirect-to=URYMosaic/" + this.production;
+        currentDomain + "/login?redirect-to=" + encodeURIComponent("URYMosaic/" + this.production);
     },
-    masonryLoading() {
+    masonryLoading(forceRecreate = false) {
+      if (this.masonry && !forceRecreate) {
+        this.$nextTick(() => {
+          if (this.masonry) {
+            this.masonry.reloadItems?.();
+            this.masonry.layout();
+          }
+        });
+        return;
+      }
       if (this.masonry) {
         this.masonry.destroy();
         this.masonry = null;
@@ -583,6 +605,7 @@ export default {
     this.call = markRaw(frappe.call());
   },
   mounted() {
+    this._isMounted = true;
     window.addEventListener("online", this.handleOnline);
     window.addEventListener("offline", this.handleOffline);
     document.addEventListener("click", this.hideAudioAlertMessage);
@@ -633,9 +656,14 @@ export default {
               // Full refresh needed — skip intermediate mutations
               this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
             } else {
-              // Incremental update
-              const newKot = { isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
-              this.kot.unshift(newKot);
+              // Incremental update — deduplicate to avoid duplicate cards
+              const existingIndex = this.kot.findIndex(k => k.name === doc.kot.name);
+              if (existingIndex !== -1) {
+                Object.assign(this.kot[existingIndex], { timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot });
+              } else {
+                const newKot = { isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
+                this.kot.unshift(newKot);
+              }
               this.updateQtyColorTable();
               this.updateTimeRemaining();
               this.masonryLoading();
@@ -668,6 +696,7 @@ export default {
     this.timer = setInterval(this.updateTimeRemaining, 60000);
   },
   beforeUnmount() {
+    this._isMounted = false;
     window.removeEventListener("online", this.handleOnline);
     window.removeEventListener("offline", this.handleOffline);
     document.removeEventListener("click", this.hideAudioAlertMessage);
@@ -685,11 +714,16 @@ export default {
     if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
     if (this._statusTimeout) clearTimeout(this._statusTimeout);
     if (this.timer) clearInterval(this.timer);
+    alertAudio = null;
   },
   computed: {
     sortedKotItems() {
       return (kot) => {
-        return [...(kot.kot_items || [])].sort((a, b) => a.serve_priority - b.serve_priority);
+        if (!kot._sortedItems || kot._sortKey !== (kot.kot_items || []).length) {
+          kot._sortKey = (kot.kot_items || []).length;
+          kot._sortedItems = [...(kot.kot_items || [])].sort((a, b) => a.serve_priority - b.serve_priority);
+        }
+        return kot._sortedItems;
       };
     },
     visibleKots() {

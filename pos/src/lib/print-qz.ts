@@ -7,13 +7,16 @@ import { getErrorMessage } from './error-utils';
 // (ury.ury.api.ury_print.signature_promise). This ensures the key is never bundled
 // into the client JS and is only available to authenticated users.
 let privateKey: string | undefined;
+let privateKeyExpiry: number = 0;
+const KEY_TTL = 5 * 60 * 1000; // 5 minutes (POS-R36-007)
 let certLoaded = false;
 
 async function loadPrivateKey(): Promise<string> {
-  if (privateKey !== undefined) return privateKey;
+  if (privateKey !== undefined && Date.now() < privateKeyExpiry) return privateKey;
   try {
     const response = await call.get('ury.ury.api.ury_print.signature_promise');
     privateKey = response.message;
+    privateKeyExpiry = Date.now() + KEY_TTL;
     if (!privateKey) {
       throw new Error('Private key not configured in site_config (qz_private_key)');
     }
@@ -39,7 +42,9 @@ export async function loadQzPrinter(host: string): Promise<void> {
   }
 
   if (!qz.websocket.isActive()) {
-    await qz.websocket.connect({ host, usingSecure: false });
+    // Default to secure WebSocket; only disable if explicitly configured (POS-R36-004)
+    const usingSecure = (window as any).__QZ_INSECURE__ !== true;
+    await qz.websocket.connect({ host, usingSecure });
   }
 }
 
@@ -79,4 +84,9 @@ export async function printWithQz(host: string, htmlToPrint: string): Promise<vo
     await loadQzPrinter(host);
     await printing();
   }
+}
+
+export function clearPrivateKey(): void {
+  privateKey = undefined;
+  privateKeyExpiry = 0;
 }

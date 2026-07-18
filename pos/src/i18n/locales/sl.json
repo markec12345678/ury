@@ -74,7 +74,7 @@
     "click_to_add": "Kliknite jedi za dodajanje",
     "double_click_hint": "Dvoklik za prilagoditev",
     "clear_cart": "Počisti košarico",
-    "total": "Skupaj",
+    "subtotal": "Skupaj brez DDV",
     "add_new_order": "Dodaj novo naročilo",
     "update_order": "Posodobi naročilo",
     "updating_order": "Posodabljanje naročila...",

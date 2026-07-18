@@ -248,12 +248,13 @@ def getPosInvoice(status, limit, limit_start):
 @frappe.whitelist()
 def searchPosInvoice(query,status):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    branch = getBranch()
     if not query:
         return {"data": [], "next": False}
     query = query.lower()
     escaped = query.replace("%", r"\\%").replace("_", r"\\_")
     search_value = f"%{escaped}%"
-    filters = {"status": "Paid" if status == "Recently Paid" else status}
+    filters = {"status": "Paid" if status == "Recently Paid" else status, "branch": branch}
     
     # Add additional conditions for Unbilled status
     if status == "Unbilled":
@@ -291,7 +292,7 @@ def get_select_field_options():
 def fav_items(customer):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     invoice_names = frappe.get_all(
-        "POS Invoice", filters={"customer": customer}, fields=["name"], pluck="name"
+        "POS Invoice", filters={"customer": customer, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]}, fields=["name"], pluck="name"
     )
     if not invoice_names:
         return []

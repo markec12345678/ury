@@ -226,11 +226,12 @@ const OrderPanel = () => {
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={() => {
+                          if (!item.uniqueId) return;
                           const newQuantity = Math.max(0, item.quantity - 1);
                           if (newQuantity === 0) {
-                            removeFromOrder(item.uniqueId!);
+                            removeFromOrder(item.uniqueId);
                           } else {
-                            updateQuantity(item.uniqueId!, newQuantity);
+                            updateQuantity(item.uniqueId, newQuantity);
                           }
                         }}
                         variant="outline"
@@ -242,7 +243,7 @@ const OrderPanel = () => {
                       </Button>
                       <span className="w-6 text-center">{item.quantity}</span>
                       <Button
-                        onClick={() => updateQuantity(item.uniqueId!, item.quantity + 1)}
+                        onClick={() => item.uniqueId && updateQuantity(item.uniqueId, item.quantity + 1)}
                         variant="outline"
                         size="icon"
                         className="w-8 h-8 rounded-full"
@@ -253,7 +254,7 @@ const OrderPanel = () => {
                     </div>
                     
                     <Button
-                      onClick={() => removeFromOrder(item.uniqueId!)}
+                      onClick={() => item.uniqueId && removeFromOrder(item.uniqueId)}
                       variant="ghost"
                       size="icon"
                       className="text-red-500 hover:text-red-600"
@@ -294,7 +295,7 @@ const OrderPanel = () => {
                 >
                   <MessageSquare className="w-4 h-4" />
                 </Button>
-                <span className="text-lg font-semibold">{t('cart.total')}</span>
+                <span className="text-lg font-semibold">{t('cart.subtotal')}</span>
               </div>
               <span className="text-lg font-semibold">{formatCurrency(total)}</span>
             </div>

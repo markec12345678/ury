@@ -12,11 +12,12 @@ export function setCurrencySymbol(symbol: string): void {
 
 export function formatCurrency(amount: number): string {
   const symbol = storage.getItem('currencySymbol');
-  if (isNaN(amount)) return symbol ? `${symbol} 0` : '0';
+  if (isNaN(amount)) return symbol ? `${symbol} 0.00` : '0.00';
+  const formatted = Math.abs(amount).toFixed(2);
   if (amount < 0) {
-    return symbol ? `-${symbol} ${Math.abs(amount)}` : String(amount);
+    return symbol ? `-${symbol} ${formatted}` : `-${formatted}`;
   }
-  return symbol ? `${symbol} ${amount}` : String(amount);
+  return symbol ? `${symbol} ${formatted}` : formatted;
 } 
 
 export const formatInvoiceTime = (timestamp: string | null) => {
