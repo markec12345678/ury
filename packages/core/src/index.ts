@@ -4,6 +4,10 @@ export { isUserRestrictedFromTableOrders, canCaptainTransfer } from './frappe/ro
 export type { User, PosProfileCombined } from './types';
 export { storage } from './storage';
 export { formatCurrency, formatInvoiceTime } from './format';
+export { formatDate, formatNumber } from './format-date';
+export type { DatePreset, FormatDateOptions, FormatNumberOptions } from './format-date';
+export { validateEmail, validatePhone } from './validation';
+export { clamp, sleep, debounce } from './utils';
 export { initPrinting, loadQzPrinter, disconnectQzPrinter, printWithQz } from './print/qz';
 export {
   isValidEmail,
