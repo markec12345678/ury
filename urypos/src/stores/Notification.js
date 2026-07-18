@@ -33,7 +33,7 @@ export const useNotifications = defineStore("notification", {
       const timeoutId = setTimeout(() => {
         notif.remove();
         container.remove(); // Remove the container after the notification is removed
-      }, 900);
+      }, 3000);
 
       closeBtn.addEventListener("click", () => {
         clearTimeout(timeoutId);

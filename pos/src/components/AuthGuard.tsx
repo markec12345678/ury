@@ -13,12 +13,12 @@ const AuthGuard: React.FC<Props> = ({ children }) => {
   const { 
     checkAuth, 
     user, 
-    isLoading: authLoading, 
-    error: authError,
+    authLoading, 
+    authError,
     fetchPosProfile,
     posProfile,
-    isLoading: configLoading,
-    error: configError,
+    configLoading,
+    configError,
     hasAccess,
   } = useRootStore();
 

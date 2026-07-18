@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 from ury.ury_pos.api import getBranch
 
 
@@ -355,7 +356,7 @@ def create_cancel_kot_doc(
             {
                 "item": cancelItem["item_code"],
                 "item_name": cancelItem["item_name"],
-                "cancelled_qty": abs(int(cancelItem["qty"])),
+                "cancelled_qty": abs(flt(cancelItem["qty"])),
                 "quantity": matching_invoice_item["qty"],
                 "comments": cancelItem["comments"],
                 "course": item_courses.get(cancelItem["item_code"]),
@@ -379,6 +380,7 @@ def kot_execute(
     previous_items=None,
     comments=None,
 ):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     # Avoid mutable default argument pitfall
     current_items = load_json(current_items or [])
     previous_items = load_json(previous_items or [])

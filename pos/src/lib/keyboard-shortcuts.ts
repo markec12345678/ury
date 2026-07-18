@@ -24,7 +24,7 @@
  *   useShortcut('search', () => { ... });
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { logger } from './logger';
 
 export interface KeyboardShortcut {
@@ -194,7 +194,9 @@ export function useShortcut(
   handler: () => void,
   options?: Partial<Omit<KeyboardShortcut, 'id' | 'handler'>>
 ): void {
-  const stableHandler = useCallback(handler, [handler]);
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+  const stableHandler = useCallback(() => handlerRef.current(), []);
 
   useEffect(() => {
     shortcutRegistry.register({

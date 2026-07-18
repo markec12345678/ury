@@ -6,7 +6,7 @@ const ScreenSizeDialog = () => {
   const handleSwitchToVersion1 = () => {
     // Get the current domain and open /urypos in a new tab
     const currentDomain = window.location.origin;
-    window.open(`${currentDomain}/urypos`, '_blank');
+    window.open(`${currentDomain}/urypos`, '_blank', 'noopener,noreferrer');
   };
 
   return (

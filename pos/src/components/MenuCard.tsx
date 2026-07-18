@@ -26,6 +26,7 @@ const MenuCard: FC<MenuCardProps> = ({
     <div
       role="button"
       tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled || undefined}
       aria-label={`${name}, ${formatCurrency(price)}${course ? `, ${course}` : ''}`}
       className={cn(
         'bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-56 flex flex-col',

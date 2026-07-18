@@ -8,6 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(amount: number): string {
   const symbol = storage.getItem('currencySymbol');
+  if (amount < 0) {
+    return symbol ? `-${symbol} ${Math.abs(amount)}` : String(amount);
+  }
   return symbol ? `${symbol} ${amount}` : String(amount);
 } 
 

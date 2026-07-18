@@ -121,7 +121,7 @@ def sync_order(
     aggregator_id=None,
     room=None
 ):
-    
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     user_role = frappe.get_roles()
     billing_roles = frappe.get_all(
         "POS Profile Role",
@@ -304,7 +304,7 @@ def sync_order(
             "URY Table", table, {"occupied": 1, "latest_invoice_time": invoice.creation}
         )
 
-    invoice.db_set("owner", cashier)
+    invoice.db_set("owner", frappe.session.user)
     return invoice.as_dict()
 
 
@@ -539,6 +539,7 @@ def customer_favourite_item(customer_name):
 
 @frappe.whitelist()
 def cancel_order(invoice_id, reason):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not frappe.has_permission("POS Invoice", "cancel", invoice_id):
         frappe.throw(_("Not permitted to cancel orders"), frappe.PermissionError)
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
@@ -568,6 +569,7 @@ def cancel_order(invoice_id, reason):
 # Method for URY POS
 @frappe.whitelist()
 def make_invoice(customer, payments, cashier, pos_profile,owner, additionalDiscount=None, table=None, invoice=None):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     order_type = frappe.get_value("POS Invoice", invoice, "order_type")
     invoice = get_order_invoice(table, invoice, order_type, "Payments")
 

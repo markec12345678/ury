@@ -107,12 +107,12 @@ export const posClosing = defineStore("posClose", {
         .then((result) => {
           this.invoiceDetails = result.message;
           let paymentAggregated = {};
+          let combinedTaxes = {};
           this.invoiceDetails.forEach((payment) => {
             this.grandTotal += parseFloat(payment.grand_total);
             this.netTotal += parseFloat(payment.net_total);
             this.totalQty += parseFloat(payment.total_qty);
             let taxes = payment.taxes;
-            let combinedTaxes = {};
 
             taxes.forEach((item) => {
               if (!combinedTaxes[item.account_head]) {
@@ -125,8 +125,6 @@ export const posClosing = defineStore("posClose", {
               combinedTaxes[item.account_head].tax_amount += item.tax_amount;
             });
 
-            this.taxes = Object.values(combinedTaxes);
-
             payment.payments.forEach((item) => {
               if (!paymentAggregated[item.mode_of_payment]) {
                 paymentAggregated[item.mode_of_payment] = {
@@ -138,6 +136,7 @@ export const posClosing = defineStore("posClose", {
                 item.amount;
             });
           });
+          this.taxes = Object.values(combinedTaxes);
           this.payments = Object.values(paymentAggregated);
 
           this.posInvoice = this.invoiceDetails.map((item) => ({

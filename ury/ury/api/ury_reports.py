@@ -168,11 +168,14 @@ def get_inventory_report(from_date=None, to_date=None):
     branch = _get_user_branch()
 
     # Material consumption
+    material_filters = {
+        "date": ["between", [from_date, to_date]],
+    }
+    if branch:
+        material_filters["branch"] = branch
     materials = frappe.get_all(
         "URY Materials",
-        filters={
-            "date": ["between", [from_date, to_date]],
-        },
+        filters=material_filters,
         fields=["name", "date", "item", "qty", "rate", "amount"],
         order_by="date"
     )
@@ -196,19 +199,30 @@ def get_expense_report(from_date=None, to_date=None):
     from_date = getdate(from_date)
     to_date = getdate(to_date)
 
+    branch = _get_user_branch()
+
     # Fixed expenses
+    fixed_filters = {
+        "date": ["between", [from_date, to_date]],
+    }
+    if branch:
+        fixed_filters["branch"] = branch
     fixed_expenses = frappe.get_all(
         "URY Fixed Expenses",
-        fields=["name", "expense_type", "amount", "description"],
+        filters=fixed_filters,
+        fields=["name", "date", "expense_type", "amount", "description"],
         order_by="expense_type"
     )
 
     # Variable expenses
+    variable_filters = {
+        "date": ["between", [from_date, to_date]],
+    }
+    if branch:
+        variable_filters["branch"] = branch
     variable_expenses = frappe.get_all(
         "URY Variable Expenses",
-        filters={
-            "date": ["between", [from_date, to_date]],
-        },
+        filters=variable_filters,
         fields=["name", "date", "expense_type", "amount", "description"],
         order_by="date"
     )
@@ -427,7 +441,7 @@ def _sales_report_html(data, company, currency):
                 <p class="period">{data.get('from_date', '')} - {data.get('to_date', '')}</p>
             </div>
             <div style="text-align: right;">
-                <strong>{company}</strong><br>
+                <strong>{_html.escape(str(company))}</strong><br>
                 <span class="period">Generated: {frappe.utils.now()}</span>
             </div>
         </div>

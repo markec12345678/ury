@@ -128,7 +128,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     setError(null);
     try {
       await call.post('ury.ury.doctype.ury_order.ury_order.make_invoice', {
-        additionalDiscount: discountValue ? parseFloat(discountValue) : null,
+        additionalDiscount: appliedDiscount > 0 ? (appliedDiscount / grandTotal * 100) : null,
         cashier,
         customer,
         invoice,

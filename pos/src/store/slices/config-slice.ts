@@ -6,8 +6,8 @@ import { getErrorMessage } from '../../lib/error-utils';
 
 export interface ConfigState {
   allowedRoles: string[];
-  isLoading: boolean;
-  error: string | null;
+  configLoading: boolean;
+  configError: string | null;
   hasAccess: boolean;
   posProfile: PosProfileCombined | null;
 }
@@ -22,8 +22,8 @@ export type ConfigSlice = ConfigState & ConfigActions;
 
 const initialState: ConfigState = {
   allowedRoles: [],
-  isLoading: false,
-  error: null,
+  configLoading: false,
+  configError: null,
   hasAccess: false,
   posProfile: null,
 };
@@ -38,7 +38,7 @@ export const createConfigSlice: StateCreator<
 
   fetchPosProfile: async (forceRefresh = false) => {
     try {
-      set({ isLoading: true, error: null });
+      set({ configLoading: true, configError: null });
 
       // Check session storage first if not forcing refresh
       const cached = sessionStorage.getItem('posProfile');
@@ -49,7 +49,7 @@ export const createConfigSlice: StateCreator<
           // Extract and set allowed roles from the profile
           const allowedRoles = profile.role_allowed_for_billing?.map((role: RolePermission) => role.role) || [];
           get().setAllowedRoles(allowedRoles);
-          set({ isLoading: false });
+          set({ configLoading: false });
           return;
         } catch {
           sessionStorage.removeItem('posProfile');
@@ -66,11 +66,11 @@ export const createConfigSlice: StateCreator<
       // Extract and set allowed roles from the profile
       const allowedRoles = profile.role_allowed_for_billing?.map((role: RolePermission) => role.role) || [];
       get().setAllowedRoles(allowedRoles);
-      set({ isLoading: false });
+      set({ configLoading: false });
     } catch (error) {
       set({ 
-        error: getErrorMessage(error),
-        isLoading: false,
+        configError: getErrorMessage(error),
+        configLoading: false,
       });
     }
   },

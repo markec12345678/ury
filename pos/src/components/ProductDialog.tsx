@@ -81,7 +81,6 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
 
   // Fetch Item doc once when dialog opens or selectedItem changes
   // (previously two separate useEffects fetching the same doc)
-  const [_addonItemCodes, setAddonItemCodes] = useState<string[]>([]);
   const [isAddonLoading, setIsAddonLoading] = useState(false);
   const [addonError, setAddonError] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
@@ -91,7 +90,6 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
       setItemDoc(null);
       setItemError(null);
       setIsItemLoading(false);
-      setAddonItemCodes([]);
       setAddonError(null);
       setIsAddonLoading(false);
       return;
@@ -105,22 +103,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
       .then((doc: FrappeItemDoc) => {
         if (cancelled) return;
         setItemDoc(doc);
-        // Extract addon codes from the same response
-        if (Array.isArray(doc.custom_pos_add_on_items)) {
-          const codes = doc.custom_pos_add_on_items
-            .map((entry) => entry.item)
-            .filter(Boolean);
-          setAddonItemCodes(codes);
-        } else {
-          setAddonItemCodes([]);
-        }
       })
       .catch(() => {
         if (cancelled) return;
         setItemError(t('errors.failed_fetch_item_details'));
         setItemDoc(null);
         setAddonError(t('errors.failed_fetch_addons'));
-        setAddonItemCodes([]);
       })
       .finally(() => {
         if (!cancelled) {

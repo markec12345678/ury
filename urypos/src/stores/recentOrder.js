@@ -95,7 +95,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
       }
     },
     totalAmount() {
-      return (this.grandTotal - (this.percentage / 100) * this.grandTotal).toFixed(3);
+      return (this.grandTotal - (this.percentage / 100) * this.grandTotal).toFixed(2);
     },
     totalPercentage() {
       return this.grandTotal - (this.percentage / 100) * this.grandTotal;
@@ -116,7 +116,6 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
           .then((result) => {
             this.recentOrderList = result.message.data;
             this.next = result.message.next;
-            return this.recentOrderList, this.next;
           })
           .catch((error) => console.error(error));
       }
@@ -131,7 +130,6 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
         .then((result) => {
           this.recentOrderList = result.message.data;
           this.next = result.message.next;
-          return this.recentOrderList, this.next;
         })
         .catch((error) => console.error(error));
       }
@@ -164,7 +162,6 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
         .then((result) => {
           this.recentOrderList = result.message.data;
           this.next = result.message.next;
-          return this.recentOrderList, this.next;
         })
         .catch((error) => console.error(error));
     },

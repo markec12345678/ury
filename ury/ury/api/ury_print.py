@@ -74,6 +74,12 @@ def network_printing(
         except Exception as e:
             frappe.log_error(message=frappe.get_traceback(), title="Network Printing - Print Error")
             frappe.throw(_("Failed to print: {0}").format(str(e)))
+        finally:
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
     except Exception as e:
         frappe.log_error(message=frappe.get_traceback(), title="Network Printing Error")
         frappe.throw(_("An error occurred: {0}").format(str(e)))
@@ -121,15 +127,8 @@ def qz_print_update(invoice):
             invoice_printed = frappe.db.get_value("POS Invoice", invoice, "invoice_printed")
 
             if invoice_printed == 0:
-                # Use a single SQL transaction to update both atomically
-                frappe.db.sql(
-                    """UPDATE `tabPOS Invoice` SET invoice_printed = 1 WHERE name = %s""",
-                    invoice,
-                )
-                frappe.db.sql(
-                    """UPDATE `tabURY Table` SET occupied = 0, latest_invoice_time = NULL WHERE name = %s""",
-                    table,
-                )
+                frappe.db.set_value("POS Invoice", invoice, "invoice_printed", 1, update_modified=False)
+                frappe.db.set_value("URY Table", table, {"occupied": 0, "latest_invoice_time": None}, update_modified=False)
 
         return {"status": "Success"}
 

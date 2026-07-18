@@ -183,7 +183,7 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
             customToDate || undefined
           );
           if (pdfUrl) {
-            window.open(pdfUrl, '_blank');
+            window.open(pdfUrl, '_blank', 'noopener,noreferrer');
             set({ exporting: false });
             showToast.success('PDF report generated');
             return;

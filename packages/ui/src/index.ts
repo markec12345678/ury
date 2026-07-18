@@ -5,8 +5,10 @@ export { cn } from './lib/cn';
 
 // Components
 export * from './components/accordion';
+export * from './components/alert';
 export * from './components/avatar';
 export * from './components/badge';
+export * from './components/breadcrumb';
 export * from './components/button';
 export * from './components/card';
 export * from './components/checkbox';
@@ -18,8 +20,8 @@ export * from './components/empty-state';
 export * from './components/input';
 export * from './components/loader';
 export { default as Loader } from './components/loader';
-export * from './components/progress';
 export * from './components/popover';
+export * from './components/progress';
 export * from './components/select';
 export * from './components/separator';
 export * from './components/skeleton';

@@ -235,9 +235,7 @@ export const useAuthStore = defineStore("auth", {
       this.auth
         .logout()
         .then(() => {
-          router.push("/login").then(() => {
-            router.push("/Table").catch(() => {});
-          });
+          router.push("/login");
           localStorage.removeItem("userAuth");
           disconnectQzPrinter();
         })

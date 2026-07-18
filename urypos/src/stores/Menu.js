@@ -367,7 +367,7 @@ export const useMenuStore = defineStore("menu", {
       if (!itemIndexExists) {
         item.qty = 1;
         item.comment = "";
-        this.cart.push(item);
+        this.cart.push(JSON.parse(JSON.stringify(item)));
 
         let message = `Added ${item.item} to Cart`;
         notification.createNotification(message);

@@ -5,6 +5,7 @@ CRUD operations for menu items, categories (courses), and prices.
 
 import frappe
 import json
+from frappe import _
 from ury.ury.api.utils import _get_user_branch
 
 
@@ -100,6 +101,9 @@ def toggle_menu(menu_name, enabled):
 def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
     """Add an item to a URY Menu."""
     frappe.only_for("Restaurant Manager")
+    rate = float(rate)
+    if rate < 0:
+        frappe.throw(_("Rate cannot be negative"))
     menu = frappe.get_doc("URY Menu", menu_name)
 
     for existing_item in menu.items:
@@ -112,7 +116,7 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
     menu.append("items", {
         "item": item,
         "item_name": item_name,
-        "rate": float(rate),
+        "rate": rate,
         "special_dish": special_dish,
         "disabled": 0,
         "course": course,
@@ -178,7 +182,10 @@ def batch_update_prices(menu_name, updates):
     for update in updates:
         for item in menu.items:
             if item.name == update.get("item_row_name"):
-                item.rate = float(update.get("rate", item.rate))
+                rate = float(update.get("rate", item.rate))
+                if rate < 0:
+                    frappe.throw(_("Rate cannot be negative"))
+                item.rate = rate
                 updated += 1
                 break
 

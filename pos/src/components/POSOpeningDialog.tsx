@@ -13,7 +13,7 @@ const POSOpeningDialog = ({ onReload, type }: POSOpeningDialogProps) => {
   const handleSwitchToDesk = () => {
     // Get the current domain and open /app in a new tab
     const currentDomain = window.location.origin;
-    window.open(`${currentDomain}/app`, '_blank');
+    window.open(`${currentDomain}/app`, '_blank', 'noopener,noreferrer');
   };
   
   return (

@@ -9,23 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **5 new UI components** (`@ury/ui`) — DropdownMenu (4 stories), Accordion (5 stories), Drawer (5 stories), Popover (4 stories), Command palette (5 stories). Total: 24 components, 97 stories.
-- **69 unit tests** for DropdownMenu (25), Accordion (18), and Drawer (26) components.
+- **2 new UI components** (`@ury/ui`) — Alert (7 stories) with Title/Description sub-components and 5 variants (default/info/success/warning/danger), Breadcrumb (5 stories) with List/Item/Link/Separator/Ellipsis sub-components. Total: 26 components, 109 stories.
 - **extractServerMessage utility** — Safe `error._server_messages` parser for both React (TypeScript) and Vue (Pinia) stores, eliminating 18+ unsafe `JSON.parse` patterns.
 - **Shared backend utility** — `ury/ury/api/utils.py` with canonical `_get_user_branch()` function (previously duplicated 3×).
 
 ### Fixed
 
-- **Backend (5 CRITICAL)**: XSS in ury_reports.py (`_html.escape` called as function, not literal text), data corruption in cancel_order (raw SQL → standard Frappe `cancel()`), missing `import re` crash, `qz_certificate()` secret exposure (added role check), 19 unguarded API endpoints now have `frappe.only_for()` authorization.
-- **POS React (5 CRITICAL)**: XSS in AIInsightsPanel (replaced `dangerouslySetInnerHTML` with React-safe rendering), auto-refresh memory leak (moved timer to component lifecycle), race conditions in ProductDialog and POSOpeningProvider (cancellation flags), unsafe JSON.parse in menu-management-store.
-- **Mosaic KDS (4 CRITICAL)**: `markRaw()` for frappe SDK instances in 8 Pinia stores (prevents proxy breakage), shared object aliasing between stores (deep-clone), unhandled user-cancellation rejection, missing error handling on fetchUserDetails.
-- **25+ HIGH fixes**: PaymentDialog double-fetch, wrong `owner` prop in Orders, inline component re-renders, unmemized callbacks, resize handler without debounce, dashboard store error handling, Notification store timeout cleanup, localStorage.removeItem invalid args, route-before-data navigation, isPrinting stuck on error, duplicate routes, pagination guard.
-- **15+ MEDIUM fixes**: ProductDialog loading/error display, CustomerSelect relatedTarget blur, Dashboard i18n (8 new keys), Orders stable keys, MenuCard unused prop, recentOrder.vue v-if guard, v-for :key attributes, computed getter side effect, aggregatorItem type consistency, posClosing per-row binding, async/await consistency, customer_favourite_item 90-day limit, report HTML file cleanup, unused imports.
+- **Backend (4 HIGH)**: Owner spoofing via client-controlled `cashier` in sync_order (now uses `frappe.session.user`), missing `frappe.only_for()` on sync_order/make_invoice/cancel_order/kot_execute, cross-branch data leaks in payment method chart, inventory report, and expense reports (branch filter added), integer truncation in KOT cancel quantities (`int()` → `flt()`).
+- **Backend (6 MEDIUM)**: Non-atomic dual SQL UPDATE in qz_print_update (replaced with `frappe.db.set_value`), XSS in report HTML for company name (added `_html.escape`), missing branch/date filters in expense reports, negative rate not validated in menu management, temp PDF file not cleaned up after network printing.
+- **Backend (2 LOW)**: App permission too restrictive in permission.py (added Restaurant Manager/User roles), missing negative rate validation.
+- **POS React (2 HIGH)**: AuthGuard overlapping `isLoading`/`error` state from root store (renamed to `authLoading`/`authError`/`configLoading`/`configError`), PaymentDialog discount validation bypass (now sends validated `appliedDiscount` instead of raw `discountValue`).
+- **POS React (4 MEDIUM)**: `window.open` missing `noopener,noreferrer` in 3 locations (tab-nabbing prevention), `useShortcut` stableHandler defeating memoization (ref-based approach), `formatCurrency` negative amount display (`€ -50` → `-€ 50`), `MenuCard` missing `aria-disabled` when disabled.
+- **POS React (2 LOW)**: Unused `_addonItemCodes` state removed from ProductDialog, `formatCurrency` negative amount handling.
+- **Mosaic KDS (1 CRITICAL)**: Cancel confirmation in invoiceCreation now properly checked — cancelled modal prevents invoice creation.
+- **Mosaic KDS (4 HIGH)**: `markRaw()` on 8 store instances in invoiceData.js, `fetchInvoiceDetails` refactored from await+.then antipattern to clean async/await, POS Closing taxes accumulation bug (combinedTaxes moved outside forEach loop), addToCart pushes deep-clone instead of direct reference.
+- **Mosaic KDS (5 MEDIUM)**: Comma expression in recentOrder return statements removed, `totalAmount` toFixed(3) → toFixed(2), logout double router.push simplified, notification timeout 900ms → 3000ms, double router.push in invoiceCreation removed.
+- **Mosaic KDS (1 LOW)**: Redundant previousOrderItem double splice simplified.
 
 ### Changed
 
-- **README.md** — Updated component count to 24, story count to 97, added 5 new components to table.
-- **Barrel exports** (`packages/ui/src/index.ts`) — Added Accordion, Drawer, DropdownMenu, Popover, Command component exports.
+- **README.md** — Updated component count to 26, story count to 109, added Alert and Breadcrumb to component list.
+- **Barrel exports** (`packages/ui/src/index.ts`) — Added Alert and Breadcrumb component exports.
+- **Auth slice** — `isLoading` → `authLoading`, `error` → `authError` for unique state in root store.
+- **Config slice** — `isLoading` → `configLoading`, `error` → `configError` for unique state in root store.
 
 ## [0.0.0] - 2025-01-01
 

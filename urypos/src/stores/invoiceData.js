@@ -58,82 +58,85 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
     previousOrderItem: [],
     db: markRaw(frappe.db()),
     call: markRaw(frappe.call()),
-    alert: useAlert(),
-    auth: useAuthStore(),
-    menu: useMenuStore(),
-    table: useTableStore(),
-    customers: useCustomerStore(),
-    notification: useNotifications(),
-    recentOrders: usetoggleRecentOrder(),
-    notificationModal: useNotificationModal(),
+    alert: markRaw(useAlert()),
+    auth: markRaw(useAuthStore()),
+    menu: markRaw(useMenuStore()),
+    table: markRaw(useTableStore()),
+    customers: markRaw(useCustomerStore()),
+    notification: markRaw(useNotifications()),
+    recentOrders: markRaw(usetoggleRecentOrder()),
+    notificationModal: markRaw(useNotificationModal()),
   }),
   actions: {
     async fetchInvoiceDetails() {
       try {
-        await this.call.get("ury.ury_pos.api.getPosProfile").then((result) => {
-          this.invoiceDetails = result.message;
-          this.tableAttention = this.invoiceDetails.tableAttention;
-          this.warehouse = this.invoiceDetails.warehouse;
-          this.posProfile = this.invoiceDetails.pos_profile;
-          this.waiter = this.invoiceDetails.waiter;
-          this.cashier = this.invoiceDetails.cashier;
-          this.owner = this.invoiceDetails.owner
-          this.branch = this.invoiceDetails.branch;
-          this.company = this.invoiceDetails.company;
-          this.print_format = this.invoiceDetails.print_format;
-          this.qz_print = this.invoiceDetails.qz_print;
-          this.qz_host = this.invoiceDetails.qz_host;
-          this.print_type = this.invoiceDetails.print_type;
-          this.printer = this.invoiceDetails.printer;
-          this.paidLimit = this.invoiceDetails.paid_limit;
-          this.disableRoundedTotal = this.invoiceDetails.disable_rounded_total;
-          this.enableDiscount = this.invoiceDetails.enable_discount;
-          this.enableKotReprint=this.invoiceDetails.enable_kot_reprint;
-          this.multipleCashier=this.invoiceDetails.multiple_cashier
-          this.editOrderType=this.invoiceDetails.edit_order_type
-          if (this.qz_host) {
-            loadQzPrinter(this.qz_host);
+        const result = await this.call.get("ury.ury_pos.api.getPosProfile");
+        this.invoiceDetails = result.message;
+        this.tableAttention = this.invoiceDetails.tableAttention;
+        this.warehouse = this.invoiceDetails.warehouse;
+        this.posProfile = this.invoiceDetails.pos_profile;
+        this.waiter = this.invoiceDetails.waiter;
+        this.cashier = this.invoiceDetails.cashier;
+        this.owner = this.invoiceDetails.owner
+        this.branch = this.invoiceDetails.branch;
+        this.company = this.invoiceDetails.company;
+        this.print_format = this.invoiceDetails.print_format;
+        this.qz_print = this.invoiceDetails.qz_print;
+        this.qz_host = this.invoiceDetails.qz_host;
+        this.print_type = this.invoiceDetails.print_type;
+        this.printer = this.invoiceDetails.printer;
+        this.paidLimit = this.invoiceDetails.paid_limit;
+        this.disableRoundedTotal = this.invoiceDetails.disable_rounded_total;
+        this.enableDiscount = this.invoiceDetails.enable_discount;
+        this.enableKotReprint = this.invoiceDetails.enable_kot_reprint;
+        this.multipleCashier = this.invoiceDetails.multiple_cashier;
+        this.editOrderType = this.invoiceDetails.edit_order_type;
+
+        if (this.qz_host) {
+          loadQzPrinter(this.qz_host);
+        }
+
+        try {
+          const doc = await this.db.getDoc("Company", this.company);
+          try {
+            const currency = await this.db.getDoc("Currency", doc.default_currency);
+            this.currency = currency.symbol;
+          } catch (error) {
+            if (error._server_messages) {
+              this.alert.createAlert(
+                "Message",
+                "You do not have Read or Select Permissions for Currency",
+                "OK"
+              );
+            }
           }
-          this.db
-            .getDoc("Company", this.company)
-            .then((doc) => {
-              this.db
-                .getDoc("Currency", doc.default_currency)
-                .then((currency) => {
-                  this.currency = currency.symbol;
-                })
-                .catch((error) => {
-                  if (error._server_messages) {
-                    this.alert.createAlert(
-                      "Message",
-                      "You do not have Read or Select Permissions for Currency",
-                      "OK"
-                    );
-                  }
-                });
-            })
-            .catch((error) => {
-              if (error._server_messages) {
-                this.alert.createAlert(
-                  "Message",
-                  "You do not have Read or Select Permissions for Company",
-                  "OK"
-                );
-              }
-            });
-        });
+        } catch (error) {
+          if (error._server_messages) {
+            this.alert.createAlert(
+              "Message",
+              "You do not have Read or Select Permissions for Company",
+              "OK"
+            );
+          }
+        }
+
+        try {
+          const modeResult = await this.call.get("ury.ury_pos.api.getModeOfPayment", {
+            pos_profile: this.posProfile,
+          });
+          this.defaultModeOfPayment = modeResult.message;
+        } catch (error) {
+          if (error._server_messages) {
+            const message = extractServerMessage(error);
+            this.alert.createAlert("Message", message, "OK");
+          }
+        }
       } catch (error) {
         if (error._server_messages) {
           const message = extractServerMessage(error);
           this.alert.createAlert("Message", message, "OK");
         }
       }
-      this.call
-        .get("ury.ury_pos.api.getModeOfPayment")
-        .then((result) => {
-          this.modeOfPaymentList = result.message;
-        })
-        .catch(() => {});
     },
 
     // Method for creating an invoice
@@ -233,7 +236,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
           }
     
           // Show confirmation modal and wait for user response
-          await new Promise((resolve, reject) => {
+          const modalResult = await new Promise((resolve, reject) => {
             this.notificationModal.showModal({
               title: "Are You Sure to remove these items?",
               message: errorMsg.join('\n'),
@@ -242,7 +245,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
               onConfirm: () => {
                 this.invoiceUpdating = true;
                 this.showUpdateButtton = true;
-                resolve();
+                resolve({ cancelled: false });
               },
               onCancel: () => {
                 this.showUpdateButtton = true;
@@ -251,6 +254,9 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
               }
             });
           });
+          if (modalResult.cancelled) {
+            return;
+          }
         }
       }
     
@@ -311,7 +317,6 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
     
             await this.alert.createAlert("Message", message, "OK");
             await router.push("/Table");
-            router.push("/Table").catch(() => {});
             return;
           }
         }
@@ -329,7 +334,6 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         
         this.table.previousOrderdItem = JSON.parse(JSON.stringify(response.message.items));
         this.recentOrders.pastOrderdItem = JSON.parse(JSON.stringify(response.message.items));
-        this.previousOrderItem.splice(0, this.previousOrderItem.length);
         this.previousOrderItem.splice(0, this.previousOrderItem.length, ...cartCopy);
         this.invoiceUpdating = false;
         this.table.modifiedTime = response.message.modified;

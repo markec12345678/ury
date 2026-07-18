@@ -10,8 +10,8 @@ export interface User {
 
 export interface AuthState {
   user: User | null;
-  isLoading: boolean;
-  error: string | null;
+  authLoading: boolean;
+  authError: string | null;
 }
 
 export interface AuthActions {
@@ -24,8 +24,8 @@ export type AuthSlice = AuthState & AuthActions;
 
 const initialState: AuthState = {
   user: null,
-  isLoading: false,
-  error: null,
+  authLoading: false,
+  authError: null,
 };
 
 export const createAuthSlice: StateCreator<AuthSlice> = (set, _get) => ({
@@ -33,7 +33,7 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, _get) => ({
 
   checkAuth: async () => {
     try {
-      set({ isLoading: true, error: null });
+      set({ authLoading: true, authError: null });
       const response = await getLoggedUser();
       
       if (!response) {
@@ -51,12 +51,12 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, _get) => ({
           full_name: roles.full_name,
           roles: roles.roles,
         },
-        isLoading: false,
+        authLoading: false,
       });
     } catch (error) {
       set({ 
-        error: getErrorMessage(error),
-        isLoading: false,
+        authError: getErrorMessage(error),
+        authLoading: false,
         user: null,
       });
       // Redirect to login on error

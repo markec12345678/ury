@@ -165,6 +165,8 @@ def get_payment_method_chart(period="this_month"):
     if branch:
         filters["branch"] = branch
 
+    branch_clause = "AND pe.branch = %s" if branch else ""
+
     payments = frappe.db.sql("""
         SELECT 
             mop.mode_of_payment as payment_method,
@@ -176,9 +178,10 @@ def get_payment_method_chart(period="this_month"):
         WHERE per.reference_doctype = 'POS Invoice'
         AND pe.posting_date BETWEEN %s AND %s
         AND pe.docstatus = 1
+        {branch_clause}
         GROUP BY mop.mode_of_payment
         ORDER BY total_amount DESC
-    """, (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     return {"data": payments}
 
