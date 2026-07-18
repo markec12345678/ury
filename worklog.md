@@ -532,3 +532,21 @@ Stage Summary:
 - @ury/ui: 26 → 28 components, 109 → 119 stories
 - 32 new unit tests (all passing)
 - Cumulative across all 33 rounds: ~444+ issues fixed
+---
+Task ID: R36
+Agent: Main Agent
+Task: Round 36 code audit and fixes for URY POS system
+
+Work Log:
+- Launched 3 parallel audit agents (POS React, KDS Vue, Frappe Backend)
+- Found 72 total issues: 7 CRITICAL, 22 HIGH, 28 MEDIUM, 15 LOW
+- Fixed all 7 CRITICAL, 15 HIGH, and 10 MEDIUM issues
+- TypeScript compilation: 0 errors
+- Python compilation: all files passing
+- Committed and pushed to fork/develop
+
+Stage Summary:
+- POS PaymentDialog: switched to frappe-sdk-retry, fixed Math.ceil overcharge
+- KDS kot.vue: added _isMounted guards, doc.kot null check, strikethrough preservation, namespaced localStorage, route params, CSRF token, instance-level audio
+- Backend: fixed NameError in ury_kot_order_number.py, reduced busy-wait, fixed int()→flt() qty, XSS in reports, empty items guard, validation in ury_daily_p_and_l
+- Key remaining issues: divergent posProfile between stores, .format() SQL pattern in dashboard/reports, ignore_permissions in menu management
