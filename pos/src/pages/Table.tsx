@@ -33,7 +33,7 @@ const TableView = () => {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
   const [roomCounts, setRoomCounts] = useState<Record<string, number>>({});
-  const [_loadingRoomCounts, setLoadingRoomCounts] = useState(false);
+  const [, setLoadingRoomCounts] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [printingTable, setPrintingTable] = useState<string | null>(null);
 

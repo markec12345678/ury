@@ -100,7 +100,8 @@ export async function addCustomer(
 }
 
 function getscramblePattern(text: string) {
-  return `%${text.split("").join("%")}%`;
+  const escaped = text.replace(/[%_\\]/g, '\\$&');
+  return `%${escaped.split("").join("%")}%`;
 }
 
 export async function searchCustomers(search: string, limit = 5) {

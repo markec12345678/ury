@@ -38,7 +38,7 @@ const PaymentMethodChart = () => {
           }))
         );
       } catch (error) {
-        console.error('Failed to fetch payment method chart:', error);
+        if (import.meta.env.DEV) console.error('Failed to fetch payment method chart:', error);
         setData([]);
       } finally {
         setLoading(false);
@@ -58,25 +58,6 @@ const PaymentMethodChart = () => {
   const totalAmount = useMemo(() => {
     return chartData.reduce((sum, item) => sum + item.value, 0);
   }, [chartData]);
-
-  const _renderCenterText = () => {
-    return (
-      <text
-        x="50%"
-        y="50%"
-        textAnchor="middle"
-        dominantBaseline="central"
-        className="fill-gray-700"
-      >
-        <tspan x="50%" dy="-0.5em" fontSize="12" className="fill-gray-400">
-          {t('dashboard.total_revenue')}
-        </tspan>
-        <tspan x="50%" dy="1.5em" fontSize="14" fontWeight="bold" className="fill-gray-900">
-          {formatCurrency(totalAmount)}
-        </tspan>
-      </text>
-    );
-  };
 
   const customTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) => {
     if (active && payload && payload.length) {

@@ -101,7 +101,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         [DEFAULT_PAYMENT_MODE]:String(finalTotal) 
       }))
     }
-  },[finalTotal,paymentModes])
+  },[finalTotal,paymentModes,paymentInputs])
 
   // Helper to calculate remaining balance
   const getRemainingBalance = (currentId: string) => {

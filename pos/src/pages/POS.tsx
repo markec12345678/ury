@@ -10,17 +10,15 @@ import { cn } from '../lib/utils';
 import { Spinner } from '../components/ui/spinner';
 import InitialLoader from '../components/InitialLoader';
 
-interface QuickFilterButtonProps {
+// QuickFilterButton moved outside component to prevent re-creation on every render
+const QuickFilterButton = ({ filter, icon: Icon, label, isActive, isDisabled, onClick }: { 
   filter: 'all' | 'special';
   icon: ElementType;
   label: string;
-  quickFilter: 'all' | 'special';
   isActive: boolean;
+  isDisabled: boolean;
   onClick: () => void;
-  disabled: boolean;
-}
-
-const QuickFilterButton = ({ filter, icon: Icon, label, quickFilter, isActive, onClick, disabled }: QuickFilterButtonProps) => (
+}) => (
   <button
     onClick={onClick}
     className={cn(
@@ -28,9 +26,9 @@ const QuickFilterButton = ({ filter, icon: Icon, label, quickFilter, isActive, o
       isActive
         ? 'bg-blue-100 text-blue-700'
         : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-      disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
+      isDisabled && 'opacity-50 cursor-not-allowed pointer-events-none'
     )}
-    disabled={disabled}
+    disabled={isDisabled}
   >
     <Icon className="w-4 h-4" />
     {label}
@@ -39,8 +37,6 @@ const QuickFilterButton = ({ filter, icon: Icon, label, quickFilter, isActive, o
 
 export default function POS() {
   const {
-    _searchQuery,
-    _setSearchQuery,
     quickFilter,
     setQuickFilter,
     setSelectedItem,
@@ -83,57 +79,39 @@ export default function POS() {
     };
   }, []);
 
-  // QuickFilterButton moved outside component to prevent re-creation on every render
-
   if (isInitializing) {
     return <InitialLoader />;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <p className="text-xl font-semibold text-red-600 mb-2">{t('errors.failed_load_pos')}</p>
-          <p className="text-gray-600">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-          >
-            {t('common.retry')}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Spinner message={t('common.loading_menu_items')} />
+        <p className="text-red-500">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden" data-testid="page-pos">
-      <Sidebar disabled={isMenuInteractionDisabled()} />
-      <div className="flex-1 flex flex-col h-screen overflow-hidden pe-96">
-        <div className="p-4 bg-white border-b border-gray-200">
-          <div className="max-w-screen-xl mx-auto space-y-3">
-            <div className="flex items-center gap-2 overflow-x-auto overflow-y-hidden">
-              {/* <SearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onVisibilityChange={setShowSearch}
-                isVisible={showSearch}
-                disabled={isMenuInteractionDisabled()}
-              /> */}
-              
-              <QuickFilterButton filter="all" icon={Star} label={t('common.all')} quickFilter={quickFilter} isActive={quickFilter === 'all'} onClick={() => setQuickFilter('all')} disabled={isMenuInteractionDisabled()} />
-              <QuickFilterButton filter="special" icon={TrendingUp} label={t('menu.special_items')} quickFilter={quickFilter} isActive={quickFilter === 'special'} onClick={() => setQuickFilter('special')} disabled={isMenuInteractionDisabled()} />
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 bg-white border-b border-gray-200">
+            <div className="max-w-screen-xl mx-auto space-y-3">
+              <div className="flex items-center gap-2 overflow-x-auto overflow-y-hidden">
+              <QuickFilterButton filter="all" icon={Star} label={t('common.all')} isActive={quickFilter === 'all'} isDisabled={isMenuInteractionDisabled()} onClick={() => setQuickFilter('all')} />
+              <QuickFilterButton filter="special" icon={TrendingUp} label={t('menu.special_items')} isActive={quickFilter === 'special'} isDisabled={isMenuInteractionDisabled()} onClick={() => setQuickFilter('special')} />
+              </div>
             </div>
           </div>
-        </div>
 
         <MenuList onItemClick={handleItemClick} />
       </div>

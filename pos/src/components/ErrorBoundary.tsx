@@ -33,23 +33,20 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     this.state = { hasError: false, error: null, errorCount: 0 };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error, errorCount: 0 };
+  static getDerivedStateFromError(error: Error, state: ErrorBoundaryState): ErrorBoundaryState {
+    return { hasError: true, error, errorCount: (state.errorCount || 0) + 1 };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    const errorCount = this.state.errorCount + 1;
-    this.setState({ errorCount });
-
     logger.error('ErrorBoundary caught:', error, errorInfo.componentStack);
 
     // Call external error handler if provided
     this.props.onError?.(error, errorInfo);
 
     // If errors keep recurring after retry, log a warning
-    if (errorCount >= 3) {
+    if (this.state.errorCount >= 3) {
       logger.warn(
-        `ErrorBoundary: ${errorCount} consecutive errors detected. Consider reloading the page.`,
+        `ErrorBoundary: ${this.state.errorCount} consecutive errors detected. Consider reloading the page.`,
       );
     }
   }

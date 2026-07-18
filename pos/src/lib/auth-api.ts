@@ -44,7 +44,7 @@ export const getUserRoles = async (email: string): Promise<{ roles: string[]; fu
 export const logout = async () => {
   try {
     return auth.logout();
-  }catch(e){
+  } catch (e) {
     throw new Error(`Failed to logout: ${getErrorMessage(e)}`);
   }
 }

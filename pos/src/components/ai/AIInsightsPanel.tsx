@@ -3,6 +3,7 @@ import { Sparkles, Send, X, Trash2, MessageSquare, AlertCircle, Loader2 } from '
 import { useAIStore } from '../../store/ai-store';
 import { cn } from '../../lib/utils';
 import { t } from '../../i18n';
+import DOMPurify from 'dompurify';
 
 const AIInsightsPanel = () => {
   const {
@@ -151,7 +152,7 @@ const AIInsightsPanel = () => {
             {msg.role === 'assistant' ? (
               <div className="whitespace-pre-wrap">
                 {msg.content.split('\n').map((line, i) => {
-                  // Split by **bold** markers and render as React elements
+                  // Split by **bold** markers and render as React elements (safe, no dangerouslySetInnerHTML)
                   const renderLine = (text: string) => {
                     const parts = text.split(/\*\*(.*?)\*\*/g);
                     return parts.map((part, j) =>

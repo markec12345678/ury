@@ -31,12 +31,12 @@ const CommentDialog = ({ isOpen, onClose, onSave, initialComment = '' }: Comment
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="comment-dialog-title">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 id="comment-dialog-title" className="text-lg font-semibold text-gray-900">
               {t('comment.title')}
             </h2>
           </div>
