@@ -1,6 +1,29 @@
 # Worklog
 
 ---
+Task ID: 29
+Agent: Main Agent
+Task: Progress component, backend branch_filter NameError fix
+
+Work Log:
+- Created Progress component: 4 sizes (sm/md/lg/xl), 5 variants (default/success/warning/danger/info), showLabel, striped, animate
+- Progress stories: 6 stories (Default, AllVariants, AllSizes, Striped, WithLabel, POSKitchenQueue)
+- Updated barrel exports with Progress
+- CRITICAL fix: ury_reports.py — replaced branch_filter (undefined) with branch_clause (5 occurrences) in get_sales_report(), added missing branch parameter to 5 SQL queries
+- CRITICAL fix: ury_dashboard.py — replaced branch_filter (undefined) with branch_clause (4 occurrences), added missing branch parameter to 4 SQL queries in _get_daily/weekly/monthly_revenue and _get_daily_orders
+- These were NameError crashes at runtime — any branch-filtered revenue chart or report would fail
+- Updated README: 17 components, 81 stories
+- Updated CONTRIBUTING: 17 components, 81 stories
+- TypeScript: 0 errors. Python: both files compile.
+- Pushed to fork/develop (commit f03445b)
+
+Stage Summary:
+- 6 files changed, 305 insertions, 18 deletions
+- @ury/ui: 16 → 17 components, 75 → 81 stories
+- Backend: fixed 9 NameError bugs across 2 API files (reports + dashboard)
+- All branch-filtered SQL queries now properly receive branch parameter
+
+---
 Task ID: 28
 Agent: Main Agent
 Task: Core validators/constants, docs update

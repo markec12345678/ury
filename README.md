@@ -2,7 +2,7 @@
 
 [![Fork CI](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml)
 [![CI](https://github.com/markec12345678/ury/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/ci.yml)
-[![Storybook](https://img.shields.io/badge/Storybook-75_stories-ff6f91?logo=storybook)](https://github.com/markec12345678/ury/tree/develop/packages/ui/src/components/__stories__)
+[![Storybook](https://img.shields.io/badge/Storybook-81_stories-ff6f91?logo=storybook)](https://github.com/markec12345678/ury/tree/develop/packages/ui/src/components/__stories__)
 [![Node](https://img.shields.io/badge/Node.js-22-339933?logo=node.js)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
@@ -104,8 +104,10 @@ ury/
 │   └── labeler.yml         # Auto-label PRs by path
 ├── .storybook/             # Storybook 10 config
 ├── packages/
-│   ├── ui/                 # @ury/ui — React components (16 components, 75 stories)
-│   │   └── src/components/ # Button, Card, Badge, Input, Textarea, Loader, Spinner, Dialog, Select, Toast, Tooltip, Switch, Checkbox, Tabs, Separator, Avatar
+│   ├── ui/                 # @ury/ui — React components (17 components, 81 stories)
+│   │   └── src/components/ # Button, Card, Badge, Input, Textarea, Loader, Spinner, Dialog,
+│   │                       # Select, Toast, Tooltip, Switch, Checkbox, Tabs, Separator,
+│   │                       # Avatar, Progress
 │   └── core/               # @ury/core — Frappe SDK, storage, formatting, validators, constants
 ├── pos/                    # POS v2 (Vite + React + Zustand)
 ├── urypos/                 # POS v1 (legacy)
@@ -182,6 +184,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 | Tabs | 7 | Default, outline, pill, all sizes, disabled tab, with icons, controlled |
 | Separator | 5 | Default, all variants, labeled, vertical, in context |
 | Avatar | 7 | Default, all sizes, with image, all colors, with status, shapes, avatar group |
+| Progress | 6 | Default, all variants, all sizes, striped, with label, kitchen queue |
 
 ---
 
