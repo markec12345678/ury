@@ -239,7 +239,7 @@
                 type="number"
                 id="amount"
                 name="amount"
-                v-model="this.posClose.closingAmount"
+                v-model="modeOfPayment.closing_amount"
                 class="border-none text-center"
               />
             </td>

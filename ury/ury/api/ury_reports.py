@@ -310,9 +310,21 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
 
     # Save the HTML as a temporary file
     import os
+    import time
     temp_dir = frappe.get_site_path("private", "reports")
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
+
+    # Cleanup: delete HTML files older than 1 hour
+    now = time.time()
+    for old_file in os.listdir(temp_dir):
+        old_filepath = os.path.join(temp_dir, old_file)
+        if old_file.endswith('.html') and os.path.isfile(old_filepath):
+            if now - os.path.getmtime(old_filepath) > 3600:
+                try:
+                    os.remove(old_filepath)
+                except OSError:
+                    pass
 
     filename = f"report_{report_type}_{frappe.generate_hash(length=8)}.html"
     filepath = os.path.join(temp_dir, filename)

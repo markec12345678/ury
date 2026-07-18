@@ -192,14 +192,14 @@ export const useTableStore = defineStore("table", {
         pos_profile: invoiceData.posProfile,
       };
       try {
-        await this.call
-          .get("ury.ury_pos.api.getRestaurantMenu", getMenuIem)
-          .then((result) => {
-            this.tableMenu = result.message.items;
-            this.menuName = result.message.name;
-            this.orderModified = result.message.modified;
-            menu.fetchItems();
-          });
+        const result = await this.call.get(
+          "ury.ury_pos.api.getRestaurantMenu",
+          getMenuIem
+        );
+        this.tableMenu = result.message.items;
+        this.menuName = result.message.name;
+        this.orderModified = result.message.modified;
+        menu.fetchItems();
       } catch (error) {
         if (error._server_messages) {
           const message = extractServerMessage(error);

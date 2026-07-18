@@ -323,7 +323,14 @@
     "last_month": "Last Month",
     "last_7_days": "Last 7 Days",
     "last_30_days": "Last 30 Days",
-    "last_90_days": "Last 90 Days"
+    "last_90_days": "Last 90 Days",
+    "avg_order_value": "Avg Order Value",
+    "tables": "tables",
+    "sold": "sold",
+    "updated": "Updated",
+    "prev": "Prev",
+    "no_recent_orders": "No recent orders",
+    "unable_to_load": "Unable to load live data"
   },
   "reports": {
     "title": "Reports",

@@ -508,7 +508,10 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
 def customer_favourite_item(customer_name):
     # Get invoice names for this customer
     invoice_names = frappe.db.get_list(
-        "POS Invoice", filters={"customer": customer_name}, fields=["name"], pluck="name"
+        "POS Invoice",
+        filters={"customer": customer_name, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]},
+        fields=["name"],
+        pluck="name",
     )
     if not invoice_names:
         return []

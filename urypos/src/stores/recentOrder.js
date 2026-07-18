@@ -95,8 +95,10 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
       }
     },
     totalAmount() {
-      this.totalPercentage = this.grandTotal - (this.percentage / 100) * this.grandTotal;
-      return this.totalPercentage.toFixed(3);
+      return (this.grandTotal - (this.percentage / 100) * this.grandTotal).toFixed(3);
+    },
+    totalPercentage() {
+      return this.grandTotal - (this.percentage / 100) * this.grandTotal;
     },
   },
   actions: {

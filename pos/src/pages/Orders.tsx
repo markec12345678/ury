@@ -413,8 +413,8 @@ export default function Orders() {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('order.items_title')}</h3>
                 <div className="space-y-3">
-                  {selectedOrderItems.map((item, index) => (
-                    <div key={index} className="flex justify-between items-start py-2 border-b border-gray-100">
+                  {selectedOrderItems.map((item) => (
+                    <div key={item.item_code || item.item_name} className="flex justify-between items-start py-2 border-b border-gray-100">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">{item.item_name}</p>
                         <p className="text-xs text-gray-500">Qty: {item.qty}</p>
@@ -434,8 +434,8 @@ export default function Orders() {
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('order.taxes_charges')}</h3>
                   <div className="space-y-2">
-                    {selectedOrderTaxes.map((tax, index) => (
-                      <div key={index} className="flex justify-between items-center py-1">
+                    {selectedOrderTaxes.map((tax) => (
+                      <div key={tax.description || tax.account_head} className="flex justify-between items-center py-1">
                         <span className="text-sm text-gray-600">{tax.description}</span>
                         <span className="text-sm font-medium text-gray-900">
                           {formatCurrency(tax.rate)}

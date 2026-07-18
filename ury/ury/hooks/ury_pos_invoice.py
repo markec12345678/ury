@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from datetime import datetime
-from frappe.utils import now_datetime, get_time,now
+from frappe.utils import now_datetime, now
 
 
 def before_insert(doc, method):

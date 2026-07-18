@@ -76,8 +76,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
 
   // State for the full item doc (used for all dialog content)
   const [itemDoc, setItemDoc] = useState<FrappeItemDoc | null>(null);
-  const [_isItemLoading, setIsItemLoading] = useState(false);
-  const [_itemError, setItemError] = useState<string | null>(null);
+  const [isItemLoading, setIsItemLoading] = useState(false);
+  const [itemError, setItemError] = useState<string | null>(null);
 
   // Fetch Item doc once when dialog opens or selectedItem changes
   // (previously two separate useEffects fetching the same doc)
@@ -356,6 +356,15 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
 
         {/* Middle Column - Variants and Quantity */}
         <div className="md:w-1/3 p-6 overflow-y-auto">
+          {isItemLoading && (
+            <div className="flex items-center justify-center py-4 text-gray-500">
+              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
+              {t('common.loading')}
+            </div>
+          )}
+          {itemError && (
+            <div className="text-red-500 text-sm py-2">{itemError}</div>
+          )}
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{selectedItem?.item_name}</h2>
             <div className="flex items-center gap-2 mt-1">

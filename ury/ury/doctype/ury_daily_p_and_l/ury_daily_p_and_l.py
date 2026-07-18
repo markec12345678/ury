@@ -227,6 +227,9 @@ class URYDailyPandL(Document):
                                         bom_map[row.item] = row.name
 
                 for item in bom_item_sales:
+                        # TODO: N+1 query — frappe.get_doc("BOM", ...) is called inside this loop
+                        # for each bom_item_sales entry. Consider batch-loading all BOM docs upfront
+                        # and caching them in a dict to avoid repeated DB round-trips.
                         buying_price = 0
                         buying_price_list = report_settings.buying_price_list
                         bom_name = bom_map.get(item['Item Code'])

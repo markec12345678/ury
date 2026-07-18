@@ -30,19 +30,18 @@ type PeriodOption = {
   label: string;
 };
 
-const periods: PeriodOption[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: 'this_week', label: 'This Week' },
-  { value: 'last_week', label: 'Last Week' },
-  { value: 'this_month', label: 'This Month' },
-  { value: 'last_month', label: 'Last Month' },
-  { value: 'last_7_days', label: 'Last 7 Days' },
-  { value: 'last_30_days', label: 'Last 30 Days' },
-  { value: 'last_90_days', label: 'Last 90 Days' },
-];
-
 const Dashboard = () => {
+  const periods: PeriodOption[] = [
+    { value: 'today', label: t('dashboard.today') },
+    { value: 'yesterday', label: t('dashboard.yesterday') },
+    { value: 'this_week', label: t('dashboard.this_week') },
+    { value: 'last_week', label: t('dashboard.last_week') },
+    { value: 'this_month', label: t('dashboard.this_month') },
+    { value: 'last_month', label: t('dashboard.last_month') },
+    { value: 'last_7_days', label: t('dashboard.last_7_days') },
+    { value: 'last_30_days', label: t('dashboard.last_30_days') },
+    { value: 'last_90_days', label: t('dashboard.last_90_days') },
+  ];
   const {
     summary,
     tableOccupancy,
@@ -103,7 +102,7 @@ const Dashboard = () => {
             className={cn(autoRefresh && 'border-emerald-300 text-emerald-600')}
           >
             <Activity className="w-4 h-4 me-1" />
-            {autoRefresh ? 'Live' : 'Auto-refresh'}
+            {autoRefresh ? t('dashboard.live') : t('dashboard.auto_refresh')}
           </Button>
           <Button
             variant="outline"
@@ -145,31 +144,31 @@ const Dashboard = () => {
           {/* Row 1: KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <KPICard
-              title="Total Revenue"
+              title={t('dashboard.total_revenue')}
               value={formatCurrency(summary?.total_revenue || 0)}
               icon={<DollarSign className="w-5 h-5" />}
               color="blue"
               subtitle={summary?.from_date ? `${summary.from_date} - ${summary.to_date}` : ''}
             />
             <KPICard
-              title="Total Orders"
+              title={t('dashboard.total_orders')}
               value={`${summary?.total_orders || 0}`}
               icon={<ShoppingCart className="w-5 h-5" />}
               color="emerald"
-              subtitle={`Avg: ${formatCurrency(summary?.average_order_value || 0)}`}
+              subtitle={`${t('dashboard.avg_order_value')}: ${formatCurrency(summary?.average_order_value || 0)}`}
             />
             <KPICard
-              title="Unique Customers"
+              title={t('dashboard.unique_customers')}
               value={`${summary?.unique_customers || 0}`}
               icon={<Users className="w-5 h-5" />}
               color="purple"
             />
             <KPICard
-              title="Table Occupancy"
+              title={t('dashboard.table_occupancy')}
               value={`${tableOccupancy?.occupancy_rate || 0}%`}
               icon={<Clock className="w-5 h-5" />}
               color="amber"
-              subtitle={`${tableOccupancy?.occupied_tables || 0} / ${tableOccupancy?.total_tables || 0} tables`}
+              subtitle={`${tableOccupancy?.occupied_tables || 0} / ${tableOccupancy?.total_tables || 0} ${t('dashboard.tables')}`}
             />
           </div>
 
@@ -205,7 +204,7 @@ const Dashboard = () => {
           {summary?.top_selling_items && summary.top_selling_items.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                Top Selling Items
+                {t('dashboard.top_selling_items')}
               </h3>
               <div className="space-y-2">
                 {summary.top_selling_items.map((item, idx) => (
@@ -223,7 +222,7 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-gray-500">
-                        {item.total_qty} sold
+                        {item.total_qty} {t('dashboard.sold')}
                       </span>
                       <span className="text-sm font-medium text-gray-900">
                         {formatCurrency(item.total_amount)}

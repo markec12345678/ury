@@ -132,7 +132,7 @@
     </div>
     <div
       class="mt-5 max-w-lg flex-1 rounded-lg border border-gray-200 bg-white p-4 shadow dark:border-gray-700 dark:bg-gray-800 sm:p-8 md:ml-10 md:mt-0"
-      v-if="this.recentOrders.showOrder"
+      v-if="this.recentOrders.showOrder && this.recentOrders.selectedOrder"
     >
       <div class="flex items-center space-x-4">
         <div class="min-w-0 flex-1">
@@ -211,7 +211,8 @@
       <div class="w-full rounded bg-gray-50 p-2">
         <div
           class="ml-2 mt-2"
-          v-for="items in this.recentOrders.recentOrderListItems"
+          v-for="(items, itemIdx) in this.recentOrders.recentOrderListItems"
+          :key="items.item_code || items.item_name || itemIdx"
         >
           <div class="flex items-center space-x-4">
             <div class="min-w-2 flex-1">
@@ -334,7 +335,7 @@
             </p>
           </div>
         </div>
-        <div class="ml-2" v-for="tax in this.recentOrders.taxDetails">
+        <div class="ml-2" v-for="(tax, taxIdx) in this.recentOrders.taxDetails" :key="tax.description || taxIdx">
           <div class="mt-2 flex items-center space-x-4">
             <div class="min-w-2 flex-1">
               <p class="truncate text-base text-gray-800 dark:text-white">

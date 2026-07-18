@@ -331,8 +331,10 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
                 setHighlightedIndex(0);
               }}
               onFocus={() => setIsOpen(true)}
-              onBlur={() => {
-                setTimeout(() => setIsOpen(false), 100);
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setIsOpen(false);
+                }
               }}
               onKeyDown={handleKeyDown}
               placeholder={t('customer.search_placeholder')}

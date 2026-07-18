@@ -249,7 +249,7 @@ export const useMenuStore = defineStore("menu", {
               }
             });
         } else {
-          this.aggregatorItem = "";
+          this.aggregatorItem = [];
           this.selectedAggregator = "";
           this.items = this.defaultMenu;
         }

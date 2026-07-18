@@ -9,34 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Skeleton UI component** (`@ury/ui`) — Loading placeholder with CVA variants (text, circular, rectangular) and animation modes (pulse, wave, none). Includes 5 pre-built layout skeletons: MenuCardSkeleton, DashboardCardSkeleton, TableRowSkeleton, ChartSkeleton. 7 Storybook stories.
-- **Empty State UI component** (`@ury/ui`) — Empty data placeholder with CVA size variants (sm, md, lg), optional Lucide icon, title, description, and call-to-action. Full ARIA accessibility. 5 Storybook stories.
-- **React hooks** (`@ury/core`):
-  - `useDebounce` — Debounce a value with configurable delay.
-  - `useLocalStorage` — Persist state in localStorage with automatic JSON serialization.
-  - `useToggle` — Toggle between boolean values with toggle/setTrue/setFalse.
-  - `useMediaQuery` — React to CSS media query changes using `useSyncExternalStore`.
-  - `usePrevious` — Track the previous value of a variable across renders.
-- **Vitest unit tests** (`@ury/core`) — Test suites for validation, utils, and format-date modules.
-- **Progress UI component** (`@ury/ui`) — Determinate and indeterminate progress bars with CVA variants (default, success, warning, danger, info), three sizes (sm, default, lg), optional percentage label, striped pattern, animate pulse, and full ARIA accessibility. 8 Storybook stories.
-- **CODE_OF_CONDUCT.md** — Contributor Covenant v2.1 code of conduct.
-- **CHANGELOG.md** — Release tracking following Keep a Changelog format.
-- **packages/core utilities**:
-  - `validateEmail` — RFC-compliant email validation.
-  - `validatePhone` — International phone number validation.
-  - `debounce` — Generic debounce with leading/trailing options and cancel/flush methods.
-  - `formatDate` — Locale-aware date formatting with multiple presets (date, time, datetime, relative).
-  - `formatNumber` — Number formatting with locale, currency, and compact notation support.
-  - `clamp` — Numeric value clamping utility.
-  - `sleep` — Promise-based async delay for testing and UI transitions.
-- **CI hardening** — Removed `continue-on-error: true` and `|| true` from critical CI steps (lint, type-check, build) so failures now properly surface.
+- **5 new UI components** (`@ury/ui`) — DropdownMenu (4 stories), Accordion (5 stories), Drawer (5 stories), Popover (4 stories), Command palette (5 stories). Total: 24 components, 97 stories.
+- **69 unit tests** for DropdownMenu (25), Accordion (18), and Drawer (26) components.
+- **extractServerMessage utility** — Safe `error._server_messages` parser for both React (TypeScript) and Vue (Pinia) stores, eliminating 18+ unsafe `JSON.parse` patterns.
+- **Shared backend utility** — `ury/ury/api/utils.py` with canonical `_get_user_branch()` function (previously duplicated 3×).
+
+### Fixed
+
+- **Backend (5 CRITICAL)**: XSS in ury_reports.py (`_html.escape` called as function, not literal text), data corruption in cancel_order (raw SQL → standard Frappe `cancel()`), missing `import re` crash, `qz_certificate()` secret exposure (added role check), 19 unguarded API endpoints now have `frappe.only_for()` authorization.
+- **POS React (5 CRITICAL)**: XSS in AIInsightsPanel (replaced `dangerouslySetInnerHTML` with React-safe rendering), auto-refresh memory leak (moved timer to component lifecycle), race conditions in ProductDialog and POSOpeningProvider (cancellation flags), unsafe JSON.parse in menu-management-store.
+- **Mosaic KDS (4 CRITICAL)**: `markRaw()` for frappe SDK instances in 8 Pinia stores (prevents proxy breakage), shared object aliasing between stores (deep-clone), unhandled user-cancellation rejection, missing error handling on fetchUserDetails.
+- **25+ HIGH fixes**: PaymentDialog double-fetch, wrong `owner` prop in Orders, inline component re-renders, unmemized callbacks, resize handler without debounce, dashboard store error handling, Notification store timeout cleanup, localStorage.removeItem invalid args, route-before-data navigation, isPrinting stuck on error, duplicate routes, pagination guard.
+- **15+ MEDIUM fixes**: ProductDialog loading/error display, CustomerSelect relatedTarget blur, Dashboard i18n (8 new keys), Orders stable keys, MenuCard unused prop, recentOrder.vue v-if guard, v-for :key attributes, computed getter side effect, aggregatorItem type consistency, posClosing per-row binding, async/await consistency, customer_favourite_item 90-day limit, report HTML file cleanup, unused imports.
 
 ### Changed
 
-- **README.md** — Updated component count to 19, story count to 93, added Skeleton and Empty State to component table.
-- **CONTRIBUTING.md** — Updated component list, added core hooks reference.
-- **Barrel exports** (`packages/ui/src/index.ts`) — Added Skeleton and Empty State component exports.
-- **Barrel exports** (`packages/core/src/index.ts`) — Added hooks exports.
+- **README.md** — Updated component count to 24, story count to 97, added 5 new components to table.
+- **Barrel exports** (`packages/ui/src/index.ts`) — Added Accordion, Drawer, DropdownMenu, Popover, Command component exports.
 
 ## [0.0.0] - 2025-01-01
 

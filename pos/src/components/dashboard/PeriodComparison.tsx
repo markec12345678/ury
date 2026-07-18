@@ -32,7 +32,7 @@ const PeriodComparison = () => {
         format: 'number',
       },
       {
-        label: 'Avg Order Value',
+        label: t('dashboard.avg_order_value'),
         current: summary.average_order_value || 0,
         previous: previousSummary?.average_order_value || 0,
         format: 'currency',
@@ -86,7 +86,7 @@ const PeriodComparison = () => {
                     </p>
                     {previousSummary && (
                       <p className="text-xs text-gray-400 mt-0.5">
-                        Prev: {formatValue(metric.previous, metric.format)}
+                        {t('dashboard.prev')}: {formatValue(metric.previous, metric.format)}
                       </p>
                     )}
                   </div>
