@@ -1,6 +1,31 @@
 # Worklog
 
 ---
+Task ID: 27
+Agent: Main Agent
+Task: Checkbox & Tabs components, production Dockerfile, PR templates
+
+Work Log:
+- Created Checkbox component: controlled/uncontrolled, 3 sizes, 4 variants, label + description, ARIA accessible
+- Created Tabs component: 3 style variants (default/outline/pill), 3 sizes, icon support, disabled tabs, ARIA tablist/tab/tabpanel
+- Checkbox stories: 7 stories (Default, Checked, WithDescription, Disabled, AllSizes, AllVariants, FormExample)
+- Tabs stories: 7 stories (Default, Outline, Pill, AllSizes, WithDisabledTab, WithIcons, Controlled)
+- Updated barrel export (packages/ui/src/index.ts) with all 14 components
+- Created production Dockerfile: multi-stage build, non-root user, dumb-init, health check, OCI labels
+- Created .dockerignore: excludes Python backend, docs, dev configs
+- Created 3 PR templates: default (general), bug_fix, new_feature — with checklists
+- Updated CONTRIBUTING.md with production Docker build section
+- Updated README: 14 components, 63 stories
+- Pushed to fork/develop (1 commit)
+
+Stage Summary:
+- 12 files changed, 880 insertions, 8 deletions
+- @ury/ui: 12 → 14 components, 50 → 63 stories
+- Production Docker image available via `docker build -t ury:latest .`
+- 3 specialized PR templates for better code review
+- TypeScript: 0 errors across all packages
+
+---
 Task ID: 26
 Agent: Main Agent
 Task: Composite CI action, security audit, Prettier, EditorConfig, CoC, new UI components
