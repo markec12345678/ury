@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Progress UI component** (`@ury/ui`) — Determinate and indeterminate progress bars with CVA variants (default, success, warning, danger, info), three sizes (sm, default, lg), optional percentage label, and full ARIA accessibility. Includes 6 Storybook stories.
+- **Skeleton UI component** (`@ury/ui`) — Loading placeholder with CVA variants (text, circular, rectangular) and animation modes (pulse, wave, none). Includes 5 pre-built layout skeletons: MenuCardSkeleton, DashboardCardSkeleton, TableRowSkeleton, ChartSkeleton. 7 Storybook stories.
+- **Empty State UI component** (`@ury/ui`) — Empty data placeholder with CVA size variants (sm, md, lg), optional Lucide icon, title, description, and call-to-action. Full ARIA accessibility. 5 Storybook stories.
+- **React hooks** (`@ury/core`):
+  - `useDebounce` — Debounce a value with configurable delay.
+  - `useLocalStorage` — Persist state in localStorage with automatic JSON serialization.
+  - `useToggle` — Toggle between boolean values with toggle/setTrue/setFalse.
+  - `useMediaQuery` — React to CSS media query changes using `useSyncExternalStore`.
+  - `usePrevious` — Track the previous value of a variable across renders.
+- **Vitest unit tests** (`@ury/core`) — Test suites for validation, utils, and format-date modules.
+- **Progress UI component** (`@ury/ui`) — Determinate and indeterminate progress bars with CVA variants (default, success, warning, danger, info), three sizes (sm, default, lg), optional percentage label, striped pattern, animate pulse, and full ARIA accessibility. 8 Storybook stories.
 - **CODE_OF_CONDUCT.md** — Contributor Covenant v2.1 code of conduct.
 - **CHANGELOG.md** — Release tracking following Keep a Changelog format.
 - **packages/core utilities**:
@@ -24,9 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **README.md** — Updated component count to 17, story count to 81, added Progress to component table.
-- **CONTRIBUTING.md** — Updated component list, added core utilities reference, fixed Storybook story path.
-- **Barrel exports** (`packages/ui/src/index.ts`) — Added Progress component export.
+- **README.md** — Updated component count to 19, story count to 93, added Skeleton and Empty State to component table.
+- **CONTRIBUTING.md** — Updated component list, added core hooks reference.
+- **Barrel exports** (`packages/ui/src/index.ts`) — Added Skeleton and Empty State component exports.
+- **Barrel exports** (`packages/core/src/index.ts`) — Added hooks exports.
 
 ## [0.0.0] - 2025-01-01
 

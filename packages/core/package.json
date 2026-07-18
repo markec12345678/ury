@@ -10,7 +10,9 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "peerDependencies": {
     "axios": ">=1",
@@ -25,6 +27,7 @@
     "frappe-js-sdk": "^1.10.0",
     "jsrsasign": "^11.1.0",
     "qz-tray": "^2.2.5",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "vitest": "^3.0.0"
   }
 }
