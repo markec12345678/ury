@@ -29,12 +29,12 @@
       }
     }
   },
-  "forwardPorts": [3000, 5432, 6379, 4000, 8080],
+  "forwardPorts": [3000, 5432, 6006, 6379, 8080],
   "postCreateCommand": "npm install",
   "remoteUser": "node",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
+      "version": "22"
     }
   }
 }

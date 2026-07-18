@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 // URY Dashboard — Admin Setup Script
-// Approves pending CI workflow runs and applies branch protection rules.
+// Applies branch protection rules and creates required labels on the fork repo.
 //
 // Usage:
-//   GITHUB_TOKEN=<admin-token> node scripts/admin-setup.mjs
-//
-// Requirements:
-//   - GITHUB_TOKEN with admin rights on ury-erp/ury
-//   - Node.js 18+ (for built-in fetch)
+//   GITHUB_TOKEN=<token> node scripts/admin-setup.mjs
+//   GITHUB_TOKEN=<token> REPO=markec12345678/ury node scripts/admin-setup.mjs
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const REPO = "ury-erp/ury";
+const REPO = process.env.REPO || "markec12345678/ury";
 const API = `https://api.github.com/repos/${REPO}`;
 const HEADERS = {
   Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -20,7 +17,7 @@ const HEADERS = {
 
 if (!GITHUB_TOKEN) {
   console.error("ERROR: GITHUB_TOKEN environment variable is required");
-  console.error("Usage: GITHUB_TOKEN=<admin-token> node scripts/admin-setup.mjs");
+  console.error("Usage: GITHUB_TOKEN=<token> node scripts/admin-setup.mjs");
   process.exit(1);
 }
 
@@ -33,46 +30,20 @@ async function fetchJSON(url, options = {}) {
   return data;
 }
 
-// ── Step 1: Approve pending workflow runs ──────────────────
-async function approvePendingWorkflows() {
-  console.log("\n📋 Step 1: Approving pending workflow runs...\n");
-
-  const { workflow_runs } = await fetchJSON(
-    `${API}/actions/runs?status=action_required&per_page=20`
-  );
-
-  if (workflow_runs.length === 0) {
-    console.log("  No pending workflow runs found.");
-    return;
-  }
-
-  for (const run of workflow_runs) {
-    try {
-      await fetch(`${API}/actions/runs/${run.id}/approve`, {
-        method: "POST",
-        headers: HEADERS,
-      });
-      console.log(`  ✅ Approved: ${run.name} (#${run.id}, head=${run.head_sha?.slice(0, 8)})`);
-    } catch (err) {
-      console.error(`  ❌ Failed: ${run.name} (#${run.id}): ${err.message}`);
-    }
-  }
-}
-
-// ── Step 2: Apply branch protection ────────────────────────
+// ── Step 1: Apply branch protection ────────────────────────
 async function applyBranchProtection() {
-  console.log("\n🛡️  Step 2: Applying branch protection rules...\n");
+  console.log("\n🛡️  Step 1: Applying branch protection rules...\n");
 
   const branches = {
     develop: {
       required_status_checks: {
         strict: true,
-        contexts: ["Lint & Type Check", "Unit Tests", "Build Verification"],
+        contexts: ["Lint & Type Check", "Storybook Build", "Build Verification"],
       },
       enforce_admins: false,
       required_pull_request_reviews: {
         dismiss_stale_reviews: true,
-        require_code_owner_reviews: false,
+        require_code_owner_reviews: true,
         required_approving_review_count: 1,
       },
       restrictions: null,
@@ -80,16 +51,17 @@ async function applyBranchProtection() {
       allow_force_pushes: false,
       allow_deletions: false,
     },
-    v1: {
+    main: {
       required_status_checks: {
         strict: true,
-        contexts: ["Lint & Type Check", "Build Verification"],
+        contexts: ["Lint & Type Check", "Unit Tests", "Build Verification"],
       },
       enforce_admins: true,
       required_pull_request_reviews: {
         dismiss_stale_reviews: true,
         require_code_owner_reviews: true,
         required_approving_review_count: 2,
+        require_last_push_approval: true,
       },
       restrictions: null,
       required_linear_history: true,
@@ -110,60 +82,28 @@ async function applyBranchProtection() {
       console.error(`  ❌ Failed: ${branch}: ${err.message}`);
     }
   }
-
-  // Note: main branch protection requires the branch to exist first
-  try {
-    const mainProtection = {
-      required_status_checks: {
-        strict: true,
-        contexts: ["Lint & Type Check", "Unit Tests", "Build Verification"],
-      },
-      enforce_admins: true,
-      required_pull_request_reviews: {
-        dismiss_stale_reviews: true,
-        require_code_owner_reviews: true,
-        required_approving_review_count: 2,
-        require_last_push_approval: true,
-      },
-      restrictions: null,
-      required_linear_history: true,
-      allow_force_pushes: false,
-      allow_deletions: false,
-    };
-    await fetch(`${API}/branches/main/protection`, {
-      method: "PUT",
-      headers: { ...HEADERS, "Content-Type": "application/json" },
-      body: JSON.stringify(mainProtection),
-    });
-    console.log("  ✅ Protected: main");
-  } catch (err) {
-    console.log(`  ⚠️  main: ${err.message} (branch may not exist yet)`);
-  }
 }
 
-// ── Step 3: Add required labels ────────────────────────────
+// ── Step 2: Add required labels ────────────────────────────
 async function addRequiredLabels() {
-  console.log("\n🏷️  Step 3: Creating required labels...\n");
+  console.log("\n🏷️  Step 2: Creating required labels...\n");
 
   const labels = [
     { name: "bug", color: "d73a4a", description: "Something isn't working" },
-    { name: "enhancement", color: "a2eeef", description: "New feature or request" },
-    { name: "triage", color: "fbca04", description: "Needs initial assessment" },
-    { name: "stale", color: "fef2c0", description: "Inactive for an extended period" },
-    { name: "security", color: "b60205", description: "Security-related issue" },
-    { name: "pinned", color: "bfdadc", description: "Exempt from stale automation" },
-    { name: "blocked", color: "e99695", description: "Blocked by external dependency" },
-    { name: "ui", color: "0075ca", description: "@ury/ui package changes" },
-    { name: "pos", color: "1d76db", description: "POS application changes" },
-    { name: "frontend", color: "0e8a16", description: "Frontend dashboard changes" },
-    { name: "backend", color: "5319e7", description: "Backend/Frappe changes" },
-    { name: "infrastructure", color: "c5def5", description: "CI/Docker/config changes" },
-    { name: "storybook", color: "d4c5f9", description: "Storybook changes" },
-    { name: "dependencies", color: "0366d6", description: "Dependency updates" },
-    { name: "documentation", color: "bfd4f2", description: "Documentation changes" },
-    { name: "docker", color: "0052cc", description: "Docker-related changes" },
-    { name: "database", color: "006b75", description: "Database/schema changes" },
+    { name: "feature", color: "0075ca", description: "New feature or request" },
     { name: "question", color: "d876e3", description: "Further information requested" },
+    { name: "ci", color: "0075ca", description: "Continuous Integration" },
+    { name: "docker", color: "0e8a16", description: "Docker related changes" },
+    { name: "storybook", color: "ff6f91", description: "Storybook component stories" },
+    { name: "dependencies", color: "0366d6", description: "Dependency updates" },
+    { name: "security", color: "b60205", description: "Security related" },
+    { name: "documentation", color: "0075ca", description: "Documentation changes" },
+    { name: "packages/ui", color: "c5def5", description: "UI package changes" },
+    { name: "packages/core", color: "bfdadc", description: "Core package changes" },
+    { name: "pos", color: "fef2c0", description: "POS app changes" },
+    { name: "urypos", color: "d4c5f9", description: "URY POS legacy changes" },
+    { name: "infra", color: "fbca04", description: "Infrastructure changes" },
+    { name: "stale", color: "ededed", description: "No recent activity" },
   ];
 
   for (const label of labels) {
@@ -184,26 +124,45 @@ async function addRequiredLabels() {
   }
 }
 
+// ── Step 3: Verify CI status ───────────────────────────────
+async function verifyCI() {
+  console.log("\n🔍 Step 3: Verifying recent CI status...\n");
+
+  try {
+    const { workflow_runs } = await fetchJSON(
+      `${API}/actions/runs?per_page=5&branch=develop&status=completed`
+    );
+
+    for (const run of workflow_runs.slice(0, 5)) {
+      const icon = run.conclusion === "success" ? "✅" : "❌";
+      console.log(`  ${icon} ${run.name}: ${run.conclusion}`);
+    }
+  } catch (err) {
+    console.error(`  ⚠️  Could not verify CI: ${err.message}`);
+  }
+}
+
 // ── Main ───────────────────────────────────────────────────
 async function main() {
   console.log("╔══════════════════════════════════════════╗");
   console.log("║   URY Repository Admin Setup Script      ║");
+  console.log(`║   Repo: ${REPO.padEnd(32)}║`);
   console.log("╚══════════════════════════════════════════╝");
 
   try {
-    await approvePendingWorkflows();
     await applyBranchProtection();
     await addRequiredLabels();
+    await verifyCI();
   } catch (err) {
     console.error(`\n❌ Fatal error: ${err.message}`);
     process.exit(1);
   }
 
   console.log("\n✅ Admin setup complete!");
-  console.log("\nNext steps:");
-  console.log("  1. Check CI status: https://github.com/ury-erp/ury/actions");
-  console.log("  2. Verify branch protection: https://github.com/ury-erp/ury/settings/branches");
-  console.log("  3. Review PR #187: https://github.com/ury-erp/ury/pull/187");
+  console.log(`\nNext steps:`);
+  console.log(`  1. Check CI: https://github.com/${REPO}/actions`);
+  console.log(`  2. Settings: https://github.com/${REPO}/settings`);
+  console.log(`  3. Storybook: https://github.com/${REPO}/tree/develop/packages/ui/src/components/__stories__`);
 }
 
 main();

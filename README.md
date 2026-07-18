@@ -1,15 +1,20 @@
 
 # URY - Open Source Restaurant Management System
 
+[![Fork CI](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml)
+[![CI](https://github.com/markec12345678/ury/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/ci.yml)
+[![Storybook](https://img.shields.io/badge/Storybook-29_stories-ff6f91?logo=storybook)](https://github.com/markec12345678/ury/tree/develop/packages/ui/src/components/__stories__)
+[![Node](https://img.shields.io/badge/Node.js-22-339933?logo=node.js)](https://nodejs.org/)
+
 URY is an open source ERP designed to simplify and streamline restaurant operations. It is built on top of  world's best free and open source ERP, ERPNext.
 
 <div align="center">
-	<a href="https://frappecloud.com/dashboard/signup?product=ury" target="_blank">
-		<picture>
-			<source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/try-on-fc-white.png">
-			<img src="https://frappe.io/files/try-on-fc-black.png" alt="Try on Frappe Cloud" height="28" />
-		</picture>
-	</a>
+        <a href="https://frappecloud.com/dashboard/signup?product=ury" target="_blank">
+                <picture>
+                        <source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/try-on-fc-white.png">
+                        <img src="https://frappe.io/files/try-on-fc-black.png" alt="Try on Frappe Cloud" height="28" />
+                </picture>
+        </a>
 </div>
 
 
@@ -120,7 +125,7 @@ To start using URY, you need to first install URY and then setup your first rest
 
 2. [URY Setup Instructions](SETUP.md).
 
-## Looking for other versions 	
+## Looking for other versions   
 
 1. Use branch `v1` to use ury [v0.1.0]
 
@@ -133,3 +138,75 @@ URY is developed by [Tridz Technologies Pvt Ltd](https://tridz.com) and supporte
 By using the URY, you agree to use it responsibly and in compliance with applicable laws. URY is built on open-source technology and is provided for your convenience to manage restaurant operations. While we strive to keep the app reliable, it is provided “as is” without any guarantees, and we are not responsible for any misuse or resulting issues.
 
 [Read More](TERMS.md)
+
+---
+
+## Developer Guide
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/markec12345678/ury.git
+cd ury
+
+# Install dependencies
+npm install
+
+# Start POS dev server
+npm --prefix pos run dev
+
+# Start Storybook (port 6006)
+npx storybook dev -p 6006
+```
+
+### Docker Development
+
+```bash
+# Start full dev stack (POS + PostgreSQL + Redis + Adminer)
+docker compose -f docker-compose.dev.yml up -d
+
+# View logs
+docker compose -f docker-compose.dev.yml logs -f
+
+# Stop
+docker compose -f docker-compose.dev.yml down
+```
+
+| Service | Port | URL |
+|---------|------|-----|
+| POS Dashboard | 3000 | http://localhost:3000 |
+| Storybook | 6006 | http://localhost:6006 |
+| PostgreSQL | 5432 | `postgresql://ury:ury_dev_2024@localhost:5432/ury_dashboard` |
+| Redis | 6379 | `redis://localhost:6379` |
+| Adminer | 8080 | http://localhost:8080 |
+
+### Project Structure
+
+```
+ury/
+├── .github/workflows/    # CI/CD pipelines (Fork CI, CI, Release, Chromatic)
+├── .storybook/           # Storybook configuration
+├── packages/ui/          # @ury/ui - Shared React component library
+│   └── src/components/   # Button, Card, Badge, Input, Textarea, Loader, Spinner
+├── packages/core/        # @ury/core - Shared utilities (Frappe SDK, storage, formatting)
+├── pos/                  # POS v2 (Vite + React + Zustand)
+├── urypos/               # POS v1 (legacy)
+├── URYMosaic/            # Kitchen Display System (Vue)
+├── ury/                  # Frappe/ERPNext backend (Python)
+├── docker-compose.dev.yml
+├── Dockerfile.dev
+└── Makefile
+```
+
+### Available Make Commands
+
+| Command | Description |
+|---------|-------------|
+| `make dev-up` | Start Docker dev stack |
+| `make dev-down` | Stop Docker containers |
+| `make storybook` | Start Storybook on port 6006 |
+| `make lint` | Run ESLint |
+| `make test` | Run unit tests |
+| `make build` | Production build |
+| `make typecheck` | TypeScript check (UI package) |
