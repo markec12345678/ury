@@ -1,10 +1,12 @@
 import { defineStore } from "pinia";
+import { markRaw } from "vue";
 import { useTableStore } from "./Table.js";
 import { useNotifications } from "./Notification.js";
 import { usetoggleRecentOrder } from "./recentOrder.js";
 import { useMenuStore } from "./Menu.js";
 import frappe from "./frappeSdk.js";
 import { useAlert } from "./Alert.js";
+import { extractServerMessage } from "./utils/extractMessage.js";
 export const useCustomerStore = defineStore("customers", {
   state: () => ({
     customer: [],
@@ -27,8 +29,8 @@ export const useCustomerStore = defineStore("customers", {
     customerTerritory: null,
     customerGroupList: [],
     customerGroup: null,
-    call: frappe.call(),
-    db: frappe.db(),
+    call: markRaw(frappe.call()),
+    db: markRaw(frappe.db()),
     timer: null,
   }),
   getters: {
@@ -123,7 +125,7 @@ export const useCustomerStore = defineStore("customers", {
         return;
       }
     },
-    selecetOrderType(order_type) {
+    selectOrderType(order_type) {
       const menu = useMenuStore();
       const recentOrders = usetoggleRecentOrder();
       this.showEditOrderType = false;
@@ -169,9 +171,7 @@ export const useCustomerStore = defineStore("customers", {
         })
         .catch((error) => {
           if (error._server_messages) {
-            const serverMessages = JSON.parse(error._server_messages);
-            const messageObject = JSON.parse(serverMessages[0]);
-            const message = messageObject.message;
+            const message = extractServerMessage(error);
             alert.createAlert("Message", message, "OK");
           }
         });

@@ -545,26 +545,22 @@ def cancel_order(invoice_id, reason):
     except Exception as e:
         frappe.log_error(f"Failed to create cancellation KOT for {invoice_id}: {frappe.get_traceback()}", "Cancel KOT Error")
 
-    # Update table and invoice status atomically in a single transaction
-    frappe.db.begin()
+    # Use standard Frappe cancellation instead of raw SQL
     try:
+        pos_invoice.cancel()
+        if reason:
+            frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason)
+    except Exception as e:
+        frappe.log_error(f"Failed to cancel invoice {invoice_id}: {frappe.get_traceback()}", "Cancel Invoice Error")
+        frappe.throw(_("Failed to cancel invoice: {0}").format(str(e)))
+
+    # Update table status
+    if pos_invoice.restaurant_table:
         frappe.db.set_value(
             "URY Table",
             pos_invoice.restaurant_table,
             {"occupied": 0, "latest_invoice_time": None},
         )
-        frappe.db.sql("""
-            UPDATE `tabPOS Invoice Item`
-            SET docstatus = 2
-            WHERE parent = %s
-        """, (invoice_id,))
-        frappe.db.set_value("POS Invoice", invoice_id, "docstatus", 2)
-        frappe.db.set_value("POS Invoice", invoice_id, "status", "Cancelled")
-        frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason)
-        frappe.db.commit()
-    except Exception:
-        frappe.db.rollback()
-        raise
 
 # Method for URY POS
 @frappe.whitelist()

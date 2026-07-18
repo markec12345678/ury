@@ -21,11 +21,7 @@ export const useNotifications = defineStore("notification", {
 
       // Create close button
       const closeBtn = document.createElement("span");
-      closeBtn.innerHTML = `
-          <span class="sr-only">Close</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>`;
+      closeBtn.textContent = '✕';
       closeBtn.classList.add(
         "cursor-pointer",
         "ml-12",
@@ -33,7 +29,14 @@ export const useNotifications = defineStore("notification", {
         "top-4",
         "right-7"
       );
+
+      const timeoutId = setTimeout(() => {
+        notif.remove();
+        container.remove(); // Remove the container after the notification is removed
+      }, 900);
+
       closeBtn.addEventListener("click", () => {
+        clearTimeout(timeoutId);
         notif.remove();
         container.remove(); // Remove the container after the notification is removed
       });
@@ -51,11 +54,6 @@ export const useNotifications = defineStore("notification", {
 
       // Add notification element to the container
       container.appendChild(notif);
-
-      setTimeout(() => {
-        notif.remove();
-        container.remove(); // Remove the container after the notification is removed
-      }, 900);
     },
   },
 });

@@ -7,6 +7,7 @@ from frappe.utils.print_format import print_by_server
 
 @frappe.whitelist()
 def reprint_kot(invoice_number):
+    frappe.only_for("Restaurant Manager", "Restaurant User")
 
     try:
         result = frappe.db.get_value(

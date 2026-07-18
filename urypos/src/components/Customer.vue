@@ -339,7 +339,7 @@
         >
           <div
             class="h-10 mb-4 rounded-lg p-4 hover:bg-gray-100"
-            @click="this.customers.selecetOrderType(customers.newOrderType)"
+            @click="this.customers.selectOrderType(customers.newOrderType)"
           >
             <h2 class="text-sm leading-normal">
                {{ customers.newOrderType }}

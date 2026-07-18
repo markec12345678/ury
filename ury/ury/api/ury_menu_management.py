@@ -5,11 +5,13 @@ CRUD operations for menu items, categories (courses), and prices.
 
 import frappe
 import json
+from ury.ury.api.utils import _get_user_branch
 
 
 @frappe.whitelist()
 def get_menus():
     """Get all URY Menus with their items for the current branch."""
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     branch = _get_user_branch()
     if not branch:
         frappe.throw("User branch not found", frappe.ValidationError)
@@ -41,6 +43,7 @@ def get_menus():
 @frappe.whitelist()
 def get_menu_detail(menu_name):
     """Get a single URY Menu with full details."""
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     menu = frappe.get_doc("URY Menu", menu_name)
     return {
         "name": menu.name,
@@ -187,6 +190,7 @@ def batch_update_prices(menu_name, updates):
 @frappe.whitelist()
 def get_courses_detail():
     """Get all menu courses with their details."""
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     courses = frappe.get_all(
         "URY Menu Course",
         fields=["name", "course", "custom_serving_priority", "custom_indicate_in_kds"],
@@ -253,6 +257,7 @@ def delete_menu_course(course_name):
 @frappe.whitelist()
 def get_available_items():
     """Get all Items that can be added to a menu (food/beverage items)."""
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     items = frappe.get_all(
         "Item",
         filters={
@@ -266,8 +271,4 @@ def get_available_items():
     return items
 
 
-def _get_user_branch():
-    """Get the branch for the current user."""
-    user = frappe.session.user
-    branch = frappe.db.get_value("URY User", {"user": user}, "parent")
-    return branch
+

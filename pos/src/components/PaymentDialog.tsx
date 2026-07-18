@@ -40,7 +40,6 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const { paymentModes, fetchPaymentModes, posProfile: storePosProfile } = usePOSStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [_discountType] = useState<'percentage'>('percentage'); // Only percentage now
   const [discountValue, setDiscountValue] = useState<string>('');
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [paymentInputs, setPaymentInputs] = useState<{ [mode: string]: string }>({});
@@ -51,8 +50,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   }, []);
 
   useEffect(() => {
-    fetchPaymentModes();
-  }, [fetchPaymentModes]);
+    if (paymentModes.length === 0) fetchPaymentModes();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate split payment total
   const payments = paymentModes
@@ -82,7 +81,6 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const subtotal = grandTotal;
   const adjustment = roundedTotal - grandTotal;
   const roundedAdjustment = Math.round(adjustment * 100) / 100;
-  const _showAdjustment = Math.abs(roundedAdjustment) > 0.001;
   const totalDiscount = appliedDiscount;
   const discountedTotal = Math.max(0, subtotal - totalDiscount);
   // If discount is applied, round up; else, round normally

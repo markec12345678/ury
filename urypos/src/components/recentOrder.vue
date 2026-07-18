@@ -334,7 +334,7 @@
             </p>
           </div>
         </div>
-        <div class="ml-2" v-for="tax in this.recentOrders.texDetails">
+        <div class="ml-2" v-for="tax in this.recentOrders.taxDetails">
           <div class="mt-2 flex items-center space-x-4">
             <div class="min-w-2 flex-1">
               <p class="truncate text-base text-gray-800 dark:text-white">

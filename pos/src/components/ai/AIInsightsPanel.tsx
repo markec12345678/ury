@@ -147,29 +147,34 @@ const AIInsightsPanel = () => {
                   : 'bg-gray-100 text-gray-800'
             )}
           >
-            {/* Simple markdown-like rendering for assistant messages */}
+            {/* Safe React-based rendering for assistant messages */}
             {msg.role === 'assistant' ? (
               <div className="whitespace-pre-wrap">
                 {msg.content.split('\n').map((line, i) => {
-                  // Bold: **text**
-                  const boldParsed = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                  // Split by **bold** markers and render as React elements
+                  const renderLine = (text: string) => {
+                    const parts = text.split(/\*\*(.*?)\*\*/g);
+                    return parts.map((part, j) =>
+                      j % 2 === 1 ? <strong key={j}>{part}</strong> : part
+                    );
+                  };
                   // Bullet points
                   if (line.startsWith('- ') || line.startsWith('* ')) {
                     return (
                       <div key={i} className="flex gap-1.5">
                         <span className="text-violet-500 flex-shrink-0">•</span>
-                        <span dangerouslySetInnerHTML={{ __html: boldParsed.slice(2) }} />
+                        <span>{renderLine(line.slice(2))}</span>
                       </div>
                     );
                   }
                   // Headers
                   if (line.startsWith('### ')) {
-                    return <div key={i} className="font-semibold mt-1" dangerouslySetInnerHTML={{ __html: boldParsed.slice(4) }} />;
+                    return <div key={i} className="font-semibold mt-1">{renderLine(line.slice(4))}</div>;
                   }
                   if (line.startsWith('## ')) {
-                    return <div key={i} className="font-bold mt-1" dangerouslySetInnerHTML={{ __html: boldParsed.slice(3) }} />;
+                    return <div key={i} className="font-bold mt-1">{renderLine(line.slice(3))}</div>;
                   }
-                  return <div key={i} dangerouslySetInnerHTML={{ __html: boldParsed }} />;
+                  return <div key={i}>{renderLine(line)}</div>;
                 })}
               </div>
             ) : (

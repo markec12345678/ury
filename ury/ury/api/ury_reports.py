@@ -7,6 +7,7 @@ import frappe
 import html as _html
 from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, flt, fmt_money
 import json
+from ury.ury.api.utils import _get_user_branch
 
 
 @frappe.whitelist()
@@ -350,11 +351,7 @@ def _get_report_dates(period, from_date=None, to_date=None):
         return today, today
 
 
-def _get_user_branch():
-    """Get the branch for the current user."""
-    user = frappe.session.user
-    branch = frappe.db.get_value("URY User", {"user": user}, "parent")
-    return branch
+
 
 
 def _generate_report_html(report_type, data):
@@ -377,13 +374,19 @@ def _sales_report_html(data, company, currency):
     summary = data.get("summary", {})
     item_rows = ""
     for item in data.get("item_sales", []):
+        safe_name = _html.escape(str(item.get('item_name', '')))
         item_rows += f"""
         <tr>
-            <td>_html.escape(str(item.get('item_name', '')))</td>
+            <td>{safe_name}</td>
             <td class="number">{flt(item.get('total_qty', 0), 1)}</td>
             <td class="number">{fmt_money(flt(item.get('avg_rate', 0), 2), currency=currency)}</td>
             <td class="number">{fmt_money(flt(item.get('total_amount', 0), 2), currency=currency)}</td>
         </tr>"""
+
+    otype_rows = ""
+    for o in data.get('order_type_sales', []):
+        safe_otype = _html.escape(str(o.get("order_type", "")))
+        otype_rows += f'<tr><td>{safe_otype}</td><td class="number">{int(o.get("order_count", 0))}</td><td class="number">{fmt_money(flt(o.get("revenue", 0), 2), currency=currency)}</td></tr>'
 
     return f"""
     <!DOCTYPE html>
@@ -453,7 +456,7 @@ def _sales_report_html(data, company, currency):
                 <tr><th>Order Type</th><th>Orders</th><th>Revenue</th></tr>
             </thead>
             <tbody>
-                {"".join(f'<tr><td>_html.escape(str(o.get("order_type", "")))</td><td class="number">{int(o.get("order_count", 0))}</td><td class="number">{fmt_money(flt(o.get("revenue", 0), 2), currency=currency)}</td></tr>' for o in data.get('order_type_sales', []))}
+                {otype_rows}
             </tbody>
         </table>
     </body>
@@ -550,6 +553,6 @@ def _generic_report_html(report_type, data, company, currency):
     </head>
     <body>
         <h1>{report_type.replace('_', ' ').title()} Report</h1>
-        <pre>{json.dumps(data, indent=2, default=str)}</pre>
+        <pre>{_html.escape(json.dumps(data, indent=2, default=str))}</pre>
     </body>
     </html>"""

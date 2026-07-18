@@ -1,13 +1,15 @@
 import { defineStore } from "pinia";
+import { markRaw } from "vue";
 import router from '../router';
 import { useAlert } from "./Alert.js";
 import { useInvoiceDataStore } from "./invoiceData.js";
 import frappe from "./frappeSdk.js";
+import { extractServerMessage } from "./utils/extractMessage.js";
 
 export const posClosing = defineStore("posClose", {
   state: () => ({
-    call: frappe.call(),
-    db: frappe.db(),
+    call: markRaw(frappe.call()),
+    db: markRaw(frappe.db()),
     startDate: null,
     postingDate: null,
     periodEndDate: new Date(),
@@ -202,9 +204,8 @@ export const posClosing = defineStore("posClose", {
         })
         .catch((error) => {
           if (error._server_messages) {
-            const messages = JSON.parse(error._server_messages);
-            const message = JSON.parse(messages[0]);
-            alert.createAlert("Message",message.message, "OK")
+            const message = extractServerMessage(error);
+            alert.createAlert("Message", message, "OK")
           }
         });
     },
@@ -237,9 +238,8 @@ export const posClosing = defineStore("posClose", {
         })
         .catch((error) => {
           if (error._server_messages) {
-            const messages = JSON.parse(error._server_messages);
-            const message = JSON.parse(messages[0]);
-            alert.createAlert("Message",message.message, "OK")
+            const message = extractServerMessage(error);
+            alert.createAlert("Message",message, "OK")
 
           }
         });

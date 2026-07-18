@@ -16,6 +16,37 @@ import { showToast } from './ui/toast';
 import { DINE_IN } from '../data/order-types';
 import { t } from '../i18n';
 
+const EmptyCartUI = () => (
+  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+      <FrownIcon className="w-12 h-12 text-gray-400" />
+    </div>
+    
+    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      {t('cart.empty_title')}
+    </h3>
+
+    <p className="text-gray-500 text-sm mb-6 max-w-xs leading-relaxed">
+      {t('cart.empty_subtitle')}
+    </p>
+
+    <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">
+      <Plus className="w-4 h-4" />
+      <span className="text-sm font-medium">{t('cart.click_to_add')}</span>
+    </div>
+
+    <div className="mt-4 text-xs text-gray-400">
+      {t('cart.double_click_hint')}
+    </div>
+  </div>
+);
+
+const LoadingOrderUI = () => (
+  <div className="h-96">
+    <Spinner message={t('cart.loading_order')} />
+  </div>
+);
+
 const OrderPanel = () => {
   const { 
     activeOrders, 
@@ -139,38 +170,9 @@ const OrderPanel = () => {
     }
   };
 
-  const EmptyCartUI = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-        <FrownIcon className="w-12 h-12 text-gray-400" />
-      </div>
-      
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        {t('cart.empty_title')}
-      </h3>
-
-      <p className="text-gray-500 text-sm mb-6 max-w-xs leading-relaxed">
-        {t('cart.empty_subtitle')}
-      </p>
-
-      <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">
-        <Plus className="w-4 h-4" />
-        <span className="text-sm font-medium">{t('cart.click_to_add')}</span>
-      </div>
-
-      <div className="mt-4 text-xs text-gray-400">
-        {t('cart.double_click_hint')}
-      </div>
-    </div>
-  );
-
-  const LoadingOrderUI = () => (
-    <div className="h-96">
-      <Spinner message={t('cart.loading_order')} />
-    </div>
-  );
-
   const isInteractionDisabled = isOrderInteractionDisabled() || isSubmitting;
+
+  // EmptyCartUI and LoadingOrderUI moved outside component to prevent re-creation on every render
 
   return (
     <div className="w-96 bg-white border-s border-gray-200 flex flex-col h-[calc(100vh-4rem)] fixed end-0 z-10" data-testid="order-panel">

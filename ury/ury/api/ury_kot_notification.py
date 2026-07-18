@@ -17,6 +17,7 @@ def get_users_with_role(role_name):
 
 @frappe.whitelist()
 def order_delay_notification(id):
+    frappe.only_for("Restaurant Manager")
     # Single query to fetch all needed fields
     kot = frappe.db.get_value(
         "URY KOT", id,

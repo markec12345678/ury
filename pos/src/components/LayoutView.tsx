@@ -142,8 +142,8 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
     }
   }, [selectedTable, tablesWithPosition]);
 
-  // Calculate table dimensions based on capacity and shape
-  const getTableDimensions = (shape: string, capacity: number = 4) => {
+  // Calculate table dimensions based on capacity and shape (memoized)
+  const getTableDimensions = useCallback((shape: string, capacity: number = 4) => {
     // Dynamic sizing: minimum 60px, scales up by 10px per person, max 250px
     const size = Math.max(60, Math.min(250, 60 + (capacity * 10)));
 
@@ -158,7 +158,7 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
       default:
         return { width: size * 1.5, height: size };
     }
-  };
+  }, []);
 
   // Zoom functionality (simple scale)
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 3));

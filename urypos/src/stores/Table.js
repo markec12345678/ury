@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { markRaw } from "vue";
 import router from "../router";
 import { useMenuStore } from "./Menu.js";
 import { useInvoiceDataStore } from "./invoiceData.js";
@@ -8,6 +9,7 @@ import { useNotifications } from "./Notification.js";
 import { useAlert } from "./Alert.js";
 import frappe from "./frappeSdk.js";
 import { usetoggleRecentOrder } from "./recentOrder.js";
+import { extractServerMessage } from "./utils/extractMessage.js";
 
 
 export const useTableStore = defineStore("table", {
@@ -24,7 +26,7 @@ export const useTableStore = defineStore("table", {
     isTakeAway: "",
     mobileNumber: "",
     showModal: false,
-    isTakeaeay: false,
+    isTakeaway: false,
     newTable: "",
     showTable: false,
     transferTable: [],
@@ -39,8 +41,8 @@ export const useTableStore = defineStore("table", {
     previousWaiter: null,
     newCaptain: "",
     invoicePrinted: "",
-    call: frappe.call(),
-    db: frappe.db(),
+    call: markRaw(frappe.call()),
+    db: markRaw(frappe.db()),
     totalMinutes: null,
     invoiceNumber: null,
     modifiedTime: null,
@@ -69,13 +71,13 @@ export const useTableStore = defineStore("table", {
       });
     },
     toggleTableType(state) {
-      return state.isTakeaeay ? "translateX(215%)" : "translateX(0)";
+      return state.isTakeaway ? "translateX(215%)" : "translateX(0)";
     },
     tableTypeLabel(state) {
-      return state.isTakeaeay ? "Takeaway" : "Table";
+      return state.isTakeaway ? "Takeaway" : "Table";
     },
     tableTypeClass(state) {
-      return state.isTakeaeay ? "text-left ml-1" : "text-center ml-2";
+      return state.isTakeaway ? "text-left ml-1" : "text-center ml-2";
     },
   },
   actions: {
@@ -200,14 +202,13 @@ export const useTableStore = defineStore("table", {
           });
       } catch (error) {
         if (error._server_messages) {
-          const messages = JSON.parse(error._server_messages);
-          const message = JSON.parse(messages[0])
-          alert.createAlert("Message", message.message, "OK");
+          const message = extractServerMessage(error);
+          alert.createAlert("Message", message, "OK");
         }
       }
     },
     toggleTableTypeSwitch() {
-      this.isTakeaeay = !this.isTakeaeay;
+      this.isTakeaway = !this.isTakeaway;
     },
     tableSearch() {
       this.db
@@ -399,7 +400,7 @@ export const useTableStore = defineStore("table", {
               if (!itemIndexExists) {
                 item.qty = previousItem.qty;
                 item.comment = previousItem.comment;
-                cart.push(item);
+                cart.push(JSON.parse(JSON.stringify(item)));
               }
             }
           });
@@ -423,12 +424,12 @@ export const useTableStore = defineStore("table", {
         })
         .catch((error) => console.error(error));
     },
-    routeToCart(table) {
-      this.addToSelectedTables(table);
+    async routeToCart(table) {
+      await this.addToSelectedTables(table);
       router.push("/Cart");
     },
-    routeToMenu(table) {
-      this.addToSelectedTables(table);
+    async routeToMenu(table) {
+      await this.addToSelectedTables(table);
       router.push("/Menu");
     },
     async invoiceNumberFetching() {
@@ -465,9 +466,8 @@ export const useTableStore = defineStore("table", {
         .catch((error) => {
           if (error._server_messages) {
             this.newTable = "";
-            const messages = JSON.parse(error._server_messages);
-            const message = JSON.parse(messages[0]);
-            alert.createAlert("Message", message.message, "OK");
+            const message = extractServerMessage(error);
+            alert.createAlert("Message", message, "OK");
           }
         });
     },
@@ -494,9 +494,8 @@ export const useTableStore = defineStore("table", {
           .then(() => router.push("/Table").catch(() => {}))
           .catch((error) => {
             if (error._server_messages) {
-              const messages = JSON.parse(error._server_messages);
-              const message = JSON.parse(messages[0]);
-              alert.createAlert("Message", message.message, "OK");
+              const message = extractServerMessage(error);
+              alert.createAlert("Message", message, "OK");
             }
           });
       }

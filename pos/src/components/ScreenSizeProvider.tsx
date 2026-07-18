@@ -17,15 +17,20 @@ const ScreenSizeProvider = ({ children }: ScreenSizeProviderProps) => {
     // Check on mount
     checkScreenSize();
 
-    // Add resize listener
+    // Debounced resize handler
+    let timeoutId: ReturnType<typeof setTimeout>;
     const handleResize = () => {
-      checkScreenSize();
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        checkScreenSize();
+      }, 150);
     };
 
     window.addEventListener('resize', handleResize);
 
     // Cleanup
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
   }, []);

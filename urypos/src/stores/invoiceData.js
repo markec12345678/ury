@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { markRaw } from "vue";
 import router from "../router";
 import { useTableStore } from "./Table.js";
 import { useMenuStore } from "./Menu.js";
@@ -9,6 +10,7 @@ import { useAlert } from "./Alert.js";
 import { useNotificationModal } from './NotificationModal';
 import { useAuthStore } from "./Auth.js";
 import frappe from "./frappeSdk.js";
+import { extractServerMessage } from "./utils/extractMessage.js";
 
 import {
   printWithQz,
@@ -54,8 +56,8 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
     cancelInvoiceFlag: false,
     invoiceDetails: [],
     previousOrderItem: [],
-    db: frappe.db(),
-    call: frappe.call(),
+    db: markRaw(frappe.db()),
+    call: markRaw(frappe.call()),
     alert: useAlert(),
     auth: useAuthStore(),
     menu: useMenuStore(),
@@ -122,9 +124,8 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         });
       } catch (error) {
         if (error._server_messages) {
-          const messages = JSON.parse(error._server_messages);
-          const message = JSON.parse(messages[0]);
-          this.alert.createAlert("Message", message.message, "OK");
+          const message = extractServerMessage(error);
+          this.alert.createAlert("Message", message, "OK");
         }
       }
       this.call
@@ -246,7 +247,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
               onCancel: () => {
                 this.showUpdateButtton = true;
                 this.invoiceUpdating = false;
-                reject('User cancelled the operation');
+                resolve({ cancelled: true });
               }
             });
           });
@@ -306,10 +307,9 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         this.showUpdateButtton = true;
         if (response.message.status === "Failure") {
           if (response._server_messages) {
-            const messages = JSON.parse(response._server_messages);
-            const message = JSON.parse(messages[0]);
+            const message = extractServerMessage(response);
     
-            await this.alert.createAlert("Message", message.message, "OK");
+            await this.alert.createAlert("Message", message, "OK");
             await router.push("/Table");
             router.push("/Table").catch(() => {});
             return;
@@ -327,8 +327,8 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         //   item.comment = "";
         // });
         
-        this.table.previousOrderdItem = response.message.items;
-        this.recentOrders.pastOrderdItem = response.message.items;
+        this.table.previousOrderdItem = JSON.parse(JSON.stringify(response.message.items));
+        this.recentOrders.pastOrderdItem = JSON.parse(JSON.stringify(response.message.items));
         this.previousOrderItem.splice(0, this.previousOrderItem.length);
         this.previousOrderItem.splice(0, this.previousOrderItem.length, ...cartCopy);
         this.invoiceUpdating = false;
@@ -342,13 +342,12 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
       } catch (error) {
         this.showUpdateButtton = true;
         this.invoiceUpdating = false;
-        if (error === 'User cancelled the operation') {
+        if (error && error.cancelled) {
           return; // Silently handle cancellation
         }
         if (error._server_messages) {
-          const messages = JSON.parse(error._server_messages);
-          const message = JSON.parse(messages[0]);
-          await this.alert.createAlert("Message", message.message, "OK");
+          const message = extractServerMessage(error);
+          await this.alert.createAlert("Message", message, "OK");
         }
       }
     },
@@ -376,7 +375,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
       this.recentOrders.invoiceNumber = "";
       this.recentOrders.setBackground = "";
       this.recentOrders.recentOrderListItems = [];
-      this.recentOrders.texDetails = [];
+      this.recentOrders.taxDetails = [];
       this.recentOrders.orderType = "";
       this.recentOrders.netTotal = 0;
       this.recentOrders.payments = [];
@@ -443,9 +442,8 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
           console.error(error);
           this.kotPrinting=false;
           if (error._server_messages) {
-            const messages = JSON.parse(error._server_messages);
-            const message = JSON.parse(messages[0]);
-             this.alert.createAlert("Message", message.message, "OK");
+            const message = extractServerMessage(error);
+             this.alert.createAlert("Message", message, "OK");
           }
         } );
 
@@ -544,10 +542,10 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         }
       } catch (e) {
         if (e?._server_messages) {
-          const messages = JSON.parse(e._server_messages);
-          const message = JSON.parse(messages[0]);
-          await this.alert.createAlert("Message", message.message, "OK");
+          const message = extractServerMessage(e);
+          await this.alert.createAlert("Message", message, "OK");
         }
+        this.isPrinting = false;
       }
     },
     async updatePrintTable(invoiceNo, maxRetries = 3) {

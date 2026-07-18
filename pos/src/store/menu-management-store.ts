@@ -18,6 +18,19 @@ import {
 } from '../lib/menu-management-api';
 import { showToast } from '../components/ui/toast';
 
+function extractServerMessage(error: unknown): string {
+  try {
+    const err = error as { _server_messages?: string };
+    if (err?._server_messages) {
+      const parsed = JSON.parse(err._server_messages);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return JSON.parse(parsed[0]).message || 'Operation failed';
+      }
+    }
+  } catch { /* ignore parse errors */ }
+  return 'Operation failed';
+}
+
 interface MenuManagementState {
   menus: URYMenu[];
   selectedMenu: URYMenu | null;
@@ -155,10 +168,7 @@ export const useMenuManagementStore = create<
       await get().fetchMenuDetail(menuName);
       showToast.success('Item added to menu');
     } catch (error: unknown) {
-      const err = error as { _server_messages?: string };
-      const msg = err?._server_messages
-        ? JSON.parse(JSON.parse(err._server_messages)[0]).message
-        : 'Failed to add item';
+      const msg = extractServerMessage(error) || 'Failed to add item';
       showToast.error(msg);
     }
   },
@@ -199,10 +209,7 @@ export const useMenuManagementStore = create<
       await get().fetchCourses();
       showToast.success('Course created');
     } catch (error: unknown) {
-      const err = error as { _server_messages?: string };
-      const msg = err?._server_messages
-        ? JSON.parse(JSON.parse(err._server_messages)[0]).message
-        : 'Failed to create course';
+      const msg = extractServerMessage(error) || 'Failed to create course';
       showToast.error(msg);
     }
   },
@@ -223,10 +230,7 @@ export const useMenuManagementStore = create<
       await get().fetchCourses();
       showToast.success('Course deleted');
     } catch (error: unknown) {
-      const err = error as { _server_messages?: string };
-      const msg = err?._server_messages
-        ? JSON.parse(JSON.parse(err._server_messages)[0]).message
-        : 'Failed to delete course';
+      const msg = extractServerMessage(error) || 'Failed to delete course';
       showToast.error(msg);
     }
   },

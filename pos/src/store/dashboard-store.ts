@@ -66,8 +66,6 @@ interface DashboardActions {
   setRefreshInterval: (seconds: number) => void;
 }
 
-let refreshTimer: ReturnType<typeof setInterval> | null = null;
-
 export const useDashboardStore = create<DashboardState & DashboardActions>(
   (set, get) => ({
     summary: null,
@@ -162,7 +160,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
       const p = period || get().selectedPeriod;
       try {
         set({ loading: true, error: null });
-        await Promise.allSettled([
+        const results = await Promise.allSettled([
           get().fetchSummary(p),
           get().fetchPreviousSummary(p),
           get().fetchRevenueChart(p),
@@ -171,7 +169,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
           get().fetchTableOccupancy(),
           get().fetchLiveMetrics(),
         ]);
-        set({ loading: false });
+        const rejected = results.filter(r => r.status === 'rejected');
+        if (rejected.length === results.length) {
+          set({ error: 'Failed to load dashboard data', loading: false });
+        } else {
+          set({ loading: false });
+        }
       } catch {
         set({ error: 'Failed to load dashboard data', loading: false });
       }
@@ -189,24 +192,10 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
 
     setAutoRefresh: (enabled) => {
       set({ autoRefresh: enabled });
-      if (refreshTimer) {
-        clearInterval(refreshTimer);
-        refreshTimer = null;
-      }
-      if (enabled) {
-        refreshTimer = setInterval(() => {
-          get().fetchLiveMetrics();
-        }, get().refreshInterval * 1000);
-      }
     },
 
     setRefreshInterval: (seconds) => {
       set({ refreshInterval: seconds });
-      if (get().autoRefresh) {
-        // Restart timer with new interval
-        get().setAutoRefresh(false);
-        get().setAutoRefresh(true);
-      }
     },
   })
 );

@@ -495,7 +495,7 @@ export default function Orders() {
           posProfile={posStore.posProfile?.name || ''}
           table={selectedOrder.restaurant_table || null}
           cashier={posStore.posProfile?.cashier || ''}
-          owner={posStore.posProfile?.cashier || ''}
+          owner={posStore.posProfile?.owner || ''}
           fetchOrders={fetchOrders}
           clearSelectedOrder={clearSelectedOrder}
         />

@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { markRaw } from "vue";
 import { useInvoiceDataStore } from "./invoiceData.js";
 import { useTableStore } from "./Table.js";
 import { useNotifications } from "./Notification.js";
@@ -8,6 +9,7 @@ import frappe from "./frappeSdk.js";
 import { usetoggleRecentOrder } from "./recentOrder.js";
 import { useAlert } from "./Alert.js";
 import router from "../router";
+import { extractServerMessage } from "./utils/extractMessage.js";
 
 
 export const useMenuStore = defineStore("menu", {
@@ -17,7 +19,7 @@ export const useMenuStore = defineStore("menu", {
     items: [],
     course: [],
     orderType: [],
-    defautlMenu: [],
+    defaultMenu: [],
     aggregatorList: [],
     aggregatorItem: [],
     quantity: "",
@@ -37,8 +39,8 @@ export const useMenuStore = defineStore("menu", {
     showDialog: false,
     showPriority: false,
     showDialogCart: false,
-    db: frappe.db(),
-    call: frappe.call(),
+    db: markRaw(frappe.db()),
+    call: markRaw(frappe.call()),
   }),
   getters: {
     filteredItems(state) {
@@ -137,8 +139,8 @@ export const useMenuStore = defineStore("menu", {
           if (!auth.cashier && table.tableMenu) {
             this.items = table.tableMenu;
           } else {
-            this.defautlMenu = result.message.items;
-            this.items = this.defautlMenu;
+            this.defaultMenu = result.message.items;
+            this.items = this.defaultMenu;
           }
           this.items.forEach((menuItem) => {
             if (menuItem.special_dish == 1) {
@@ -150,9 +152,8 @@ export const useMenuStore = defineStore("menu", {
         })
         .catch((error) => {
           if (error._server_messages) {
-            const messages = JSON.parse(error._server_messages);
-            const message = JSON.parse(messages[0]);
-            alert.createAlert("Message", message.message, "OK");
+            const message = extractServerMessage(error);
+            alert.createAlert("Message", message, "OK");
           }
         });
       this.db
@@ -188,7 +189,7 @@ export const useMenuStore = defineStore("menu", {
       recentOrders.showOrder = "";
       recentOrders.invoiceNumber = "";
       recentOrders.recentOrderListItems = [];
-      recentOrders.texDetails = [];
+      recentOrders.taxDetails = [];
       recentOrders.orderType = "";
       recentOrders.draftInvoice = "";
       recentOrders.netTotal = 0;
@@ -243,15 +244,14 @@ export const useMenuStore = defineStore("menu", {
             })
             .catch((error) => {
               if (error._server_messages) {
-                const messages = JSON.parse(error._server_messages);
-                const message = JSON.parse(messages[0]);
-                alert.createAlert("Message", message.message, "OK");
+                const message = extractServerMessage(error);
+                alert.createAlert("Message", message, "OK");
               }
             });
         } else {
           this.aggregatorItem = "";
           this.selectedAggregator = "";
-          this.items = this.defautlMenu;
+          this.items = this.defaultMenu;
         }
       }
     },
@@ -281,14 +281,13 @@ export const useMenuStore = defineStore("menu", {
             if (result.message) {
               this.items = result.message;
             } else {
-              this.items = this.defautlMenu;
+              this.items = this.defaultMenu;
             }
           })
           .catch((error) => {
             if (error._server_messages) {
-              const messages = JSON.parse(error._server_messages);
-              const message = JSON.parse(messages[0]);
-              alert.createAlert("Message", message.message, "OK");
+              const message = extractServerMessage(error);
+              alert.createAlert("Message", message, "OK");
             }
           });
       }

@@ -68,10 +68,54 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
 
   useEffect(() => {
     // Only check if we have the POS profile loaded
-    if (posProfile) {
-      checkPOSStatus();
-    }
-  }, [posProfile]);
+    if (!posProfile) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage(null);
+
+        // First check if POS is opened
+        const openingResponse = await checkPOSOpening();
+        if (cancelled) return;
+        if (openingResponse.message === 1) {
+          // POS is not opened
+          setValidationType('opening');
+          return;
+        }
+
+        // If POS is opened, check if custom_daily_pos_close is enabled
+        if (posProfile?.custom_daily_pos_close === 1) {
+          try {
+            const closeResponse = await validatePOSClose(posProfile.name);
+            if (cancelled) return;
+            if (closeResponse.message === 'Failed') {
+              // Previous POS is not closed
+              setValidationType('closing');
+              return;
+            }
+          } catch (error) {
+            if (cancelled) return;
+            // On error, show error state with retry instead of assuming failure
+            setErrorMessage(getErrorMessage(error));
+            setValidationType('error');
+            return;
+          }
+        }
+
+        // All validations passed
+        if (!cancelled) setValidationType(null);
+      } catch (error) {
+        if (cancelled) return;
+        // Show error state with retry instead of assuming POS is not opened
+        setErrorMessage(getErrorMessage(error));
+        setValidationType('error');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [posProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show loading state while checking
   if (isLoading) {

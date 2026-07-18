@@ -92,7 +92,7 @@
       </select>
     </div>
   </div>
-  <div v-if="!this.table.isTakeaeay" class="m-auto">
+  <div v-if="!this.table.isTakeaway" class="m-auto">
     <div class="flow-root">
       <div
         class="fixed inset-0 z-50 flex items-center justify-center bg-gray-300 bg-opacity-50 text-lg"

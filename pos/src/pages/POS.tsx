@@ -10,6 +10,33 @@ import { cn } from '../lib/utils';
 import { Spinner } from '../components/ui/spinner';
 import InitialLoader from '../components/InitialLoader';
 
+interface QuickFilterButtonProps {
+  filter: 'all' | 'special';
+  icon: ElementType;
+  label: string;
+  quickFilter: 'all' | 'special';
+  isActive: boolean;
+  onClick: () => void;
+  disabled: boolean;
+}
+
+const QuickFilterButton = ({ filter, icon: Icon, label, quickFilter, isActive, onClick, disabled }: QuickFilterButtonProps) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
+      isActive
+        ? 'bg-blue-100 text-blue-700'
+        : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+      disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
+    )}
+    disabled={disabled}
+  >
+    <Icon className="w-4 h-4" />
+    {label}
+  </button>
+);
+
 export default function POS() {
   const {
     _searchQuery,
@@ -56,26 +83,7 @@ export default function POS() {
     };
   }, []);
 
-  const QuickFilterButton = ({ filter, icon: Icon, label }: { 
-    filter: 'all' | 'special';
-    icon: ElementType;
-    label: string;
-  }) => (
-    <button
-      onClick={() => setQuickFilter(filter)}
-      className={cn(
-        'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
-        quickFilter === filter
-          ? 'bg-blue-100 text-blue-700'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-        isMenuInteractionDisabled() && 'opacity-50 cursor-not-allowed pointer-events-none'
-      )}
-      disabled={isMenuInteractionDisabled()}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
-  );
+  // QuickFilterButton moved outside component to prevent re-creation on every render
 
   if (isInitializing) {
     return <InitialLoader />;
@@ -121,8 +129,8 @@ export default function POS() {
                 disabled={isMenuInteractionDisabled()}
               /> */}
               
-              <QuickFilterButton filter="all" icon={Star} label={t('common.all')} />
-              <QuickFilterButton filter="special" icon={TrendingUp} label={t('menu.special_items')} />
+              <QuickFilterButton filter="all" icon={Star} label={t('common.all')} quickFilter={quickFilter} isActive={quickFilter === 'all'} onClick={() => setQuickFilter('all')} disabled={isMenuInteractionDisabled()} />
+              <QuickFilterButton filter="special" icon={TrendingUp} label={t('menu.special_items')} quickFilter={quickFilter} isActive={quickFilter === 'special'} onClick={() => setQuickFilter('special')} disabled={isMenuInteractionDisabled()} />
             </div>
           </div>
         </div>

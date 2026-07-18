@@ -4,12 +4,15 @@
 export { cn } from './lib/cn';
 
 // Components
+export * from './components/accordion';
 export * from './components/avatar';
 export * from './components/badge';
 export * from './components/button';
 export * from './components/card';
 export * from './components/checkbox';
 export * from './components/dialog';
+export * from './components/drawer';
+export * from './components/dropdown-menu';
 export * from './components/empty-state';
 export * from './components/input';
 export * from './components/loader';

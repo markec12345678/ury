@@ -5,6 +5,7 @@ Provides aggregated data for the advanced dashboard with charts.
 
 import frappe
 from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, nowdate, flt
+from ury.ury.api.utils import _get_user_branch
 
 
 @frappe.whitelist()
@@ -12,6 +13,7 @@ def get_dashboard_summary(period="today"):
     """Get dashboard summary KPIs for the given period.
     period: today, yesterday, this_week, last_week, this_month, last_month
     """
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     from_date, to_date = _get_period_dates(period)
     branch = _get_user_branch()
 
@@ -99,6 +101,7 @@ def get_revenue_chart(period="this_month", granularity="daily"):
 @frappe.whitelist()
 def get_orders_chart(period="this_month"):
     """Get orders count data for charts."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     from_date, to_date = _get_period_dates(period)
     branch = _get_user_branch()
 
@@ -115,6 +118,7 @@ def get_orders_chart(period="this_month"):
 @frappe.whitelist()
 def get_category_sales_chart(period="this_month"):
     """Get sales breakdown by menu course/category."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     from_date, to_date = _get_period_dates(period)
     branch = _get_user_branch()
 
@@ -150,6 +154,7 @@ def get_category_sales_chart(period="this_month"):
 @frappe.whitelist()
 def get_payment_method_chart(period="this_month"):
     """Get payment method distribution."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     from_date, to_date = _get_period_dates(period)
     branch = _get_user_branch()
 
@@ -181,6 +186,7 @@ def get_payment_method_chart(period="this_month"):
 @frappe.whitelist()
 def get_table_occupancy():
     """Get current table occupancy data."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     branch = _get_user_branch()
 
     tables = frappe.get_all(
@@ -216,6 +222,7 @@ def get_table_occupancy():
 @frappe.whitelist()
 def get_live_metrics():
     """Get real-time metrics for live dashboard updates."""
+    frappe.only_for("Restaurant Manager", "Accounts Manager")
     today = getdate()
     branch = _get_user_branch()
 
@@ -297,11 +304,7 @@ def _get_period_dates(period):
         return today, today
 
 
-def _get_user_branch():
-    """Get the branch for the current user."""
-    user = frappe.session.user
-    branch = frappe.db.get_value("URY User", {"user": user}, "parent")
-    return branch
+
 
 
 def _get_top_selling_items(from_date, to_date, branch=None, limit=10):

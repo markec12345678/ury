@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { markRaw } from "vue";
 import router from "../router";
 import moment from "moment";
 import { useMenuStore } from "./Menu.js";
@@ -8,12 +9,13 @@ import { useInvoiceDataStore } from "./invoiceData.js";
 import { useTableStore } from "./Table.js";
 import { useAlert } from "./Alert.js";
 import frappe from "./frappeSdk.js";
+import { extractServerMessage } from "./utils/extractMessage.js";
 
 export const usetoggleRecentOrder = defineStore("recentOrders", {
   state: () => ({
     payments: [],
     pastOrder: [],
-    texDetails: [],
+    taxDetails: [],
     pastOrderdItem: [],
     recentOrderList: [],
     modeOfPaymentList: [],
@@ -62,7 +64,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
     showPayment: false,
     showDiscount: false,
     cancelInvoiceFlag: false,
-    call: frappe.call(),
+    call: markRaw(frappe.call()),
   }),
   getters: {
     filteredOrders() {
@@ -192,6 +194,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
       this.getPosInvoice(this.selectedStatus, limit, startLimit);
     },
     previousPageClick() {
+      if (this.currentPage <= 1) return;
       this.currentPage -= 1;
       const limit = 10;
       const startLimit = (this.currentPage - 1) * limit;
@@ -257,7 +260,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
         .get("ury.ury_pos.api.getPosInvoiceItems", getPosInvoiceItems)
         .then((result) => {
           this.recentOrderListItems = result.message[0];
-          this.texDetails = result.message[1];
+          this.taxDetails = result.message[1];
         })
         .catch((error) => console.error(error));
       this.showOrder = true;
@@ -327,7 +330,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
               if (!itemIndexExists) {
                 item.qty = previousItem.qty;
                 item.comment = previousItem.comment;
-                cart.push(item);
+                cart.push(JSON.parse(JSON.stringify(item)));
               }
             }
           });
@@ -389,9 +392,8 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
           })
           .catch((error) => {
             if (error._server_messages) {
-              const messages = JSON.parse(error._server_messages);
-              const message = JSON.parse(messages[0]);
-              alert.createAlert("Message", message.message, "OK");
+              const message = extractServerMessage(error);
+              alert.createAlert("Message", message, "OK");
             }
           });
       }
@@ -535,9 +537,8 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
           .catch((error) => {
             this.isLoading = false;
             if (error._server_messages) {
-              const messages = JSON.parse(error._server_messages);
-              const message = JSON.parse(messages[0]);
-              alert.createAlert("Message", message.message, "OK");
+              const message = extractServerMessage(error);
+              alert.createAlert("Message", message, "OK");
             }
           });
       }
@@ -573,7 +574,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
       this.invoiceNumber = "";
       this.setBackground = "";
       this.recentOrderListItems = [];
-      this.texDetails = [];
+      this.taxDetails = [];
     },
     showCancelInvoiceModal() {
       const alert = useAlert();

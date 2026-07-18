@@ -9,13 +9,13 @@ def before_uninstall():
         print("Removing customizations created by the Frappe URY app...")
         # remove_custom_fields()
 
-    except:
+    except Exception:
         print("Failed To Remove Customizations.")
 
 def uninstall():
-	ROLES = ["URY Manager", "URY Captain", "URY Cashier"]
+        ROLES = ["URY Manager", "URY Captain", "URY Cashier"]
 
-	frappe.db.delete("Custom DocPerm",{"role": ["in", ROLES]})
+        frappe.db.delete("Custom DocPerm",{"role": ["in", ROLES]})
 
-	print ("* removing URY Roles...")
-	frappe.db.delete("Role", {"name": ["in", ROLES]})
+        print ("* removing URY Roles...")
+        frappe.db.delete("Role", {"name": ["in", ROLES]})

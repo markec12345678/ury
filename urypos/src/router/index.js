@@ -14,12 +14,11 @@ import posClose from "../components/posClosing.vue";
 const routes = [
   {
     path: "/",
-    name: "Table",
-    component: Table,
+    redirect: "/Table",
   },
   {
     path: "/Table",
-    name: "TableView",
+    name: "Table",
     component: Table,
   },
   {
@@ -64,6 +63,5 @@ export const router = createRouter({
 
 
 export default router;
-
 
 

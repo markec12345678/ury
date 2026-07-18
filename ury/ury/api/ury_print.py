@@ -10,7 +10,6 @@ no_cache = 1
 base_template_path = "www/printview.html"
 standard_format = "templates/print_formats/standard.html"
 
-from frappe.www.printview import validate_print_permission
 
 @frappe.whitelist()
 def network_printing(
@@ -22,6 +21,7 @@ def network_printing(
     no_letterhead=0,
     file_path=None,
 ):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     try:
         print_settings = frappe.get_doc("Network Printer Settings", printer_setting)
 
@@ -81,6 +81,7 @@ def network_printing(
 
 @frappe.whitelist()
 def select_network_printer(pos_profile, invoice_id):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     table = frappe.db.get_value("POS Invoice", invoice_id, "restaurant_table")
     print_format = frappe.db.get_value("POS Profile", pos_profile, "print_format")
 
@@ -108,6 +109,7 @@ def select_network_printer(pos_profile, invoice_id):
 
 @frappe.whitelist()
 def qz_print_update(invoice):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     try:
         table = frappe.db.get_value("POS Invoice", invoice, "restaurant_table")
 
@@ -138,6 +140,7 @@ def qz_print_update(invoice):
 
 @frappe.whitelist()
 def print_pos_page(doctype, name, print_format):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     data = {"name": name, "doctype": doctype, "print_format": print_format}
 
     result = frappe.db.get_value(
@@ -164,9 +167,10 @@ def print_pos_page(doctype, name, print_format):
 
 @frappe.whitelist()
 def qz_certificate():
+    if "System Manager" not in frappe.get_roles():
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
     site_config = frappe.get_site_config()
     qz_key_value = site_config.get("qz_cert")
-
     return qz_key_value
 
 

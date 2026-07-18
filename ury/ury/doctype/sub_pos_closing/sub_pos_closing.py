@@ -92,6 +92,8 @@ def get_cashiers(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 def get_pos_invoices(start, end, pos_profile, user):
+    # Get branch from pos_profile for filtering
+    branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
     # Filter by date range in SQL instead of Python (M9)
     data = frappe.db.sql(
         """
@@ -105,8 +107,9 @@ def get_pos_invoices(start, end, pos_profile, user):
             and status != "Consolidated"
             and timestamp(posting_date, posting_time) >= %s
             and timestamp(posting_date, posting_time) <= %s
+            and branch = %s
         """,
-        (user, pos_profile, start, end),
+        (user, pos_profile, start, end, branch),
         as_dict=1,
     )
     if not data:

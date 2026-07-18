@@ -11,7 +11,7 @@ console.warn(
 );
 
 import './index.css';
-import { createApp, reactive } from "vue";
+import { createApp } from "vue";
 import App from "./App.vue";
 
 import { useAuthStore } from "@/stores/Auth.js";

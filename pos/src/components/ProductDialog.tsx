@@ -96,12 +96,14 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
       setIsAddonLoading(false);
       return;
     }
+    let cancelled = false;
     setIsItemLoading(true);
     setIsAddonLoading(true);
     setItemError(null);
     setAddonError(null);
     db.getDoc('Item', selectedItem.item)
       .then((doc: FrappeItemDoc) => {
+        if (cancelled) return;
         setItemDoc(doc);
         // Extract addon codes from the same response
         if (Array.isArray(doc.custom_pos_add_on_items)) {
@@ -114,15 +116,19 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
         }
       })
       .catch(() => {
+        if (cancelled) return;
         setItemError(t('errors.failed_fetch_item_details'));
         setItemDoc(null);
         setAddonError(t('errors.failed_fetch_addons'));
         setAddonItemCodes([]);
       })
       .finally(() => {
-        setIsItemLoading(false);
-        setIsAddonLoading(false);
+        if (!cancelled) {
+          setIsItemLoading(false);
+          setIsAddonLoading(false);
+        }
       });
+    return () => { cancelled = true; };
   }, [selectedItem]);
 
   const addonDetails = Array.isArray(itemDoc?.custom_pos_add_on_items)

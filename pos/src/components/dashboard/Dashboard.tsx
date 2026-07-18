@@ -49,7 +49,9 @@ const Dashboard = () => {
     selectedPeriod,
     loading,
     autoRefresh,
+    refreshInterval,
     fetchAll,
+    fetchLiveMetrics,
     setSelectedPeriod,
     setAutoRefresh,
   } = useDashboardStore();
@@ -60,10 +62,20 @@ const Dashboard = () => {
     fetchAll();
   }, [fetchAll]);
 
+  // Auto-refresh timer with proper cleanup
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = setInterval(() => fetchLiveMetrics(), refreshInterval * 1000);
+    return () => clearInterval(id);
+  }, [autoRefresh, refreshInterval, fetchLiveMetrics]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchAll();
-    setRefreshing(false);
+    try {
+      await fetchAll();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handlePeriodChange = (period: string) => {

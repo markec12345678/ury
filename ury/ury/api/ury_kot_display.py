@@ -7,6 +7,7 @@ from frappe.utils import get_datetime
 # Function to set order status in a KOT document
 @frappe.whitelist()
 def serve_kot(name, time):
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     current_time = get_datetime()
     creation_time = frappe.db.get_value("URY KOT", name, "creation")
     if not creation_time:
@@ -24,6 +25,7 @@ def serve_kot(name, time):
 # Function to mark it as verified by a user in cancel type KOT
 @frappe.whitelist()
 def confirm_cancel_kot(name, user=None):
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     # Use server-side identity instead of client-supplied user parameter
     verified_by = frappe.session.user
     frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by})
@@ -31,6 +33,7 @@ def confirm_cancel_kot(name, user=None):
 
 @frappe.whitelist()
 def get_site_name():
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     return {"site_name": frappe.local.site}
 
 
@@ -208,11 +211,13 @@ def _build_kot_response(branch, status_filter):
 
 @frappe.whitelist()
 def kot_list():
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     branch = getBranch()
     return _build_kot_response(branch, "Ready For Prepare")
 
 
 @frappe.whitelist()
 def served_kot_list():
+    frappe.only_for("Restaurant Manager", "Restaurant User")
     branch = getBranch()
     return _build_kot_response(branch, "Served")

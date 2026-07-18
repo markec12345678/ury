@@ -1,8 +1,10 @@
 import { defineStore } from "pinia";
+import { markRaw } from "vue";
 import { useTableStore } from "./Table.js";
 import { useMenuStore } from "./Menu.js";
 import { useInvoiceDataStore } from "./invoiceData.js";
 import frappe from "./frappeSdk.js";
+import { extractServerMessage } from "./utils/extractMessage.js";
 
 import axios from "axios";
 import { useAlert } from "./Alert.js";
@@ -28,9 +30,9 @@ export const useAuthStore = defineStore("auth", {
     viewAllStatus: null,
     restrictTableOrder: null,
     removeTableOrderItem: null,
-    db: frappe.db(),
-    call: frappe.call(),
-    auth: frappe.auth(),
+    db: markRaw(frappe.db()),
+    call: markRaw(frappe.call()),
+    auth: markRaw(frappe.auth()),
     userAuth: localStorage.getItem("userAuth"),
   }),
   getters: {
@@ -83,16 +85,23 @@ export const useAuthStore = defineStore("auth", {
             localStorage.removeItem("userAuth");
           } else {
             this.userAuth = true;
-            invoiceData.fetchInvoiceDetails().then(() => {
-              router.push("/Table");
-              table.fetchRoom();
-              this.fetchUserRole();
-            });
+            invoiceData.fetchInvoiceDetails()
+              .then(() => {
+                router.push("/Table");
+                table.fetchRoom();
+                this.fetchUserRole();
+              })
+              .catch((error) => {
+                console.error("Failed to fetch invoice details:", error);
+                this.userAuth = false;
+                localStorage.removeItem("userAuth");
+                router.push("/login");
+              });
           }
         })
         .catch((error) => {
           this.userAuth = false;
-          localStorage.removeItem("userAuth", "true");
+          localStorage.removeItem("userAuth");
           router.push("/login");
         });
     },
@@ -168,10 +177,7 @@ export const useAuthStore = defineStore("auth", {
           .catch((error) => {
             if (error._server_messages) {
               var currentDomain = window.location.origin;
-              const serverMessages = JSON.parse(error._server_messages);
-              const innerMessageString = serverMessages[0];
-              const innerMessage = JSON.parse(innerMessageString);
-              const message = innerMessage.message;
+              const message = extractServerMessage(error);
               alert.createAlert("Message", message, "OK").then(() => {
                 window.location.href = currentDomain + "/app/";
               });
@@ -232,7 +238,7 @@ export const useAuthStore = defineStore("auth", {
           router.push("/login").then(() => {
             router.push("/Table").catch(() => {});
           });
-          localStorage.removeItem("userAuth", "true");
+          localStorage.removeItem("userAuth");
           disconnectQzPrinter();
         })
         .catch((error) => console.error(error));
