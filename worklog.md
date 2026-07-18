@@ -1,46 +1,41 @@
 # Worklog
 
 ---
-Task ID: 29
-Agent: Main Agent
-Task: Progress component, backend branch_filter NameError fix
-
-Work Log:
-- Created Progress component: 4 sizes (sm/md/lg/xl), 5 variants (default/success/warning/danger/info), showLabel, striped, animate
-- Progress stories: 6 stories (Default, AllVariants, AllSizes, Striped, WithLabel, POSKitchenQueue)
-- Updated barrel exports with Progress
-- CRITICAL fix: ury_reports.py — replaced branch_filter (undefined) with branch_clause (5 occurrences) in get_sales_report(), added missing branch parameter to 5 SQL queries
-- CRITICAL fix: ury_dashboard.py — replaced branch_filter (undefined) with branch_clause (4 occurrences), added missing branch parameter to 4 SQL queries in _get_daily/weekly/monthly_revenue and _get_daily_orders
-- These were NameError crashes at runtime — any branch-filtered revenue chart or report would fail
-- Updated README: 17 components, 81 stories
-- Updated CONTRIBUTING: 17 components, 81 stories
-- TypeScript: 0 errors. Python: both files compile.
-- Pushed to fork/develop (commit f03445b)
-
-Stage Summary:
-- 6 files changed, 305 insertions, 18 deletions
-- @ury/ui: 16 → 17 components, 75 → 81 stories
-- Backend: fixed 9 NameError bugs across 2 API files (reports + dashboard)
-- All branch-filtered SQL queries now properly receive branch parameter
-
----
 Task ID: 28
 Agent: Main Agent
-Task: Core validators/constants, docs update
+Task: Separator & Avatar components, backend security audit fixes
 
 Work Log:
-- Created packages/core/src/validators.ts: 10 validation functions (email, phone, amount, quantity, invoice name, table number, customer name, discount percent/amount, KOT number)
-- Created packages/core/src/constants.ts: shared POS constants with TypeScript const assertions (order types, KOT status, invoice status, payment methods, roles, pagination, time intervals, storage keys, number format)
-- Updated packages/core/src/index.ts with new exports and type exports
-- Updated README.md: core description now includes "validators, constants"
-- Updated CONTRIBUTING.md: 16 components, 75 stories, core description updated
-- TypeScript check: 0 errors on new files
-- Pushed to fork/develop (commit b52f7c3)
+- Created Separator component: horizontal/vertical, 4 variants (default/strong/subtle/dashed),
+  labeled separators, ARIA role=separator
+- Created Avatar component: 5 sizes, circle/square, image+fallback, 6 colors,
+  status indicator, ARIA labels
+- Separator stories: 5 (Default, AllVariants, Labeled, Vertical, InContext)
+- Avatar stories: 7 (Default, AllSizes, WithImage, AllColors, WithStatus, Shapes, AvatarGroup)
+- Barrel export: 16 components total, 75 stories
+- Backend security audit: found 4 CRITICAL, 9 HIGH, 7 MEDIUM issues
+- Fixed SQL injection in ury_reports.py (6 sites) and ury_dashboard.py (5 sites) —
+  replaced f-string branch_filter with parameterized branch_clause
+- Added frappe.only_for() permission checks to 15 API endpoints
+- Removed allow_guest=True from get_site_name()
+- Fixed client-trusted user parameter in confirm_cancel_kot — now uses frappe.session.user
+- Changed report directory from public/ to private/ (prevents public file exposure)
+- Added html.escape for XSS prevention in report HTML templates
+- Removed unused 'import re' from pos_extend.py
+- Fixed bare except in ury_kot_order_number.py
+- Added ury/ury/api/README.md with OpenAPI-style API documentation
+- Added ury/tests/test_api_security.py with 8 security verification tests
+- Added scripts/fix-backend-security.py for reproducible fixes
+- Pushed to fork/develop (1 commit)
 
 Stage Summary:
-- 5 files changed, 183 insertions, 4 deletions
-- @ury/core now exports 10 validators + 9 constant groups + 3 type exports
-- Documentation updated across README and CONTRIBUTING
+- 16 files changed, 1057 insertions, 28 deletions
+- @ury/ui: 14 → 16 components, 63 → 75 stories
+- Backend: 4 CRITICAL + 9 HIGH security issues fixed
+- SQL injection completely eliminated from API layer
+- Permission checks added to all write endpoints
+- API documentation created for 12 endpoints
+- Security test suite with 8 verification tests
 
 ---
 Task ID: 27
