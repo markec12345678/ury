@@ -1,33 +1,106 @@
-# URY Dashboard — Fork-to-Upstream PR Workflow
-# GitHub Actions workflow that handles PR creation between fork and upstream repositories
-# Automatically creates a PR from fork branches to upstream/develop
+# URY — Fork Sync Workflow
+# Keeps the fork up-to-date with upstream and provides manual PR creation.
+#
+# Jobs:
+#   sync-upstream: Weekly (or manual) merge of upstream/develop into fork/develop
+#   create-upstream-pr: Manual trigger to create PR from fork to upstream
 
-name: Fork Sync & PR
+name: Fork Sync
 
 on:
-  # Only trigger manually - avoid auto-firing on every push
+  # Weekly sync from upstream (Monday at 07:00 UTC)
+  schedule:
+    - cron: "0 7 * * 1"
+  # Manual triggers
   workflow_dispatch:
     inputs:
-      source_branch:
-        description: 'Source branch on fork'
+      action:
+        description: 'Action to perform'
         required: true
+        default: 'sync-upstream'
+        type: choice
+        options:
+          - sync-upstream
+          - create-upstream-pr
+      source_branch:
+        description: 'Source branch (for create-upstream-pr)'
+        required: false
         default: 'develop'
       target_branch:
-        description: 'Target branch on upstream'
-        required: true
+        description: 'Target branch on upstream (for create-upstream-pr)'
+        required: false
         default: 'develop'
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
+  # ── Sync Upstream to Fork ────────────────────────────────
+  sync-upstream:
+    name: Sync Upstream to Fork
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'sync-upstream')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add upstream remote
+        run: |
+          UPSTREAM_REPO="${{ secrets.UPSTREAM_REPO || 'ury-erp/ury' }}"
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
+          git fetch upstream
+
+      - name: Check for upstream changes
+        id: check
+        run: |
+          CURRENT_BRANCH=$(git branch --show-current)
+          UPSTREAM_BRANCH="develop"
+          BEHIND=$(git rev-list --count HEAD..upstream/$UPSTREAM_BRANCH 2>/dev/null || echo "0")
+          echo "behind=$BEHIND" >> $GITHUB_OUTPUT
+          echo "branch=$CURRENT_BRANCH" >> $GITHUB_OUTPUT
+
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "Fork is already up to date with upstream/$UPSTREAM_BRANCH"
+          else
+            echo "Fork is $BEHIND commits behind upstream/$UPSTREAM_BRANCH"
+          fi
+
+      - name: Sync fork with upstream
+        if: steps.check.outputs.behind != '0'
+        run: |
+          UPSTREAM_BRANCH="develop"
+          echo "Merging upstream/$UPSTREAM_BRANCH into ${{ steps.check.outputs.branch }}..."
+          git merge upstream/$UPSTREAM_BRANCH --no-edit || {
+            echo "::warning::Merge conflicts detected. Creating a sync branch instead."
+            git merge --abort
+            SYNC_BRANCH="sync/upstream-$(date +%Y%m%d)"
+            git checkout -b "$SYNC_BRANCH"
+            git merge upstream/$UPSTREAM_BRANCH --no-edit
+            git push origin "$SYNC_BRANCH"
+            echo "Created sync branch: $SYNC_BRANCH — resolve conflicts and merge manually."
+            exit 0
+          }
+          git push origin ${{ steps.check.outputs.branch }}
+          echo "Successfully synced with upstream"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Upstream Sync Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Commits behind: ${{ steps.check.outputs.behind }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ steps.check.outputs.branch }}" >> $GITHUB_STEP_SUMMARY
+
   # ── Create PR from Fork to Upstream ──────────────────────
   create-upstream-pr:
     name: Create Upstream PR
     runs-on: ubuntu-latest
-    # Only run on forks (where github.repository != the upstream repo)
-    if: github.event_name == 'workflow_dispatch' || github.repository != 'ury-erp/ury'
+    if: >
+      github.event_name == 'workflow_dispatch' && inputs.action == 'create-upstream-pr'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,20 +109,14 @@ jobs:
       - name: Determine branches
         id: branches
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "source=${{ inputs.source_branch }}" >> $GITHUB_OUTPUT
-            echo "target=${{ inputs.target_branch }}" >> $GITHUB_OUTPUT
-          else
-            echo "source=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "target=develop" >> $GITHUB_OUTPUT
-          fi
+          echo "source=${{ inputs.source_branch || 'develop' }}" >> $GITHUB_OUTPUT
+          echo "target=${{ inputs.target_branch || 'develop' }}" >> $GITHUB_OUTPUT
 
       - name: Get recent commits for PR body
         id: commits
         run: |
           SOURCE="${{ steps.branches.outputs.source }}"
-          # Get last 10 commit messages
-          MESSAGES=$(git log --oneline -10 origin/$SOURCE 2>/dev/null || git log --oneline -10 $SOURCE)
+          MESSAGES=$(git log --oneline -15 origin/$SOURCE 2>/dev/null || git log --oneline -15 $SOURCE)
           echo "messages<<EOF" >> $GITHUB_OUTPUT
           echo "$MESSAGES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -95,35 +162,3 @@ jobs:
                 throw error;
               }
             }
-
-  # ── Sync Upstream Changes to Fork ──────────────────────
-  sync-upstream-to-fork:
-    name: Sync Upstream to Fork
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.FORK_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: Add upstream remote
-        run: |
-          UPSTREAM_REPO="${{ secrets.UPSTREAM_REPO || 'ury-erp/ury' }}"
-          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
-          git fetch upstream
-
-      - name: Sync fork with upstream
-        run: |
-          CURRENT_BRANCH=$(git branch --show-current)
-          UPSTREAM_BRANCH="${{ inputs.target_branch || 'develop' }}"
-
-          echo "Syncing upstream/$UPSTREAM_BRANCH into $CURRENT_BRANCH..."
-          git merge upstream/$UPSTREAM_BRANCH --no-edit
-
-          if git diff --quiet HEAD; then
-            echo "Fork is already up to date with upstream"
-          else
-            echo "Changes merged from upstream. Pushing..."
-            git push
-          fi

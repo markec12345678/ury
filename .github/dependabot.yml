@@ -13,7 +13,7 @@ updates:
       time: "06:00"
     open-pull-requests-limit: 10
     reviewers:
-      - "ury-erp/core"
+      - "markec12345678"
     labels:
       - "dependencies"
       - "automated"

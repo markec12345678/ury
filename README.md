@@ -2,7 +2,7 @@
 
 [![Fork CI](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml)
 [![CI](https://github.com/markec12345678/ury/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/ci.yml)
-[![Storybook](https://img.shields.io/badge/Storybook-29_stories-ff6f91?logo=storybook)](https://github.com/markec12345678/ury/tree/develop/packages/ui/src/components/__stories__)
+[![Storybook](https://img.shields.io/badge/Storybook-40_stories-ff6f91?logo=storybook)](https://github.com/markec12345678/ury/tree/develop/packages/ui/src/components/__stories__)
 [![Node](https://img.shields.io/badge/Node.js-22-339933?logo=node.js)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
@@ -104,8 +104,8 @@ ury/
 │   └── labeler.yml         # Auto-label PRs by path
 ├── .storybook/             # Storybook 10 config
 ├── packages/
-│   ├── ui/                 # @ury/ui — React components (7 components, 29 stories)
-│   │   └── src/components/ # Button, Card, Badge, Input, Textarea, Loader, Spinner
+│   ├── ui/                 # @ury/ui — React components (10 components, 40 stories)
+│   │   └── src/components/ # Button, Card, Badge, Input, Textarea, Loader, Spinner, Dialog, Select, Toast
 │   └── core/               # @ury/core — Frappe SDK, storage, formatting
 ├── pos/                    # POS v2 (Vite + React + Zustand)
 ├── urypos/                 # POS v1 (legacy)
@@ -139,7 +139,8 @@ ury/
 |----------|---------|-------------|
 | **Fork CI** | Push/PR to develop | Lint, Storybook build, Build verification |
 | **CI** | Push/PR to develop/main | Lint, Unit tests, Build, E2E |
-| **Release** | Tag push (v*) | Build Docker image, push to GHCR |
+| **Release** | Tag push (v*) | Validate build, changelog, GitHub release, Docker push |
+| **Fork Sync** | Cron (weekly Mon 07:00) / Manual | Sync upstream changes into fork |
 | **Chromatic** | Push to develop | Storybook visual regression |
 | **Labeler** | PR opened | Auto-label by changed paths |
 | **Stale** | Cron (daily) | Close inactive issues/PRs (60d/30d) |
@@ -165,6 +166,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Key points:
 | Textarea | 3 | Default, disabled, with error |
 | Loader | 3 | Default, full page, custom label |
 | Spinner | 2 | Default, inline usage |
+| Dialog | 4 | Default, large, no close button, custom size |
+| Select | 7 | Default, preselected, error, small, large, disabled, many options |
+| Toast | 4 | Success, error, info, all types |
 
 ---
 
