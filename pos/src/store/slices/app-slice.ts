@@ -3,6 +3,7 @@ import { storage } from '../../lib/storage';
 import { getCurrencyInfo, type PosProfileCombined, getCombinedPosProfile } from '../../lib/pos-profile-api';
 import { getPaymentModes } from '../../lib/payment-api';
 import { DEFAULT_ORDER_TYPE } from '../../data/order-types';
+import { getErrorMessage } from '../../lib/error-utils';
 import type { POSSliceAll } from './combined';
 
 // --- Types ---
@@ -16,6 +17,7 @@ export interface AppState {
   currency: string;
   currencySymbol: string | null;
   paymentModes: string[];
+  paymentModesError: string | null;
 }
 
 export interface AppActions {
@@ -41,6 +43,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
   currency: storage.getItem('currency') || 'INR',
   currencySymbol: storage.getItem('currencySymbol') || null,
   paymentModes: ['Cash'],
+  paymentModesError: null,
 
   initializeApp: async () => {
     try {
@@ -134,10 +137,12 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
 
   fetchPaymentModes: async () => {
     try {
+      set({ paymentModesError: null });
       const modes = await getPaymentModes();
       set({ paymentModes: modes });
     } catch (error) {
       if (import.meta.env.DEV) console.error('Failed to fetch payment modes:', error);
+      set({ paymentModesError: getErrorMessage(error) });
     }
   },
 

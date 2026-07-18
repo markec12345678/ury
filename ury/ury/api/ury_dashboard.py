@@ -362,12 +362,6 @@ def _get_order_type_breakdown(from_date, to_date, branch=None):
 def _get_hourly_breakdown(from_date, to_date, branch=None):
     """Get hourly revenue/order breakdown."""
     branch_clause = "AND branch = %s" if branch else ""
-    filters = {
-        "posting_date": ["between", [from_date, to_date]],
-        "docstatus": 1,
-    }
-    if branch:
-        filters["branch"] = branch
 
     data = frappe.db.sql("""
         SELECT 

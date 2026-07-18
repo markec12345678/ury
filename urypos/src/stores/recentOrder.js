@@ -11,6 +11,9 @@ import { useAlert } from "./Alert.js";
 import frappe from "./frappeSdk.js";
 import { extractServerMessage } from "./utils/extractMessage.js";
 
+let timer = null;
+let searchTimer = null;
+
 export const usetoggleRecentOrder = defineStore("recentOrders", {
   state: () => ({
     payments: [],
@@ -35,10 +38,8 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
     customerNameForBilling: "",
     previousOrderdCustomer: "",
     table: null,
-    timer: null,
     orderType: null,
     percentage: null,
-    searchTimer: null,
     postingDate: null,
     modifiedTime: null,
     recentWaiter: null,
@@ -56,6 +57,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
     additionalPiscountPercentage: null,
     changeToReturn: 0,
     discountAmount: null,
+    setBackground: null,
     isLoading: false,
     isChecked: false,
     showOrder: false,
@@ -166,8 +168,8 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
         .catch((error) => console.error(error));
     },
     handleSearchInput(event) {
-      clearTimeout(this.searchTimer);
-      this.searchTimer=setTimeout(()=>{
+      clearTimeout(searchTimer);
+      searchTimer=setTimeout(()=>{
         this.searchPosInvoice(event.target.value);
       },500);
     },
@@ -369,10 +371,10 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
     },
 
     resetTimer() {
-      if (this.timer) {
-        clearTimeout(this.timer);
+      if (timer) {
+        clearTimeout(timer);
       }
-      this.timer = setTimeout(this.hideInputBox, 1000);
+      timer = setTimeout(this.hideInputBox, 1000);
     },
     hideInputBox() {
       this.showInput = false;

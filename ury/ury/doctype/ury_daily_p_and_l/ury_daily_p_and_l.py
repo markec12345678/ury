@@ -9,9 +9,27 @@ import json
 import calendar
 from datetime import datetime
 
-def inner_bom_process(buying_price_list, bom):
+def inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=None):
+    if visited is None:
+        visited = set()
     unset_bom_items = []
     bom_buying_price = 0
+
+    if depth > max_depth:
+        frappe.log_error(
+            f"BOM recursion depth exceeded max_depth={max_depth} for BOM {bom.name}",
+            "BOM Depth Limit Warning"
+        )
+        return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
+
+    if bom.name in visited:
+        frappe.log_error(
+            f"Circular BOM reference detected: {bom.name} already visited",
+            "BOM Circular Reference Warning"
+        )
+        return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
+
+    visited = visited | {bom.name}
 
     for bom_item in bom.items:
         bom_item_qty = bom_item.qty
@@ -20,7 +38,7 @@ def inner_bom_process(buying_price_list, bom):
         
         if len(boms) > 0:
             inner_bom = frappe.get_doc("BOM", boms[0].name)
-            inner_bom_data = inner_inner_bom_process(buying_price_list, inner_bom)
+            inner_bom_data = inner_bom_process(buying_price_list, inner_bom, depth=depth+1, max_depth=max_depth, visited=visited)
             inner_bom_buying_price = inner_bom_data['bom_buying_price']
             inner_unset_bom_items = inner_bom_data['unset_bom_items']
             bom_buying_price += float(inner_bom_buying_price) * bom_item_qty
@@ -43,9 +61,21 @@ def inner_bom_process(buying_price_list, bom):
     return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
 
 
-def inner_inner_bom_process(buying_price_list, bom):
+def inner_inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=None):
+    """Leaf-level BOM processor (no further BOM resolution).
+    Kept for backward compatibility; inner_bom_process now recurses into itself
+    for arbitrary nesting depth with circular-reference and depth-limit guards."""
+    if visited is None:
+        visited = set()
     unset_bom_items = []
     bom_buying_price = 0
+
+    if depth > max_depth or bom.name in visited:
+        frappe.log_error(
+            f"BOM depth/circular check triggered for {bom.name} in inner_inner_bom_process",
+            "BOM Safety Check Warning"
+        )
+        return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
 
     for bom_item in bom.items:
         bom_item_qty = bom_item.qty
@@ -226,16 +256,20 @@ class URYDailyPandL(Document):
                                 if row.item not in bom_map:
                                         bom_map[row.item] = row.name
 
+                # Batch-load BOM documents to avoid N+1 queries in the loop below
+                bom_doc_cache = {}
+                for bn in set(bom_map.values()):
+                        bom_doc_cache[bn] = frappe.get_doc("BOM", bn)
+
                 for item in bom_item_sales:
-                        # TODO: N+1 query — frappe.get_doc("BOM", ...) is called inside this loop
-                        # for each bom_item_sales entry. Consider batch-loading all BOM docs upfront
-                        # and caching them in a dict to avoid repeated DB round-trips.
                         buying_price = 0
                         buying_price_list = report_settings.buying_price_list
                         bom_name = bom_map.get(item['Item Code'])
                         if not bom_name:
                                 continue
-                        bom = frappe.get_doc("BOM", bom_name)
+                        bom = bom_doc_cache.get(bom_name)
+                        if not bom:
+                                continue
                         bom_data = inner_bom_process(buying_price_list,bom)
                         bom_buying_price = bom_data['bom_buying_price']
                         unset_bom_items = bom_data['unset_bom_items']
@@ -268,33 +302,87 @@ class URYDailyPandL(Document):
                         for row in pb_rows:
                                 pb_map[row.new_item_code] = row.name
 
+                # Batch-load Product Bundle documents to avoid N+1 queries in the loop below
+                pb_doc_cache = {}
+                for pn in set(pb_map.values()):
+                        pb_doc_cache[pn] = frappe.get_doc("Product Bundle", pn)
+
+                # Batch-load sub-item data for all Product Bundles (BOMs, Item names, Item Prices)
+                all_pb_sub_item_codes = set()
+                for pb_doc in pb_doc_cache.values():
+                        for pb_item in pb_doc.items:
+                                all_pb_sub_item_codes.add(pb_item.item_code)
+
+                pb_sub_bom_map = {}
+                if all_pb_sub_item_codes:
+                        pb_sub_bom_rows = frappe.db.get_all(
+                                "BOM",
+                                filters={"item": ("in", list(all_pb_sub_item_codes)), "is_active": 1, "is_default": 1, "docstatus": 1},
+                                fields=["name", "item"],
+                        )
+                        for row in pb_sub_bom_rows:
+                                if row.item not in pb_sub_bom_map:
+                                        pb_sub_bom_map[row.item] = row.name
+
+                # Add PB sub-item BOM docs to the shared bom_doc_cache
+                for bn in set(pb_sub_bom_map.values()):
+                        if bn not in bom_doc_cache:
+                                bom_doc_cache[bn] = frappe.get_doc("BOM", bn)
+
+                pb_sub_items_without_bom = [ic for ic in all_pb_sub_item_codes if ic not in pb_sub_bom_map]
+
+                # Batch-load Item names for sub-items without BOMs
+                pb_sub_item_name_map = {}
+                if pb_sub_items_without_bom:
+                        item_name_rows = frappe.db.get_all(
+                                "Item",
+                                filters={"item_code": ("in", pb_sub_items_without_bom)},
+                                fields=["item_code", "item_name"],
+                        )
+                        pb_sub_item_name_map = {r.item_code: r.item_name for r in item_name_rows}
+
+                # Batch-load Item Prices for sub-items without BOMs
+                pb_sub_item_price_map = {}
+                if pb_sub_items_without_bom:
+                        price_rows = frappe.db.get_all(
+                                "Item Price",
+                                fields=['item_code', 'price_list_rate'],
+                                filters={'price_list': report_settings.buying_price_list, 'item_code': ('in', pb_sub_items_without_bom)}
+                        )
+                        for r in price_rows:
+                                if r.item_code not in pb_sub_item_price_map:
+                                        pb_sub_item_price_map[r.item_code] = r.price_list_rate
+
                 for item in pb_item_sales:
                         pb_name = pb_map.get(item['Item Code'])
                         if not pb_name:
                                 continue
-                        pb = frappe.get_doc("Product Bundle", pb_name)
+                        pb = pb_doc_cache.get(pb_name)
+                        if not pb:
+                                continue
                         buying_price = 0
                         for pb_item in pb.items:
                                 item_qty = pb_item.qty
-                                boms = frappe.db.get_all("BOM",fields = ["name"],filters = {'item':pb_item.item_code,'is_active':1,'is_default':1,'docstatus':1})
-                                if len(boms) > 0:
+                                sub_bom_name = pb_sub_bom_map.get(pb_item.item_code)
+                                if sub_bom_name:
                                         buying_price_list = report_settings.buying_price_list
-                                        bom = frappe.get_doc("BOM",boms[0].name)
-                                        bom_data = inner_bom_process(buying_price_list,bom)
-                                        bom_buying_price = bom_data['bom_buying_price']
-                                        unset_bom_items = bom_data['unset_bom_items']
-                                        buying_price += float(bom_buying_price)*item_qty
-                                        for unset_item in unset_bom_items:
-                                                if unset_item not in unset_bom_item_prices:
-                                                        unset_bom_item_prices.append(unset_item)
+                                        bom = bom_doc_cache.get(sub_bom_name)
+                                        if bom:
+                                                bom_data = inner_bom_process(buying_price_list, bom)
+                                                bom_buying_price = bom_data['bom_buying_price']
+                                                unset_bom_items = bom_data['unset_bom_items']
+                                                buying_price += float(bom_buying_price) * item_qty
+                                                for unset_item in unset_bom_items:
+                                                        if unset_item not in unset_bom_item_prices:
+                                                                unset_bom_item_prices.append(unset_item)
                                 else:
-                                        item_name = frappe.db.get_value("Item", pb_item.item_code, "item_name") or pb_item.item_code
-                                        items_price = frappe.db.get_all("Item Price",fields = ['price_list_rate'],filters = {'price_list':report_settings.buying_price_list,'item_code':pb_item.item_code})
-                                        if len(items_price) == 0:
+                                        item_name = pb_sub_item_name_map.get(pb_item.item_code, pb_item.item_code)
+                                        items_price_rate = pb_sub_item_price_map.get(pb_item.item_code)
+                                        if items_price_rate is None:
                                                 if item_name not in unset_pb_item_prices:
                                                         unset_pb_item_prices.append(item_name)
                                         else:
-                                                buying_price += float(items_price[0].price_list_rate)*item_qty
+                                                buying_price += float(items_price_rate) * item_qty
                         
                         if buying_price > 0:
                                 qty = float(item['Qty'])
@@ -308,6 +396,7 @@ class URYDailyPandL(Document):
                                 })
                                 cogs = cogs + buying_price * qty
                 self.cogs = cogs
+                self._cogs_calculated = True
                 
                 unset_prices = [
                         ("ITEMS", unset_item_prices),
@@ -328,7 +417,9 @@ class URYDailyPandL(Document):
                         frappe.msgprint(title=_('Set Buying Price'), msg=_("Please review the remarks below for the items. Submitting now will exclude these items from the cost of goods."))
         
         def before_submit(self):
-                self.cogs_sold()
+                # Optimization: skip redundant COGS calculation — already computed in before_save
+                if not getattr(self, '_cogs_calculated', False):
+                        self.cogs_sold()
                 
                 # Reuse cached report_settings from cogs_sold()
                 report_settings = self._report_settings

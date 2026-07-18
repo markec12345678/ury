@@ -49,6 +49,7 @@ interface DashboardState {
   error: string | null;
   autoRefresh: boolean;
   refreshInterval: number; // seconds
+  partialErrors: string[];
 }
 
 interface DashboardActions {
@@ -82,6 +83,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
     error: null,
     autoRefresh: false,
     refreshInterval: 30,
+    partialErrors: [],
 
     fetchSummary: async (period) => {
       const p = period || get().selectedPeriod;
@@ -159,7 +161,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
     fetchAll: async (period) => {
       const p = period || get().selectedPeriod;
       try {
-        set({ loading: true, error: null });
+        set({ loading: true, error: null, partialErrors: [] });
         const results = await Promise.allSettled([
           get().fetchSummary(p),
           get().fetchPreviousSummary(p),
@@ -170,10 +172,13 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
           get().fetchLiveMetrics(),
         ]);
         const rejected = results.filter(r => r.status === 'rejected');
+        const partialErrors = rejected.map(r =>
+          r.status === 'rejected' ? String(r.reason ?? 'Unknown error') : ''
+        ).filter(Boolean);
         if (rejected.length === results.length) {
-          set({ error: 'Failed to load dashboard data', loading: false });
+          set({ error: 'Failed to load dashboard data', loading: false, partialErrors });
         } else {
-          set({ loading: false });
+          set({ loading: false, partialErrors });
         }
       } catch {
         set({ error: 'Failed to load dashboard data', loading: false });

@@ -78,7 +78,6 @@ export function printWithQz(host, htmlToPrint){
                     res(stob64(hextorstr(hex)));
                 } catch (err) {
                     rej(err);
-                    reject(err);
                 }
             };
         });

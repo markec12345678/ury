@@ -374,6 +374,10 @@ def _get_report_dates(period, from_date=None, to_date=None):
         last_month = add_months(today, -1)
         return get_first_day(last_month), get_last_day(last_month)
     else:
+        frappe.log_error(
+            f"Unknown period '{period}' passed to _get_report_dates, defaulting to today",
+            "URY Reports Warning"
+        )
         return today, today
 
 

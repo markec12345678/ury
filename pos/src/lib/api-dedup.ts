@@ -40,6 +40,9 @@ const DEFAULT_CACHE_TTL = 5 * 60 * 1000;
 /** Max age for pending request before it's considered stale (30 seconds) */
 const PENDING_REQUEST_MAX_AGE = 30 * 1000;
 
+/** Critical POST endpoints that should never be deduplicated (payment retries, etc.) */
+const CRITICAL_POST_ENDPOINTS = ['sync_order', 'make_invoice', 'cancel_order'];
+
 /**
  * Generate a cache/dedup key from method + params.
  */
@@ -153,15 +156,20 @@ export const dedupedCall = {
     }
   ): Promise<T> => {
     // POST requests are never cached, but we still dedup in-flight
+    // However, critical endpoints (payments, invoices) must never be deduped
+    // to allow legitimate retries
     const priority = options?.priority ?? inferPriority(method);
     const key = makeKey(method, params);
+    const isCritical = CRITICAL_POST_ENDPOINTS.some(ep => method.includes(ep));
 
     cleanupStalePending();
 
-    const pending = pendingRequests.get(key);
-    if (pending && Date.now() - pending.timestamp < PENDING_REQUEST_MAX_AGE) {
-      logger.debug(`[API Dedup] Reusing in-flight POST for ${method}`);
-      return pending.promise as Promise<T>;
+    if (!isCritical) {
+      const pending = pendingRequests.get(key);
+      if (pending && Date.now() - pending.timestamp < PENDING_REQUEST_MAX_AGE) {
+        logger.debug(`[API Dedup] Reusing in-flight POST for ${method}`);
+        return pending.promise as Promise<T>;
+      }
     }
 
     // Route through rate limiter → retry → actual call

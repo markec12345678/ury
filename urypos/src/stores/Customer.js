@@ -7,6 +7,8 @@ import { useMenuStore } from "./Menu.js";
 import frappe from "./frappeSdk.js";
 import { useAlert } from "./Alert.js";
 import { extractServerMessage } from "./utils/extractMessage.js";
+let timer = null;
+
 export const useCustomerStore = defineStore("customers", {
   state: () => ({
     customer: [],
@@ -31,7 +33,6 @@ export const useCustomerStore = defineStore("customers", {
     customerGroup: null,
     call: markRaw(frappe.call()),
     db: markRaw(frappe.db()),
-    timer: null,
   }),
   getters: {
     isFlagSet() {
@@ -75,8 +76,8 @@ export const useCustomerStore = defineStore("customers", {
     },
     handleSearchInput(event) {
       this.search = event.target.value;
-      clearTimeout(this.timer);
-      this.timer = setTimeout(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
         this.pickCustomer();
       }, 500);
     },
@@ -232,7 +233,7 @@ export const useCustomerStore = defineStore("customers", {
     },
     validateInput(event) {
       let value = event.target.value;
-      if (value < 1) {
+      if (Number(value) < 1) {
         this.numberOfPax = "";
         return;
       }

@@ -103,7 +103,7 @@ export const useMenuStore = defineStore("menu", {
       ) {
         return "black";
       } else if (
-        recentOrders.editPrintedInvoice === 1 ||
+        recentOrders.editPrintedInvoice === 1 &&
         auth.removeTableOrderItem === 0
       ) {
         return "gray";
@@ -163,7 +163,8 @@ export const useMenuStore = defineStore("menu", {
         })
         .then((docs) => {
           this.course = docs;
-        });
+        })
+        .catch((error) => console.error("Failed to fetch menu courses:", error));
     },
     pickOrderType() {
       this.call

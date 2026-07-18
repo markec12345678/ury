@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { checkPOSOpening, validatePOSClose } from '../lib/pos-opening-api';
 import { usePOSStore } from '../store/pos-store';
 import POSOpeningDialog from './POSOpeningDialog';
@@ -15,56 +15,16 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
   const [validationType, setValidationType] = useState<ValidationType>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { posProfile } = usePOSStore();
-
-  const checkPOSStatus = async () => {
-    try {
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      // First check if POS is opened
-      const openingResponse = await checkPOSOpening();
-      if (openingResponse.message === 1) {
-        // POS is not opened
-        setValidationType('opening');
-        return;
-      }
-
-      // If POS is opened, check if custom_daily_pos_close is enabled
-      if (posProfile?.custom_daily_pos_close === 1) {
-        try {
-          const closeResponse = await validatePOSClose(posProfile.name);
-          if (closeResponse.message === 'Failed') {
-            // Previous POS is not closed
-            setValidationType('closing');
-            return;
-          }
-        } catch (error) {
-          // On error, show error state with retry instead of assuming failure
-          setErrorMessage(getErrorMessage(error));
-          setValidationType('error');
-          return;
-        }
-      }
-
-      // All validations passed
-      setValidationType(null);
-    } catch (error) {
-      // Show error state with retry instead of assuming POS is not opened
-      setErrorMessage(getErrorMessage(error));
-      setValidationType('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleReload = () => {
     window.location.reload();
   };
 
-  const handleRetry = () => {
-    checkPOSStatus();
-  };
+  const handleRetry = useCallback(() => {
+    setRetryCount(c => c + 1);
+  }, []);
 
   useEffect(() => {
     // Only check if we have the POS profile loaded
@@ -115,7 +75,7 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
       }
     })();
     return () => { cancelled = true; };
-  }, [posProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [posProfile, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show loading state while checking
   if (isLoading) {
