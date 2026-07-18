@@ -61,11 +61,13 @@ docker run -p 3000:3000 ury:latest
 ury/
 ├── packages/ui/          # @ury/ui — Shared React component library
 │   └── src/
-│       ├── components/    # Button, Card, Badge, Input, Textarea, Loader, Spinner, Dialog, Select, Toast
-│       ├── __stories__/   # Storybook stories (10 components, 40 stories)
+│       ├── components/    # 16 components: Button, Card, Badge, Input, Textarea, Loader,
+│       │                  # Spinner, Dialog, Select, Toast, Tooltip, Switch, Checkbox,
+│       │                  # Tabs, Separator, Avatar
+│       ├── __stories__/   # Storybook stories (16 components, 75 stories)
 │       ├── styles/        # Theme CSS, Tailwind preset
 │       └── lib/           # Utilities (cn, etc.)
-├── packages/core/         # @ury/core — Frappe SDK, storage, formatting
+├── packages/core/         # @ury/core — Frappe SDK, storage, formatting, validators, constants
 ├── pos/                   # POS v2 (Vite + React + Zustand)
 ├── ury/                   # Frappe backend app (Python)
 ├── urypos/                # Legacy POS (Frappe)

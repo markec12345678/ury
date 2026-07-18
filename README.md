@@ -106,7 +106,7 @@ ury/
 ├── packages/
 │   ├── ui/                 # @ury/ui — React components (16 components, 75 stories)
 │   │   └── src/components/ # Button, Card, Badge, Input, Textarea, Loader, Spinner, Dialog, Select, Toast, Tooltip, Switch, Checkbox, Tabs, Separator, Avatar
-│   └── core/               # @ury/core — Frappe SDK, storage, formatting
+│   └── core/               # @ury/core — Frappe SDK, storage, formatting, validators, constants
 ├── pos/                    # POS v2 (Vite + React + Zustand)
 ├── urypos/                 # POS v1 (legacy)
 ├── URYMosaic/              # Kitchen Display System (Vue)
