@@ -126,7 +126,7 @@ def create_kot(
 
     kotdoc.insert()
     kotdoc.submit()
-    kotdoc.db_set("owner", owner)
+    kotdoc.db_set("owner", posInvoice.owner)
 
     # Create a KOT Log entry
     create_kot_log(kotdoc, posInvoice)

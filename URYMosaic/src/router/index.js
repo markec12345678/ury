@@ -10,6 +10,10 @@ const routes = [
     meta: { isLoginPage: false },
   },
   ...authRoutes,
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/',
+  },
 ];
 
 const router = createRouter({

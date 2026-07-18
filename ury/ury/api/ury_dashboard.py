@@ -4,7 +4,7 @@ Provides aggregated data for the advanced dashboard with charts.
 """
 
 import frappe
-from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, nowdate, flt
+from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, flt
 from ury.ury.api.utils import _get_user_branch
 
 

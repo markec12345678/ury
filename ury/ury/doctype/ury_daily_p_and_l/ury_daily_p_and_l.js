@@ -58,7 +58,7 @@ frappe.ui.form.on('URY Daily P and L', {
 function set_html_data(frm) {
         if (frm.doc.docstatus === 1) {
                 frappe.call({
-                        method: "get_proft_loss_details",
+                        method: "get_profit_loss_details",
                         doc: frm.doc,
                         callback: (r) => {
                                 frm.get_field("proft_loss_details").$wrapper.html(r.message);

@@ -5,7 +5,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
-import json
 import calendar
 from datetime import datetime
 
@@ -54,38 +53,6 @@ def inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=Non
                     unset_bom_items.append(bom_item_name)
             else:
                 bom_buying_price += float(bom_items_price[0].price_list_rate) * bom_item_qty
-
-    if not bom.quantity:
-        return {"bom_buying_price": 0, "unset_bom_items": unset_bom_items}
-    bom_buying_price = bom_buying_price / bom.quantity
-    return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
-
-
-def inner_inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=None):
-    """Leaf-level BOM processor (no further BOM resolution).
-    Kept for backward compatibility; inner_bom_process now recurses into itself
-    for arbitrary nesting depth with circular-reference and depth-limit guards."""
-    if visited is None:
-        visited = set()
-    unset_bom_items = []
-    bom_buying_price = 0
-
-    if depth > max_depth or bom.name in visited:
-        frappe.log_error(
-            f"BOM depth/circular check triggered for {bom.name} in inner_inner_bom_process",
-            "BOM Safety Check Warning"
-        )
-        return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
-
-    for bom_item in bom.items:
-        bom_item_qty = bom_item.qty
-        bom_item_name = bom_item.item_name
-        bom_items_price = frappe.db.get_all("Item Price", fields=['name', 'price_list_rate'], filters={'price_list': buying_price_list, 'item_code': bom_item.item_code})
-        if len(bom_items_price) == 0:
-            if bom_item_name not in unset_bom_items:
-                unset_bom_items.append(bom_item_name)
-        else:
-            bom_buying_price += float(bom_items_price[0].price_list_rate) * bom_item_qty
 
     if not bom.quantity:
         return {"bom_buying_price": 0, "unset_bom_items": unset_bom_items}
@@ -680,8 +647,10 @@ class URYDailyPandL(Document):
                         self.net_profit_percent = round(((self.net_profit / self.net_sales) * 100),2)
         
         @frappe.whitelist()
-        def get_proft_loss_details(self):
+        def get_profit_loss_details(self):
+                frappe.only_for("Restaurant Manager", "Accounts Manager")
+                currency = frappe.db.get_value("Company", self.company, "default_currency") or "INR"
                 return frappe.render_template(
                         "ury/doctype/ury_daily_p_and_l/profit_loss_details.html",
-                        {"data": self, "currency": "INR"},
+                        {"data": self, "currency": currency},
                 )

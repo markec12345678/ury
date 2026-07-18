@@ -76,6 +76,7 @@ class SubPOSClosing(Document):
 
 @frappe.whitelist()
 def get_pos_profile():
+    frappe.only_for("Restaurant Manager", "Cashier")
     branch = getBranch()
     pos_profile = frappe.db.get_value("POS Profile", {"branch": branch}, "name")
     return pos_profile
@@ -84,6 +85,7 @@ def get_pos_profile():
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_cashiers(doctype, txt, searchfield, start, page_len, filters):
+    frappe.only_for("Restaurant Manager", "Cashier")
     cashiers_list = frappe.get_all(
         "POS Profile User", filters=filters, fields=["user"], as_list=1
     )
@@ -92,6 +94,7 @@ def get_cashiers(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 def get_pos_invoices(start, end, pos_profile, user):
+    frappe.only_for("Restaurant Manager", "Cashier")
     # Get branch from pos_profile for filtering
     branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
     # Filter by date range in SQL instead of Python (M9)

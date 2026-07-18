@@ -22,6 +22,7 @@ def validate_search_input(search_term):
 @frappe.whitelist()
 def overrided_past_order_list(search_term, status, limit=20):
     """Fetch past orders for the v1 POS, respecting branch permissions."""
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     user = frappe.session.user
     search_term = validate_search_input(search_term)
     limit = cint(limit)

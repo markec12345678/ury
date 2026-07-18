@@ -10,7 +10,7 @@
       <div class="flex items-center justify-center">
         <div class="w-full rounded-lg bg-white p-6 shadow-lg md:max-w-md">
           <p
-            class="block text-left text-xl font-medium text-gray dark:text-gray"
+            class="block text-left text-xl font-medium text-gray-700 dark:text-gray-300"
           >
             <span
               class="w-3 h-3 rounded-full inline-block mr-1 bg-red-500"
@@ -23,7 +23,7 @@
             Log in to access this page.
           </p>
 
-          <div class="flex justify">
+          <div class="flex justify-center">
             <button
               @click="
                 showModal = false;
@@ -42,12 +42,14 @@
     <div
       class="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
-      <div v-for="kot in kot" :key="kot.name">
+      <div v-for="kot in visibleKots" :key="kot.name">
         <div
           :class="[kot.color]"
           class="inline-block shadow-lg gap-4 p-3 rounded-2xl w-80 h-auto masonry-item"
           style="margin-top: 28px"
-          v-if="!kot.showDiv && kot.production === production"
+          role="button"
+          tabindex="0"
+          @keydown.enter="rotateCard(kot)"
         >
           <div class="w-64">
             <div
@@ -200,6 +202,8 @@
           'bg-red-500': !isOnline,
         },
       ]"
+      role="status"
+      aria-live="polite"
       @transitionend="handleTransitionEnd"
     >
       {{ statusMessage }}
@@ -211,13 +215,15 @@
 import { FrappeApp } from "frappe-js-sdk";
 import Masonry from "masonry-layout";
 import io from "socket.io-client";
+import { markRaw } from "vue";
 
 let host = window.location.hostname;
 let port = window.location.port;
 let protocol = window.location.protocol;
 let url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
-window.globalSiteName = '';
-let socket; 
+let siteName = '';
+let socketInitPromise = null;
+let alertAudio = null; 
 
 function debounce(fn, delay) {
     let timer = null;
@@ -236,7 +242,7 @@ async function fetchAndSetSiteName() {
             }
         });
         const data = await response.json();
-        window.globalSiteName = data?.message?.site_name || '';
+        siteName = data?.message?.site_name || '';
     } catch (error) {
         if (import.meta.env?.DEV) console.error('Failed to fetch site name:', error);
     }
@@ -244,22 +250,25 @@ async function fetchAndSetSiteName() {
 
 async function initializeSocket() {
     await fetchAndSetSiteName();
-    if (window.globalSiteName) {
-        let site = window.globalSiteName;
+    if (siteName) {
+        let site = siteName;
         let site_url = `${url}/${site}`;
-        socket = io(site_url, {
+        const sock = io(site_url, {
           withCredentials: true,
           reconnection: true,
           reconnectionAttempts: Infinity,
           reconnectionDelay: 1000,
           reconnectionDelayMax: 5000,
         });
+        return sock;
     } else {
         console.error('Site name is not set. Socket cannot be initialized.');
+        return null;
     }
 }
 
-initializeSocket(); // Initialize the socket after fetching the site name
+// Start initialization but don't block module evaluation
+socketInitPromise = initializeSocket();
 
 
 const frappe = new FrappeApp(url);
@@ -288,8 +297,12 @@ export default {
     playAlertSound(path) {
       const currentDomain = window.location.origin;
       const audio_path = currentDomain + path;
-      const audio = new Audio(audio_path);
-      audio.play().catch(() => {});
+      if (!alertAudio) {
+        alertAudio = new Audio(audio_path);
+      } else {
+        alertAudio.src = audio_path;
+      }
+      alertAudio.play().catch(() => {});
     },
     auth() {
       return new Promise((resolve, reject) => {
@@ -391,10 +404,14 @@ export default {
     },
     toggleItemStrikeThrough(kotitem, kot) {
       kotitem.striked = !kotitem.striked;
-      localStorage.setItem(
-        `${kot.name}_${kotitem.name}_strike`,
-        JSON.stringify(kotitem.striked)
-      );
+      try {
+        localStorage.setItem(
+          `${kot.name}_${kotitem.name}_strike`,
+          JSON.stringify(kotitem.striked)
+        );
+      } catch (e) {
+        if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+      }
     },
 
     updateColorandTable(kot, restaurant_table, type, table_takeaway) {
@@ -498,11 +515,11 @@ export default {
         targetSeconds
       );
 
-      const timeDifference = currentTime - targetDate;
+      const timeDifference = Math.max(0, currentTime - targetDate);
       const hoursRemaining = Math.floor(timeDifference / 3600000);
       const minutesRemaining = Math.floor((timeDifference % 3600000) / 60000);
 
-      return `${hoursRemaining} : ${minutesRemaining}`;
+      return `${hoursRemaining} : ${String(minutesRemaining).padStart(2, '0')}`;
     },
     fetchkotwithmasonry() {
       return this.fetchKOT().then(() => {
@@ -523,10 +540,10 @@ export default {
         if (!this.$el) return;
         const grid = this.$el.querySelector(".grid");
         if (!grid) return;
-        this.masonry = new Masonry(grid, {
+        this.masonry = markRaw(new Masonry(grid, {
           itemSelector: ".masonry-item",
           gutter: 28,
-        });
+        }));
         this.masonry.layout();
       });
     },
@@ -549,6 +566,7 @@ export default {
       this.statusMessage = message;
     },
     hideStatusMessageAfterDelay() {
+      if (this._statusTimeout) clearTimeout(this._statusTimeout);
       this._statusTimeout = setTimeout(() => {
         this.statusMessage = "";
       }, 3000);
@@ -562,7 +580,7 @@ export default {
   },
   created() {
     // API client as non-reactive instance property (avoids Proxy overhead)
-    this.call = frappe.call();
+    this.call = markRaw(frappe.call());
   },
   mounted() {
     window.addEventListener("online", this.handleOnline);
@@ -579,17 +597,24 @@ export default {
     window.addEventListener("resize", this._resizeHandler);
     this.masonryLoading();
 
-    if (socket) socket.on('connect_error', (err) => {
-      console.error("Socket connection error:", err);
-      this.setStatusMessage("Connection error. Retrying...");
-    });
-    if (socket) socket.on('disconnect', (reason) => {
-      console.warn("Socket disconnected:", reason);
-      this.setStatusMessage("Connection lost. Reconnecting...");
-    });
-    if (socket) socket.on('connect', () => {
-      this.setStatusMessage("Reconnected");
-      this.hideStatusMessageAfterDelay();
+    // Wait for socket to be ready before attaching listeners
+    socketInitPromise.then((sock) => {
+      this._socket = sock;
+      if (this._socket) this._socket.on('connect_error', (err) => {
+        console.error("Socket connection error:", err);
+        this.setStatusMessage("Connection error. Retrying...");
+      });
+      if (this._socket) this._socket.on('disconnect', (reason) => {
+        console.warn("Socket disconnected:", reason);
+        this.setStatusMessage("Connection lost. Reconnecting...");
+      });
+      if (this._socket) this._socket.on('connect', () => {
+        this.setStatusMessage("Reconnected");
+        this.hideStatusMessageAfterDelay();
+      });
+      if (this._socket && this.socketHandler) {
+        this._socket.on(this.kot_channel, this.socketHandler);
+      }
     });
 
     this.auth()
@@ -623,12 +648,18 @@ export default {
                   }).catch((e) => { console.error("KOT fetch failed:", e); });
                 }
               }, 1500);
-              if (doc.kot) localStorage.setItem("kot_time", doc.kot.time);
+              if (doc.kot) {
+                try {
+                  localStorage.setItem("kot_time", doc.kot.time);
+                } catch (e) {
+                  if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+                }
+              }
             } catch (err) {
               if (import.meta.env?.DEV) console.error("Socket handler error:", err);
             }
           };
-          if (socket) socket.on(this.kot_channel, this.socketHandler);
+          if (this._socket) this._socket.on(this.kot_channel, this.socketHandler);
         }).catch((e) => { console.error("KOT fetch failed:", e); });
       })
       .catch((error) => {
@@ -642,13 +673,14 @@ export default {
     window.removeEventListener("offline", this.handleOffline);
     document.removeEventListener("click", this.hideAudioAlertMessage);
     window.removeEventListener("resize", this._resizeHandler);
-    if (this.socketHandler) {
-      socket.off(this.kot_channel, this.socketHandler);
+    if (this.socketHandler && this._socket) {
+      this._socket.off(this.kot_channel, this.socketHandler);
     }
-    if (socket) {
-      socket.off('connect_error');
-      socket.off('disconnect');
-      socket.off('connect');
+    if (this._socket) {
+      this._socket.off('connect_error');
+      this._socket.off('disconnect');
+      this._socket.off('connect');
+      this._socket.disconnect();
     }
     if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
     if (this._statusTimeout) clearTimeout(this._statusTimeout);
@@ -659,6 +691,9 @@ export default {
       return (kot) => {
         return [...(kot.kot_items || [])].sort((a, b) => a.serve_priority - b.serve_priority);
       };
+    },
+    visibleKots() {
+      return this.kot.filter(kot => !kot.showDiv && kot.production === this.production);
     },
   },
 };

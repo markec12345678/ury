@@ -18,6 +18,7 @@ class URYOrder(Document):
 @frappe.whitelist()
 def get_order_invoice(table=None, invoiceNo=None, order_type=None, is_payment=None):
     """returns the active invoice linked to the given table"""
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
 
     if table:
         if is_payment == "Payments":
@@ -38,7 +39,6 @@ def get_order_invoice(table=None, invoiceNo=None, order_type=None, is_payment=No
                     dict(restaurant_table=table, docstatus=0, invoice_printed=0),
                 )
                 
-        # invoice_name = frappe.get_value("POS Invoice", dict(restaurant_table=table, docstatus=0, invoice_printed=0))
         branch, menu_name, restaurant = get_restaurant_and_menu_name(table)
 
         if invoice_name:
@@ -319,6 +319,7 @@ def item_query_restaurant(
     as_dict=False,
 ):
     """Return items that are selected in active menu of the restaurant"""
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     restaurant, menu = get_restaurant_and_menu_name(filters["table"])
     items = frappe.db.get_all("URY Menu Item", ["item"], dict(parent=menu, disabled=0))
     del filters["table"]
@@ -329,6 +330,7 @@ def item_query_restaurant(
 
 @frappe.whitelist()
 def get_restaurant_and_menu_name(table):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not table:
         frappe.throw(_("Please select a table"))
 
@@ -364,6 +366,7 @@ def get_restaurant_and_menu_name(table):
 
 @frappe.whitelist()
 def get_menu_name(order_type):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     branch = getBranch()
     restaurant = frappe.get_value(
         "URY Restaurant",
@@ -389,7 +392,7 @@ def get_menu_name(order_type):
 
 @frappe.whitelist()
 def pos_opening_check():
-    
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     user = frappe.session.user
     # Handle the administrator case differently
     if user == "Administrator":
@@ -506,6 +509,7 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
 
 @frappe.whitelist()
 def customer_favourite_item(customer_name):
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     # Get invoice names for this customer
     invoice_names = frappe.db.get_list(
         "POS Invoice",
@@ -659,10 +663,8 @@ def cancel_kot(invoice_id):
     )
 
     if kot_names:
-        frappe.db.sql(
-            """UPDATE `tabURY KOT` SET docstatus = 2 WHERE name IN %s""",
-            (kot_names,),
-        )
+        for kot_name in kot_names:
+            frappe.get_doc("URY KOT", kot_name).cancel()
 
 
 def change_table_in_kot(invoice, new_table, branch):

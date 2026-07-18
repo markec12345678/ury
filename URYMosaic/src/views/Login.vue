@@ -96,6 +96,8 @@ export default {
           }
           // Navigate to the intended route or home
           const redirectPath = this.$route.query.route || "/";
+          this.password = '';
+          this.username = '';
           this.$router.push(redirectPath);
         } else {
           this.error = data.message || "Login failed. Please try again.";

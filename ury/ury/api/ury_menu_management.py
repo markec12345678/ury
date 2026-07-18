@@ -74,7 +74,7 @@ def create_menu(branch, enabled=1):
     frappe.only_for("Restaurant Manager")
     existing = frappe.get_all("URY Menu", filters={"branch": branch})
     if existing:
-        frappe.throw(f"Menu already exists for branch {branch}", frappe.DuplicateEntryError)
+        frappe.throw(_("Menu already exists for branch {0}").format(branch), frappe.DuplicateEntryError)
 
     menu = frappe.get_doc({
         "doctype": "URY Menu",
@@ -82,7 +82,6 @@ def create_menu(branch, enabled=1):
         "enabled": enabled,
     })
     menu.insert(ignore_permissions=True)
-    frappe.db.commit()
     return menu.name
 
 
@@ -93,7 +92,6 @@ def toggle_menu(menu_name, enabled):
     menu = frappe.get_doc("URY Menu", menu_name)
     menu.enabled = enabled
     menu.save(ignore_permissions=True)
-    frappe.db.commit()
     return {"name": menu.name, "enabled": menu.enabled}
 
 
@@ -108,7 +106,7 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
 
     for existing_item in menu.items:
         if existing_item.item == item:
-            frappe.throw(f"Item {item} already exists in this menu", frappe.DuplicateEntryError)
+            frappe.throw(_("Item {0} already exists in this menu").format(item), frappe.DuplicateEntryError)
 
     item_doc = frappe.get_doc("Item", item)
     item_name = item_doc.item_name
@@ -122,7 +120,6 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
         "course": course,
     })
     menu.save(ignore_permissions=True)
-    frappe.db.commit()
     return {"success": True, "item": item, "item_name": item_name}
 
 
@@ -143,10 +140,9 @@ def update_menu_item(menu_name, item_row_name, rate=None, special_dish=None, dis
                 item.course = course
             break
     else:
-        frappe.throw(f"Menu item row {item_row_name} not found", frappe.DoesNotExistError)
+        frappe.throw(_("Menu item row {0} not found").format(item_row_name), frappe.DoesNotExistError)
 
     menu.save(ignore_permissions=True)
-    frappe.db.commit()
     return {"success": True}
 
 
@@ -160,10 +156,9 @@ def remove_menu_item(menu_name, item_row_name):
     menu.items = [item for item in menu.items if item.name != item_row_name]
 
     if len(menu.items) == original_count:
-        frappe.throw(f"Menu item row {item_row_name} not found", frappe.DoesNotExistError)
+        frappe.throw(_("Menu item row {0} not found").format(item_row_name), frappe.DoesNotExistError)
 
     menu.save(ignore_permissions=True)
-    frappe.db.commit()
     return {"success": True}
 
 
@@ -190,7 +185,6 @@ def batch_update_prices(menu_name, updates):
                 break
 
     menu.save(ignore_permissions=True)
-    frappe.db.commit()
     return {"success": True, "updated_count": updated}
 
 
@@ -212,7 +206,7 @@ def create_menu_course(course, serving_priority=0, indicate_in_kds=0):
     frappe.only_for("Restaurant Manager")
     existing = frappe.get_all("URY Menu Course", filters={"course": course})
     if existing:
-        frappe.throw(f"Course '{course}' already exists", frappe.DuplicateEntryError)
+        frappe.throw(_("Course '{0}' already exists").format(course), frappe.DuplicateEntryError)
 
     doc = frappe.get_doc({
         "doctype": "URY Menu Course",
@@ -221,7 +215,6 @@ def create_menu_course(course, serving_priority=0, indicate_in_kds=0):
         "custom_indicate_in_kds": indicate_in_kds,
     })
     doc.insert(ignore_permissions=True)
-    frappe.db.commit()
     return doc.name
 
 
@@ -237,7 +230,6 @@ def update_menu_course(course_name, course=None, serving_priority=None, indicate
     if indicate_in_kds is not None:
         doc.custom_indicate_in_kds = int(indicate_in_kds)
     doc.save(ignore_permissions=True)
-    frappe.db.commit()
     return {"success": True}
 
 
@@ -252,12 +244,11 @@ def delete_menu_course(course_name):
     )
     if used_items:
         frappe.throw(
-            f"Cannot delete course. It is used by {len(used_items)} menu items.",
+            _("Cannot delete course. It is used by {0} menu items.").format(len(used_items)),
             frappe.ValidationError
         )
 
     frappe.delete_doc("URY Menu Course", course_name, ignore_permissions=True)
-    frappe.db.commit()
     return {"success": True}
 
 
