@@ -18,11 +18,11 @@ We take security vulnerabilities seriously. If you discover a security issue in 
 
 Instead, please:
 
-1. **Email** your findings to the URY security team (check repository settings for contact)
-2. **Use GitHub's private vulnerability reporting**:
-   - Go to the repository **Security** tab
+1. **Use GitHub's private vulnerability reporting**:
+   - Go to [Security tab](https://github.com/markec12345678/ury/security)
    - Click **Report a vulnerability**
    - Fill in the details of the vulnerability
+2. **Email** your findings to the URY security team (check repository settings for contact)
 
 ### What to Include
 
@@ -50,7 +50,7 @@ We appreciate responsible disclosure and will:
 ### Security Best Practices for Contributors
 
 - Never commit secrets, API keys, or credentials to the repository
-- Use environment variables for all sensitive configuration
-- Run `npm audit` or `yarn audit` regularly to check for known vulnerabilities
+- Use environment variables for all sensitive configuration (see `.env.dev`)
+- Run `npm audit` regularly to check for known vulnerabilities
 - Keep dependencies up to date (Dependabot is configured to help)
 - Follow the principle of least privilege when implementing new features

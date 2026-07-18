@@ -6,8 +6,8 @@ Thank you for your interest in contributing to URY! This guide covers everything
 
 ### Prerequisites
 
-- **Node.js** 20+ (LTS recommended)
-- **Yarn** 1.22+ (classic)
+- **Node.js** 22+ (LTS recommended)
+- **npm** or **Yarn** 1.22+
 - **Docker** & Docker Compose (optional, for containerized dev)
 - **Python** 3.10+ (for Frappe backend)
 
@@ -15,7 +15,7 @@ Thank you for your interest in contributing to URY! This guide covers everything
 
 ```bash
 # Clone the repository
-git clone https://github.com/ury-erp/ury.git
+git clone https://github.com/markec12345678/ury.git
 cd ury
 
 # Start the full dev stack
@@ -26,22 +26,22 @@ make dev-logs
 ```
 
 This starts:
-- **URY Dashboard** on http://localhost:3000
+- **URY POS** on http://localhost:3000
+- **Storybook** on http://localhost:6006
 - **PostgreSQL 16** on localhost:5432
 - **Redis 7** on localhost:6379
 - **Adminer** (DB GUI) on http://localhost:8080
-- **URY Realtime** (WebSocket) on localhost:4000
 
 ### Setup without Docker
 
 ```bash
 # Install dependencies
-yarn install
+npm install
 
 # Build all workspaces
-yarn build
+npm run build
 
-# Start development server
+# Start POS development server
 make dev
 ```
 
@@ -49,20 +49,23 @@ make dev
 
 ```
 ury/
-├── packages/ui/        # @ury/ui — Shared UI component library
+├── packages/ui/          # @ury/ui — Shared React component library
 │   └── src/
-│       ├── components/  # Button, Card, Badge, Input, etc.
-│       ├── styles/      # Theme CSS, Tailwind preset
-│       └── lib/         # Utilities (cn, etc.)
-├── pos/                 # POS v2 — React POS application
-├── frontend/            # Frontend — Main Next.js dashboard
-├── ury/                 # Frappe backend app
-├── urypos/              # Legacy POS (Frappe)
-├── URYMosaic/           # Mosaic dashboard widget
-├── mini-services/       # Microservices (WebSocket realtime)
-├── .github/             # CI/CD, branch protection, CODEOWNERS
-├── .storybook/          # Storybook configuration
-└── scripts/             # Dev utility scripts
+│       ├── components/    # Button, Card, Badge, Input, Textarea, Loader, Spinner
+│       ├── __stories__/   # Storybook stories (7 components, 29 stories)
+│       ├── styles/        # Theme CSS, Tailwind preset
+│       └── lib/           # Utilities (cn, etc.)
+├── packages/core/         # @ury/core — Frappe SDK, storage, formatting
+├── pos/                   # POS v2 (Vite + React + Zustand)
+├── ury/                   # Frappe backend app (Python)
+├── urypos/                # Legacy POS (Frappe)
+├── URYMosaic/             # Kitchen Display System (Vue)
+├── .github/               # CI/CD, branch protection, CODEOWNERS
+├── .storybook/            # Storybook 10 configuration
+├── scripts/               # Admin setup, branch protection, upstream PR
+├── docker-compose.dev.yml # Docker dev stack
+├── Dockerfile.dev         # Node 22 Alpine dev image
+└── Makefile               # Convenience commands
 ```
 
 ## Development Workflow
@@ -80,19 +83,9 @@ ury/
 
 1. Create a feature branch from `develop`
 2. Make your changes with clear, descriptive commits
-3. Push to your fork and create a PR to `upstream/develop`
-4. Ensure CI checks pass (lint, type-check, tests, build)
-5. Get the required approvals (1 for develop, 2 for main)
-
-#### Fork Contributors
-
-```bash
-# Use the helper script
-make fork-pr
-
-# Or manually with GitHub CLI
-bash scripts/create-upstream-pr.sh feature/my-change
-```
+3. Push and create a PR to `develop`
+4. Ensure CI checks pass (Lint, Storybook, Build)
+5. Get the required approval (1 for develop, 2 for main)
 
 ### Commit Messages
 
@@ -111,22 +104,18 @@ chore(deps): bump react to 19.1
 
 ```bash
 make lint
-# or
-yarn lint
 ```
 
 ### Type Checking
 
 ```bash
-yarn --cwd packages/ui typecheck
+make typecheck
 ```
 
 ### Testing
 
 ```bash
 make test
-# or
-yarn test
 ```
 
 ### Storybook
@@ -176,10 +165,22 @@ export const Default: Story = {
 | Branch | Approvals | Code Owners | Linear History | Enforce Admins |
 |--------|-----------|-------------|----------------|----------------|
 | `main` | 2 | Required | Yes | Yes |
-| `develop` | 1 | Not required | No | No |
+| `develop` | 1 | Required | No | No |
+
+## CI/CD Workflows
+
+| Workflow | Trigger | Jobs |
+|----------|---------|------|
+| **Fork CI** | Push/PR to develop | Lint, Storybook Build, Build Verification |
+| **CI** | Push/PR to develop/main | Lint, Unit Tests, Build, E2E |
+| **Release** | Tag push (v*) | Docker build + push to GHCR |
+| **Chromatic** | Push to develop | Visual regression testing |
+| **Labeler** | PR opened | Auto-label by path |
+| **Stale** | Daily | Close inactive issues/PRs (60d/30d) |
+| **Fork Sync** | Manual | Create PR from fork to upstream |
 
 ## Need Help?
 
-- Open a [GitHub Issue](https://github.com/ury-erp/ury/issues)
-- Check existing [Pull Requests](https://github.com/ury-erp/ury/pulls)
-- Refer to `AGENTS.MD` and `FEATURES.md` for project context
+- Open a [GitHub Issue](https://github.com/markec12345678/ury/issues)
+- Check existing [Pull Requests](https://github.com/markec12345678/ury/pulls)
+- Refer to `FEATURES.md` for project context

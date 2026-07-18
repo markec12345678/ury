@@ -2,36 +2,39 @@
 # Controls who is required to review PRs for specific paths
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# Default owners for everything in the repo
-* @ury-erp/core
+# Default owner for everything in the repo
+* @markec12345678
 
-# Dashboard components (Next.js)
-/src/components/dashboard/ @ury-erp/frontend
-/src/app/                 @ury-erp/frontend
+# UI component library
+/packages/ui/             @markec12345678
 
-# UI components (shared)
-/src/components/ui/       @ury-erp/frontend
+# Core utilities (Frappe SDK, storage, formatting)
+/packages/core/           @markec12345678
 
-# Backend Frappe app
-/ury/ury/                 @ury-erp/backend
+# POS v2 (Vite + React + Zustand)
+/pos/                     @markec12345678
 
-# POS React app
-/ury/pos/                 @ury-erp/pos-team
+# Kitchen Display System (Vue)
+/URYMosaic/               @markec12345678
+
+# Legacy POS
+/urypos/                  @markec12345678
+
+# Frappe backend (Python)
+/ury/                     @markec12345678
 
 # Infrastructure & CI
-/.github/                 @ury-erp/devops
-/Dockerfile               @ury-erp/devops
-/docker-compose*.yml      @ury-erp/devops
-/Caddyfile                @ury-erp/devops
-/scripts/                 @ury-erp/devops
+/.github/                 @markec12345678
+/Dockerfile*              @markec12345678
+/docker-compose*.yml      @markec12345678
+/scripts/                 @markec12345678
+/Makefile                 @markec12345678
 
-# Database
-/prisma/                  @ury-erp/backend
-
-# Tests
-/e2e/                     @ury-erp/qa
-/**/*.test.*              @ury-erp/qa
+# Storybook
+/.storybook/              @markec12345678
+/**/__stories__/           @markec12345678
 
 # Documentation
-/README.md                @ury-erp/core
-/CHANGELOG.md             @ury-erp/core
+/README.md                @markec12345678
+/CONTRIBUTING.md          @markec12345678
+/SECURITY.md              @markec12345678

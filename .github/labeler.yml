@@ -1,29 +1,38 @@
 # URY Dashboard — PR Auto-label Configuration
 # Maps file paths to labels for automatic PR categorization
 
-# UI components
-ui:
+# UI component library
+packages/ui:
   - changed-files:
       - any-glob-to-any-file: "packages/ui/**"
 
-# POS application
+# Core utilities
+packages/core:
+  - changed-files:
+      - any-glob-to-any-file: "packages/core/**"
+
+# POS v2 application
 pos:
   - changed-files:
       - any-glob-to-any-file: "pos/**"
 
-# Frontend dashboard
-frontend:
+# Legacy POS
+urypos:
   - changed-files:
-      - any-glob-to-any-file: "frontend/**"
+      - any-glob-to-any-file: "urypos/**"
 
 # Backend (Frappe)
 backend:
   - changed-files:
       - any-glob-to-any-file: "ury/**"
-      - any-glob-to-any-file: "urypos/**"
+
+# Kitchen Display System
+mosaic:
+  - changed-files:
+      - any-glob-to-any-file: "URYMosaic/**"
 
 # Infrastructure & CI/CD
-infrastructure:
+infra:
   - changed-files:
       - any-glob-to-any-file: ".github/**"
       - any-glob-to-any-file: "Dockerfile*"
@@ -41,17 +50,14 @@ storybook:
 dependencies:
   - changed-files:
       - any-glob-to-any-file: "package.json"
-      - any-glob-to-any-file: "packages/ui/package.json"
+      - any-glob-to-any-file: "packages/*/package.json"
       - any-glob-to-any-file: "pos/package.json"
-      - any-glob-to-any-file: "frontend/package.json"
-      - any-glob-to-any-file: "yarn.lock"
+      - any-glob-to-any-file: "package-lock.json"
 
 # Documentation
 documentation:
   - changed-files:
       - any-glob-to-any-file: "*.md"
-      - any-glob-to-any-file: "CONTRIBUTING.md"
-      - any-glob-to-any-file: "README.md"
 
 # Docker
 docker:
@@ -60,7 +66,7 @@ docker:
       - any-glob-to-any-file: "docker-compose*.yml"
       - any-glob-to-any-file: ".devcontainer/**"
 
-# Database
-database:
+# Security
+security:
   - changed-files:
-      - any-glob-to-any-file: "prisma/**"
+      - any-glob-to-any-file: "SECURITY.md"

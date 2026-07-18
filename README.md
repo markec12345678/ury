@@ -1,143 +1,54 @@
-
 # URY - Open Source Restaurant Management System
 
 [![Fork CI](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/fork-ci.yml)
 [![CI](https://github.com/markec12345678/ury/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/markec12345678/ury/actions/workflows/ci.yml)
 [![Storybook](https://img.shields.io/badge/Storybook-29_stories-ff6f91?logo=storybook)](https://github.com/markec12345678/ury/tree/develop/packages/ui/src/components/__stories__)
 [![Node](https://img.shields.io/badge/Node.js-22-339933?logo=node.js)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-URY is an open source ERP designed to simplify and streamline restaurant operations. It is built on top of  world's best free and open source ERP, ERPNext.
+URY is an open-source ERP designed to simplify and streamline restaurant operations, built on top of [ERPNext](https://erpnext.com) — the world's best free and open-source ERP.
 
-<div align="center">
-        <a href="https://frappecloud.com/dashboard/signup?product=ury" target="_blank">
-                <picture>
-                        <source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/try-on-fc-white.png">
-                        <img src="https://frappe.io/files/try-on-fc-black.png" alt="Try on Frappe Cloud" height="28" />
-                </picture>
-        </a>
-</div>
+> **Warning:** URY is in active development. Backward compatibility is not guaranteed until a stable release.
 
-
-> :warning: Warning : 
-> URY is currently in active development, and we are continuously making changes, updates, and working on new features and improvements. Please be aware that until a stable release is reached, backward compatibility is not guaranteed. We make every effort to maintain compatibility.
-
-> :information_source: Note :
-> Our system has been successfully running at scale, serving over 10+ outlets for the past 10 months.
-
+---
 
 ## What It Includes
-- **POS**: Dine‑in, takeaway, delivery, offline mode, printer management  
-- **Kitchen Display**: Real‑time order queues, KOT printing  
-- **Analytics**: P&L dashboard, consumption reports, item trends  
 
-Given below is the list of features of URY app. 
+| Module | Description |
+|--------|-------------|
+| **URY POS** | Lightweight web-based POS for dine-in, takeaway, delivery, and aggregator orders |
+| **URY MOSAIC** | Interactive Kitchen Display System (KDS) with KOT printing |
+| **Daily P&L** | Profit & Loss dashboards, consumption reports, item trends |
 
-### URY POS
+## Key Features
 
-**URY POS** is a light weight and easy to use web-based application designed for streamlined order management. It serves as an efficient tool for both cashiers and captains, facilitating order processing at the cash counter and tables.It supports various order types, including dine-in, delivery, takeout and Aggregator. URY POS is compatibile with a wide range of devices, including desktops, tablets, and smartphones. 
+- **POS & Billing** — Role-based access, multi-cashier, shift management, cash reconciliation
+- **Menu Management** — Centralized menus with outlet-level control, BOM, combos, modifiers
+- **Table Orders** — Mobile-first order taking with live kitchen sync and real-time inventory checks
+- **Kitchen Display** — Multi-kitchen support, live status updates, printer routing, delay tracking
+- **Alerts & Red Flags** — Delayed orders, unclosed bills, excessive cancellations, real-time alerts
+- **Reports & Analytics** — Daily P&L, shortage/excess, staff performance, branch comparisons
 
-:information_source: **Note:**  
-> To access the previous version of the separate URY POS app, [click here](https://github.com/ury-erp/pos).  
-> **Use the URY branch `v1` to access these separate apps.**
-> **Support for this version will end in December 2025.**
+For a full feature list, see [FEATURES.md](FEATURES.md).
 
-### URY MOSAIC
-
-**URY MOSAIC** is an interactive Kitchen Display System (KDS) designed to simplify order management in both single and multi-kitchen restaurants. Additionally, it offers optional Kitchen Order Ticket (KOT) printing support for added convenience.
-
-:information_source: **Note:**  
-> To access the previous version of the separate URY MOSAIC app, [click here](https://github.com/ury-erp/mosaic).  
-> **Use the URY branch `v1` to access these separate apps.**
-> **Support for this version will end in December 2025.**
-
-### Daily P & L and Reports
- URY has daily P & L and various reports. It helps restaurants to monitor daily Profit and Loss (P&L), utility consumption, disposables usage, and other key metrics with precision and ease. It provides restaurants with crucial data, enabling timely decision-making by presenting essential information and insights.
- 
-:information_source: **Note:**  
-> To access the previous version of the separate URY PULSE app, [click here](https://github.com/ury-erp/pulse).  
-> **Use the URY branch `v1` to access these separate apps.**
-> **Support for this version will end in December 2025.**
-
-## Features
-
-### POS & Billing
-* Role-based access with strict operational controls
-* Pre-billing checklists to enforce compliance (e.g., stock check, hygiene checklist)
-* Linked with stock and accounting modules
-* Multi-format support: Table service, QSR, and takeaway
-* Multi-cashier handling and terminal controls
-* Advanced filters for order and bill management
-* Modern, fast UI with guided flow
-* Shift opening, closing, and cash reconciliation built-in
-
-
-###  Menu & Recipe Management
-* Centralized menu with outlet-level control
-* Recipe mapping using Bill of Materials (BOM)
-* Control pricing, availability, and portions per outlet
-* Supports combos, modifiers, and item bundles
-* Integrated with production planning for daily prep
-
-### Table Order Management
-* Mobile-first order taking for waitstaff
-* Live sync with kitchen and cashier
-* Real-time inventory checks before order placement
-* Supports modifiers, course sequencing, and notes
-* Seamless integration with billing and KDS
-
-
-### Kitchen Display & KOT Management
-* Supports multiple kitchens with advanced printer routing
-* Interactive KDS with live status updates (Preparing, Ready, Served)
-* Delay, cancellation, and modification tracking
-* Real-time kitchen analytics
-* Seamless flow from order to service across stations
-
-
-### Operational Red Flags & Alerts
-* Delayed orders and preparation time breaches
-* KOT not started after order placement
-* Unclosed bills and prolonged table occupancy
-* Excessive KOT cancellations and modifications
-* Real-time alerts for operational exceptions
-* Dashboard view for quick issue resolution across outlets
-
-
-
-### Reports & Analytics
-* Daily Profit & Loss
-* Shortage and Excess reporting
-* Course-wise and item-wise performance
-* Captain and staff performance tracking
-* Branch-wise and outlet-wise comparisons
-* Customer-wise sales trends
-* Detailed sales, production, and stock reports
-* Real-time operational insights for better decision-making
-
-For more comprehensive list of features [go here.](FEATURES.md)
-
+---
 
 ## Getting Started
 
-To start using URY, you need to first install URY and then setup your first restaurant.
+### Prerequisites
 
-1. [URY Installation Guide](INSTALLATION.md).
+- [Node.js 22+](https://nodejs.org/)
+- [Frappe/ERPNext](https://frappeframework.com/docs/user/en/install) (for backend)
+- Docker (optional, for dev stack)
 
-2. [URY Setup Instructions](SETUP.md).
+### Installation
 
-## Looking for other versions   
+1. Follow the [URY Installation Guide](INSTALLATION.md)
+2. Set up your restaurant with [URY Setup Instructions](SETUP.md)
 
-1. Use branch `v1` to use ury [v0.1.0]
+### Other Versions
 
-## About
-
-URY is developed by [Tridz Technologies Pvt Ltd](https://tridz.com) and supported by [Frappe](http://frappe.io).
-
-## Terms and Conditions
-
-By using the URY, you agree to use it responsibly and in compliance with applicable laws. URY is built on open-source technology and is provided for your convenience to manage restaurant operations. While we strive to keep the app reliable, it is provided “as is” without any guarantees, and we are not responsible for any misuse or resulting issues.
-
-[Read More](TERMS.md)
+Use branch `v1` for URY v0.1.0 (separate POS/Mosaic/Pulse apps).
 
 ---
 
@@ -146,14 +57,14 @@ By using the URY, you agree to use it responsibly and in compliance with applica
 ### Quick Start
 
 ```bash
-# Clone the repository
+# Clone
 git clone https://github.com/markec12345678/ury.git
 cd ury
 
-# Install dependencies
+# Install
 npm install
 
-# Start POS dev server
+# Start POS dev server (port 3000)
 npm --prefix pos run dev
 
 # Start Storybook (port 6006)
@@ -163,7 +74,7 @@ npx storybook dev -p 6006
 ### Docker Development
 
 ```bash
-# Start full dev stack (POS + PostgreSQL + Redis + Adminer)
+# Start full dev stack
 docker compose -f docker-compose.dev.yml up -d
 
 # View logs
@@ -177,36 +88,92 @@ docker compose -f docker-compose.dev.yml down
 |---------|------|-----|
 | POS Dashboard | 3000 | http://localhost:3000 |
 | Storybook | 6006 | http://localhost:6006 |
-| PostgreSQL | 5432 | `postgresql://ury:ury_dev_2024@localhost:5432/ury_dashboard` |
-| Redis | 6379 | `redis://localhost:6379` |
+| PostgreSQL 16 | 5432 | `postgresql://ury:ury_dev_2024@localhost:5432/ury_dashboard` |
+| Redis 7 | 6379 | `redis://localhost:6379` |
 | Adminer | 8080 | http://localhost:8080 |
 
 ### Project Structure
 
 ```
 ury/
-├── .github/workflows/    # CI/CD pipelines (Fork CI, CI, Release, Chromatic)
-├── .storybook/           # Storybook configuration
-├── packages/ui/          # @ury/ui - Shared React component library
-│   └── src/components/   # Button, Card, Badge, Input, Textarea, Loader, Spinner
-├── packages/core/        # @ury/core - Shared utilities (Frappe SDK, storage, formatting)
-├── pos/                  # POS v2 (Vite + React + Zustand)
-├── urypos/               # POS v1 (legacy)
-├── URYMosaic/            # Kitchen Display System (Vue)
-├── ury/                  # Frappe/ERPNext backend (Python)
-├── docker-compose.dev.yml
-├── Dockerfile.dev
-└── Makefile
+├── .github/
+│   ├── workflows/          # CI/CD (Fork CI, CI, Release, Chromatic, Labeler, Stale)
+│   ├── ISSUE_TEMPLATE/     # Bug reports, feature requests, questions
+│   ├── CODEOWNERS          # Code review routing
+│   ├── dependabot.yml      # Weekly dependency updates
+│   └── labeler.yml         # Auto-label PRs by path
+├── .storybook/             # Storybook 10 config
+├── packages/
+│   ├── ui/                 # @ury/ui — React components (7 components, 29 stories)
+│   │   └── src/components/ # Button, Card, Badge, Input, Textarea, Loader, Spinner
+│   └── core/               # @ury/core — Frappe SDK, storage, formatting
+├── pos/                    # POS v2 (Vite + React + Zustand)
+├── urypos/                 # POS v1 (legacy)
+├── URYMosaic/              # Kitchen Display System (Vue)
+├── ury/                    # Frappe/ERPNext backend (Python)
+├── scripts/                # Admin setup, branch protection, upstream PR
+├── docker-compose.dev.yml  # Docker dev stack
+├── Dockerfile.dev          # Node 22 Alpine dev image
+├── Makefile                # Convenience commands
+└── .env.dev                # Development environment variables
 ```
 
-### Available Make Commands
+### Make Commands
 
 | Command | Description |
 |---------|-------------|
 | `make dev-up` | Start Docker dev stack |
 | `make dev-down` | Stop Docker containers |
+| `make dev-logs` | Tail container logs |
 | `make storybook` | Start Storybook on port 6006 |
+| `make build-storybook` | Build static Storybook site |
 | `make lint` | Run ESLint |
 | `make test` | Run unit tests |
 | `make build` | Production build |
 | `make typecheck` | TypeScript check (UI package) |
+| `make install` | Install all dependencies |
+
+### CI/CD Pipelines
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| **Fork CI** | Push/PR to develop | Lint, Storybook build, Build verification |
+| **CI** | Push/PR to develop/main | Lint, Unit tests, Build, E2E |
+| **Release** | Tag push (v*) | Build Docker image, push to GHCR |
+| **Chromatic** | Push to develop | Storybook visual regression |
+| **Labeler** | PR opened | Auto-label by changed paths |
+| **Stale** | Cron (daily) | Close inactive issues/PRs (60d/30d) |
+| **Dependabot** | Cron (weekly) | Check for dependency updates |
+
+### Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Key points:
+
+1. Create a feature branch from `develop`
+2. Make changes and add tests
+3. Submit a PR — CI will run automatically
+4. Get a code review before merging
+
+### Storybook Components
+
+| Component | Stories | Description |
+|-----------|---------|-------------|
+| Button | 5 | Primary, secondary, destructive, disabled, POS actions |
+| Card | 2 | Default, menu card |
+| Badge | 3 | Default, all variants, order status badges |
+| Input | 3 | Default, disabled, POS inputs |
+| Textarea | 3 | Default, disabled, with error |
+| Loader | 3 | Default, full page, custom label |
+| Spinner | 2 | Default, inline usage |
+
+---
+
+## About
+
+URY is developed by [Tridz Technologies Pvt Ltd](https://tridz.com) and supported by [Frappe](http://frappe.io).
+
+## Terms and Conditions
+
+By using URY, you agree to use it responsibly and in compliance with applicable laws. URY is built on open-source technology and is provided for your convenience to manage restaurant operations. While we strive to keep the app reliable, it is provided "as is" without any guarantees, and we are not responsible for any misuse or resulting issues.
+
+[Read More](TERMS.md)
