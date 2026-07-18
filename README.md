@@ -194,6 +194,8 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 | Drawer | 5 | Default, left side, top side, bottom side, all sides |
 | Popover | 4 | Default, all alignments, top position, controlled |
 | Command | 5 | Default, ghost, with keywords, with disabled items, controlled |
+| Sheet | 5 | Default, left side, top side, sizes, with form |
+| Calendar | 5 | Default, with selected date, small size, disabled dates, controlled |
 
 ---
 
