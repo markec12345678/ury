@@ -57,10 +57,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         JOIN `tabPOS Invoice` pi ON ii.parent = pi.name
         WHERE pi.posting_date BETWEEN %s AND %s
         AND pi.docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY ii.item_code, ii.item_name
         ORDER BY total_amount DESC
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     # Order type breakdown
     order_type_sales = frappe.db.sql("""
@@ -71,10 +71,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY order_type
         ORDER BY revenue DESC
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     # Hourly breakdown
     hourly_sales = frappe.db.sql("""
@@ -85,10 +85,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY HOUR(posting_time)
         ORDER BY hour
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     # Cancelled orders
     cancelled = frappe.db.sql("""
@@ -114,10 +114,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         WHERE per.reference_doctype = 'POS Invoice'
         AND pe.posting_date BETWEEN %s AND %s
         AND pe.docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY pe.mode_of_payment
         ORDER BY total_paid DESC
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     # Top customers
     top_customers = frappe.db.sql("""
@@ -129,11 +129,11 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY customer, customer_name
         ORDER BY total_spent DESC
         LIMIT 10
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     return {
         "period": period,

@@ -395,10 +395,10 @@ def _get_daily_revenue(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY posting_date
         ORDER BY posting_date
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     return data
 
@@ -417,10 +417,10 @@ def _get_weekly_revenue(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY YEARWEEK(posting_date, 1)
         ORDER BY week
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     return data
 
@@ -437,10 +437,10 @@ def _get_monthly_revenue(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_filter}
+        {branch_clause}
         GROUP BY month
         ORDER BY month
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     return data
 
@@ -458,9 +458,9 @@ def _get_daily_orders(from_date, to_date, branch=None):
             SUM(CASE WHEN docstatus = 2 THEN 1 ELSE 0 END) as cancelled_orders
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
-        {branch_filter}
+        {branch_clause}
         GROUP BY posting_date
         ORDER BY posting_date
-    """.format(branch_filter=branch_filter), (from_date, to_date), as_dict=True)
+    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
 
     return data

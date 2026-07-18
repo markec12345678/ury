@@ -1,6 +1,25 @@
 # Worklog
 
 ---
+Task ID: 28
+Agent: Main Agent
+Task: Core validators/constants, docs update
+
+Work Log:
+- Created packages/core/src/validators.ts: 10 validation functions (email, phone, amount, quantity, invoice name, table number, customer name, discount percent/amount, KOT number)
+- Created packages/core/src/constants.ts: shared POS constants with TypeScript const assertions (order types, KOT status, invoice status, payment methods, roles, pagination, time intervals, storage keys, number format)
+- Updated packages/core/src/index.ts with new exports and type exports
+- Updated README.md: core description now includes "validators, constants"
+- Updated CONTRIBUTING.md: 16 components, 75 stories, core description updated
+- TypeScript check: 0 errors on new files
+- Pushed to fork/develop (commit b52f7c3)
+
+Stage Summary:
+- 5 files changed, 183 insertions, 4 deletions
+- @ury/core now exports 10 validators + 9 constant groups + 3 type exports
+- Documentation updated across README and CONTRIBUTING
+
+---
 Task ID: 27
 Agent: Main Agent
 Task: Checkbox & Tabs components, production Dockerfile, PR templates
