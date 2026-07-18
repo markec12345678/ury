@@ -1,11 +1,9 @@
 # URY Dashboard — Development Docker Compose
-# Full development stack: Dashboard + PostgreSQL + Redis + Adminer
+# Full development stack: POS + PostgreSQL + Redis + Adminer + Storybook
 # Usage: docker compose -f docker-compose.dev.yml up
 
-version: "3.8"
-
 services:
-  # ── Dashboard (Next.js) ─────────────────────────────────
+  # ── POS Dashboard (Vite + React) ────────────────────────
   dashboard:
     build:
       context: .
@@ -13,12 +11,12 @@ services:
     container_name: ury-dashboard
     ports:
       - "3000:3000"
+      - "6006:6006"
     volumes:
       - .:/app
       - /app/node_modules
       - /app/packages/ui/node_modules
       - /app/pos/node_modules
-      - /app/frontend/node_modules
     environment:
       - NODE_ENV=development
       - NEXT_TELEMETRY_DISABLED=1
@@ -84,25 +82,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-    networks:
-      - ury-dev
-
-  # ── URY Realtime (WebSocket) ────────────────────────────
-  ury-realtime:
-    build:
-      context: ./mini-services/ury-realtime
-      dockerfile: Dockerfile
-    container_name: ury-realtime
-    ports:
-      - "4000:4000"
-    environment:
-      - NODE_ENV=development
-      - REDIS_URL=redis://redis:6379
-      - PORT=4000
-    depends_on:
-      redis:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - ury-dev
