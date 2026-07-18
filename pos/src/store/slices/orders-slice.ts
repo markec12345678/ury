@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { call } from '../../lib/frappe-sdk';
+import { call } from '../../lib/frappe-sdk-retry';
 import { getPOSInvoices, getPOSInvoiceItems, searchPosInvoice, POSInvoiceItem, POSInvoiceTax } from '../../lib/invoice-api';
 import type { POSInvoice } from '../../lib/invoice-api';
 import { getErrorMessage } from '../../lib/error-utils';
@@ -20,6 +20,7 @@ export interface OrdersState {
   selectedOrderLoading: boolean;
   selectedOrderError: string | null;
   orderSearchQuery: string;
+  _fetchOrdersSeq: number;
 }
 
 export interface OrdersActions {
@@ -59,11 +60,13 @@ export const createOrdersSlice: StateCreator<
   selectedOrderLoading: false,
   selectedOrderError: null,
   orderSearchQuery: '',
+  _fetchOrdersSeq: 0,
 
   // Actions
   fetchOrders: async (page = 1) => {
+    const seq = get()._fetchOrdersSeq + 1;
+    set({ _fetchOrdersSeq: seq, orderLoading: true, error: null });
     try {
-      set({ orderLoading: true, error: null });
       const { orderSearchQuery, selectedStatus } = get();
       
       // Get POS profile to access paid_limit
@@ -101,6 +104,8 @@ export const createOrdersSlice: StateCreator<
         limit_start: limitStart,
         paid_limit: paidLimit
       });
+      // Discard stale response if a newer request was started
+      if (get()._fetchOrdersSeq !== seq) return;
       set({ 
         orders: invoices,
         pagination: {

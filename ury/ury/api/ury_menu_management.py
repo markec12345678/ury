@@ -72,6 +72,9 @@ def get_menu_detail(menu_name):
 def create_menu(branch, enabled=1):
     """Create a new URY Menu."""
     frappe.only_for("Restaurant Manager")
+    user_branch = _get_user_branch()
+    if branch != user_branch:
+        frappe.throw(_("Cannot create menu for a different branch"))
     existing = frappe.get_all("URY Menu", filters={"branch": branch})
     if existing:
         frappe.throw(_("Menu already exists for branch {0}").format(branch), frappe.DuplicateEntryError)
@@ -169,6 +172,8 @@ def batch_update_prices(menu_name, updates):
     frappe.only_for("Restaurant Manager")
     if isinstance(updates, str):
         updates = json.loads(updates)
+    if len(updates) > 500:
+        frappe.throw(_("Maximum 500 price updates per batch"))
 
     menu = frappe.get_doc("URY Menu", menu_name)
     updated = 0

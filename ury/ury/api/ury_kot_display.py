@@ -24,7 +24,7 @@ def serve_kot(name, time):
 
 # Function to mark it as verified by a user in cancel type KOT
 @frappe.whitelist()
-def confirm_cancel_kot(name, user=None):
+def confirm_cancel_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
     # Use server-side identity instead of client-supplied user parameter
     verified_by = frappe.session.user

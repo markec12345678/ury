@@ -23,6 +23,7 @@
           <input
             v-model="username"
             type="text"
+            :disabled="isLoading"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
             placeholder="Enter your username"
             required
@@ -34,6 +35,7 @@
           <input
             v-model="password"
             type="password"
+            :disabled="isLoading"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
             placeholder="Enter your password"
             required

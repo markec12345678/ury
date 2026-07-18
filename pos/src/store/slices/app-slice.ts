@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { storage } from '../../lib/storage';
+import { setCurrencySymbol } from '../../lib/utils';
 import { getCurrencyInfo, type PosProfileCombined, getCombinedPosProfile } from '../../lib/pos-profile-api';
 import { getPaymentModes } from '../../lib/payment-api';
 import { DEFAULT_ORDER_TYPE } from '../../data/order-types';
@@ -84,15 +85,21 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
       if (cached) {
         try {
           const profile = JSON.parse(cached);
-          set({
-            posProfile: profile,
-            profileLoading: false,
-            currency: profile.currency || 'INR',
-          });
-          if (!storage.getItem('currencySymbol')) {
-            await get().fetchCurrencySymbol();
+          const requiredFields = ['name', 'owner', 'cashier', 'branch'];
+          if (!requiredFields.every(f => typeof profile[f] === 'string')) {
+            sessionStorage.removeItem('posProfile');
+            // fall through to API fetch
+          } else {
+            set({
+              posProfile: profile,
+              profileLoading: false,
+              currency: profile.currency || 'INR',
+            });
+            if (!storage.getItem('currencySymbol')) {
+              await get().fetchCurrencySymbol();
+            }
+            return;
           }
-          return;
         } catch {
           sessionStorage.removeItem('posProfile');
         }
@@ -127,11 +134,11 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
       const { symbol } = response;
 
       set({ currencySymbol: symbol });
-      storage.setItem('currencySymbol', symbol);
+      setCurrencySymbol(symbol);
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error fetching currency symbol:', error);
       set({ currencySymbol: get().currency });
-      storage.setItem('currencySymbol', get().currency);
+      setCurrencySymbol(get().currency);
     }
   },
 

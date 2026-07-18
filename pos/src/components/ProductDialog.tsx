@@ -3,7 +3,7 @@ import { X, Plus, Minus } from 'lucide-react';
 import { OrderItem, usePOSStore } from '../store/pos-store';
 import { cn, formatCurrency } from '../lib/utils';
 import { Button, Dialog, DialogContent, Input } from './ui';
-import { db } from '../lib/frappe-sdk';
+import { db } from '../lib/frappe-sdk-retry';
 import { t } from '../i18n';
 
 interface Variant {

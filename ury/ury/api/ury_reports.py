@@ -276,9 +276,12 @@ def get_profit_loss_report(from_date=None, to_date=None):
     total_expenses = expense_data["total_expenses"]
 
     # Cost of goods
+    cogs_filters = {"date": ["between", [from_date, to_date]]}
+    if branch:
+        cogs_filters["branch"] = branch
     cogs_data = frappe.get_all(
         "URY Cost of Goods",
-        filters={"date": ["between", [from_date, to_date]]},
+        filters=cogs_filters,
         fields=["sum(amount) as total_cogs"]
     )
     total_cogs = flt(cogs_data[0].total_cogs) if cogs_data else 0

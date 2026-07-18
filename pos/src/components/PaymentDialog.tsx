@@ -138,9 +138,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         table,
       });
       showToast.success(t('success.payment_successful'));
-      onClose();
-      clearSelectedOrder();
       await fetchOrders();
+      clearSelectedOrder();
+      onClose();
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

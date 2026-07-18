@@ -5,7 +5,7 @@
  * to `import { call, db, auth } from './frappe-sdk-retry'` in any API file
  * to get automatic retry with exponential backoff on network/5xx errors.
  *
- * - `call.get` / `call.post` — wrapped with retry (GET: 3 retries, POST: 2)
+ * - `call.get` — wrapped with retry (3 retries). `call.post` — no retry by default; pass `{ idempotent: true }` for safe retries.
  * - `db.getDocList` / `db.getDoc` / `db.getValue` / `db.getCount` — wrapped with retry (3 retries)
  * - `auth` — passed through without retry (login/signup are idempotent-safe but shouldn't auto-retry)
  */
@@ -48,11 +48,15 @@ const callWithRetry = {
       { ...GET_RETRY_OPTIONS, ...options }
     ),
 
-  post: <T = unknown>(method: string, params?: Record<string, unknown>, options?: Partial<RetryOptions>) =>
-    withRetry<T>(
+  post: <T = unknown>(method: string, params?: Record<string, unknown>, options?: Partial<RetryOptions> & { idempotent?: boolean }) => {
+    if (!options?.idempotent) {
+      return originalCall.post<T>(method, params);
+    }
+    return withRetry<T>(
       () => originalCall.post<T>(method, params),
       { ...POST_RETRY_OPTIONS, ...options }
-    ),
+    );
+  },
 };
 
 /**

@@ -14,18 +14,17 @@ export function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [wasOffline, setWasOffline] = useState(!navigator.onLine);
   const wasOfflineRef = useRef(!navigator.onLine);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      // Show "back online" briefly if we were previously offline
       if (wasOfflineRef.current) {
         setWasOffline(true);
-        const timer = setTimeout(() => {
+        timerRef.current = setTimeout(() => {
           setWasOffline(false);
           wasOfflineRef.current = false;
         }, 3000);
-        return () => clearTimeout(timer);
       }
     };
 
@@ -41,6 +40,7 @@ export function NetworkStatus() {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
 

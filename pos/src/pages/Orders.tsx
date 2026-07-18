@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Clock, User, UserCheck, Receipt, Printer, Pencil, X } from 'lucide-react';
-import { db } from '../lib/frappe-sdk';
+import { db } from '../lib/frappe-sdk-retry';
 import { Badge, Button, Card, CardContent } from '../components/ui';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { showToast } from '../components/ui/toast';
@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '../lib/error-utils';
 import PaymentDialog from '../components/PaymentDialog';
 import { printOrder } from '../lib/print';
-import { call } from '../lib/frappe-sdk';
+import { call } from '../lib/frappe-sdk-retry';
 import { t } from '../i18n';
 
 export default function Orders() {

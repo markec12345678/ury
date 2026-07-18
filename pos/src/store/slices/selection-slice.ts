@@ -22,6 +22,7 @@ export interface SelectionState {
   isUpdatingOrder: boolean;
   orderId: string | null;
   orderLoading: boolean;
+  _loadTableOrderSeq: number;
 }
 
 export interface SelectionActions {
@@ -58,6 +59,7 @@ export const createSelectionSlice: StateCreator<POSSliceAll, [], [], SelectionSl
   isUpdatingOrder: false,
   orderId: null,
   orderLoading: false,
+  _loadTableOrderSeq: 0,
 
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -93,9 +95,12 @@ export const createSelectionSlice: StateCreator<POSSliceAll, [], [], SelectionSl
   },
 
   loadTableOrder: async (table: string) => {
+    const seq = get()._loadTableOrderSeq + 1;
+    set({ _loadTableOrderSeq: seq, orderLoading: true, error: null });
     try {
-      set({ orderLoading: true, error: null });
       const response = await getTableOrder(table);
+      // Discard stale response if a newer request was started
+      if (get()._loadTableOrderSeq !== seq) return;
       const order = response.message;
       if (order && order.name && order.items && order.items.length > 0) {
         const orderItems: OrderItem[] = order.items.map(item => {
