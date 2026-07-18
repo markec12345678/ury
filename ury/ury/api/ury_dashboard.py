@@ -133,6 +133,11 @@ def get_category_sales_chart(period="this_month"):
     if not invoice_names:
         return {"data": []}
 
+    # Limit the IN clause to prevent SQL query bloat with large datasets
+    MAX_INVOICES = 1000
+    if len(invoice_names) > MAX_INVOICES:
+        invoice_names = invoice_names[:MAX_INVOICES]
+
     # Get item-wise sales with course info
     items = frappe.db.sql("""
         SELECT 
@@ -322,6 +327,11 @@ def _get_top_selling_items(from_date, to_date, branch=None, limit=10):
     invoice_names = frappe.get_all("POS Invoice", filters=filters, pluck="name")
     if not invoice_names:
         return []
+
+    # Limit the IN clause to prevent SQL query bloat with large datasets
+    MAX_INVOICES = 1000
+    if len(invoice_names) > MAX_INVOICES:
+        invoice_names = invoice_names[:MAX_INVOICES]
 
     items = frappe.db.sql("""
         SELECT 

@@ -102,7 +102,7 @@ describe('HourlyHeatmap', () => {
     fireEvent.mouseEnter(cell);
     // Tooltip should show the day and hour info
     expect(screen.getByText('Mon 10:00 - 11:00')).toBeInTheDocument();
-    expect(screen.getByText('5 orders')).toBeInTheDocument();
+    expect(screen.getByText(/5 dashboard.orders_count/)).toBeInTheDocument();
   });
 
   it('hides tooltip on cell mouse leave', () => {
@@ -114,9 +114,9 @@ describe('HourlyHeatmap', () => {
     render(<HourlyHeatmap />);
     const cell = screen.getByText('5');
     fireEvent.mouseEnter(cell);
-    expect(screen.getByText('5 orders')).toBeInTheDocument();
+    expect(screen.getByText(/5 dashboard.orders_count/)).toBeInTheDocument();
     fireEvent.mouseLeave(cell);
-    expect(screen.queryByText('5 orders')).not.toBeInTheDocument();
+    expect(screen.queryByText(/5 dashboard.orders_count/)).not.toBeInTheDocument();
   });
 
   it('renders legend with color steps', () => {
@@ -126,8 +126,8 @@ describe('HourlyHeatmap', () => {
       ],
     };
     render(<HourlyHeatmap />);
-    expect(screen.getByText('Less')).toBeInTheDocument();
-    expect(screen.getByText('More')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.legend_less')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.legend_more')).toBeInTheDocument();
   });
 
   it('distributes data across all days when no day info', () => {

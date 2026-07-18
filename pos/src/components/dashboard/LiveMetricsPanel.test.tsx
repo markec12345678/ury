@@ -51,7 +51,7 @@ describe('LiveMetricsPanel', () => {
 
   it('renders the Live Metrics title', () => {
     render(<LiveMetricsPanel />);
-    expect(screen.getByText('Live Metrics')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.live_metrics')).toBeInTheDocument();
   });
 
   it('shows loading spinner when liveLoading is true and no data', () => {
@@ -66,7 +66,7 @@ describe('LiveMetricsPanel', () => {
     mockDashboardStoreState.liveLoading = false;
     mockDashboardStoreState.liveMetrics = null;
     render(<LiveMetricsPanel />);
-    expect(screen.getByText('Unable to load live data')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.unable_to_load')).toBeInTheDocument();
   });
 
   it('shows Today Revenue when data exists', () => {
@@ -78,7 +78,7 @@ describe('LiveMetricsPanel', () => {
       timestamp: new Date().toISOString(),
     };
     render(<LiveMetricsPanel />);
-    expect(screen.getByText('Today Revenue')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.today_revenue')).toBeInTheDocument();
     expect(screen.getByText('€ 3500')).toBeInTheDocument();
   });
 
@@ -91,7 +91,7 @@ describe('LiveMetricsPanel', () => {
       timestamp: new Date().toISOString(),
     };
     render(<LiveMetricsPanel />);
-    expect(screen.getByText('Today Orders')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.today_orders')).toBeInTheDocument();
     expect(screen.getByText('35')).toBeInTheDocument();
   });
 
@@ -104,7 +104,7 @@ describe('LiveMetricsPanel', () => {
       timestamp: new Date().toISOString(),
     };
     render(<LiveMetricsPanel />);
-    expect(screen.getByText('2 Pending KOTs')).toBeInTheDocument();
+    expect(screen.getByText(/2 dashboard.pending_kots/)).toBeInTheDocument();
   });
 
   it('shows amber background when pending KOTs > 0', () => {
@@ -116,7 +116,7 @@ describe('LiveMetricsPanel', () => {
       timestamp: new Date().toISOString(),
     };
     render(<LiveMetricsPanel />);
-    const pendingDiv = screen.getByText('2 Pending KOTs').closest('.rounded-lg')!;
+    const pendingDiv = screen.getByText(/2 dashboard.pending_kots/).closest('.rounded-lg')!;
     expect(pendingDiv.className).toContain('bg-amber-50');
   });
 
@@ -129,7 +129,7 @@ describe('LiveMetricsPanel', () => {
       timestamp: new Date().toISOString(),
     };
     render(<LiveMetricsPanel />);
-    const pendingDiv = screen.getByText('0 Pending KOTs').closest('.rounded-lg')!;
+    const pendingDiv = screen.getByText(/0 dashboard.pending_kots/).closest('.rounded-lg')!;
     expect(pendingDiv.className).toContain('bg-gray-50');
   });
 
@@ -142,10 +142,10 @@ describe('LiveMetricsPanel', () => {
       timestamp: new Date().toISOString(),
     };
     render(<LiveMetricsPanel />);
-    expect(screen.getByText('Recent Orders')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.recent_orders')).toBeInTheDocument();
   });
 
-  it('shows "No recent orders" when list is empty', () => {
+  it('shows no recent orders message when list is empty', () => {
     mockDashboardStoreState.liveMetrics = {
       today_revenue: 3500,
       today_orders: 35,
@@ -154,7 +154,7 @@ describe('LiveMetricsPanel', () => {
       timestamp: new Date().toISOString(),
     };
     render(<LiveMetricsPanel />);
-    expect(screen.getByText('No recent orders')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.no_recent_orders')).toBeInTheDocument();
   });
 
   it('renders recent order details', () => {
@@ -188,13 +188,13 @@ describe('LiveMetricsPanel', () => {
       timestamp,
     };
     render(<LiveMetricsPanel />);
-    expect(screen.getByText(/Updated:/)).toBeInTheDocument();
+    expect(screen.getByText(/dashboard.updated/)).toBeInTheDocument();
   });
 
   it('does not show timestamp when no data', () => {
     mockDashboardStoreState.liveMetrics = null;
     render(<LiveMetricsPanel />);
-    expect(screen.queryByText(/Updated:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/dashboard.updated/)).not.toBeInTheDocument();
   });
 
   it('shows animate-pulse on Activity icon when autoRefresh is enabled', () => {

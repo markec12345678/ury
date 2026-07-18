@@ -10,7 +10,9 @@ vi.mock('../../i18n', () => ({
       'dashboard.vs_previous_period': 'vs previous period',
       'dashboard.total_revenue': 'Total Revenue',
       'dashboard.total_orders': 'Total Orders',
+      'dashboard.avg_order_value': 'Avg Order Value',
       'dashboard.no_data_available': 'No data available',
+      'dashboard.prev': 'Prev',
     };
     return translations[key] || key;
   },

@@ -4,19 +4,28 @@ from frappe.utils import get_datetime
 
 
 def kotValidationThread():
-    current_datetime = get_datetime()
-    one_minute_ago = current_datetime - timedelta(minutes=1)
-    five_minutes_ago = current_datetime - timedelta(minutes=5)
+    # Prevent overlapping runs using a cache lock
+    lock_key = "ury_kot_validation_running"
+    if frappe.cache().get_value(lock_key):
+        return  # Previous run still in progress
+    frappe.cache().set_value(lock_key, True, expires_in_sec=120)
 
-    # Get a list of unprocessed invoices within the last 5 minutes
-    invoice_list = get_unprocessed_invoices(five_minutes_ago, one_minute_ago)
+    try:
+        current_datetime = get_datetime()
+        one_minute_ago = current_datetime - timedelta(minutes=1)
+        five_minutes_ago = current_datetime - timedelta(minutes=5)
 
-    # Process each invoice independently so one failure doesn't block others
-    for invoice in invoice_list:
-        try:
-            process_invoice(invoice)
-        except Exception:
-            frappe.log_error("URY KOT Validation Error", f"Failed to process invoice {invoice.name}")
+        # Get a list of unprocessed invoices within the last 5 minutes
+        invoice_list = get_unprocessed_invoices(five_minutes_ago, one_minute_ago)
+
+        # Process each invoice independently so one failure doesn't block others
+        for invoice in invoice_list:
+            try:
+                process_invoice(invoice)
+            except Exception:
+                frappe.log_error("URY KOT Validation Error", f"Failed to process invoice {invoice.name}")
+    finally:
+        frappe.cache().delete_value(lock_key)
 
 
 def get_unprocessed_invoices(start_time, end_time):

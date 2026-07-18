@@ -50,5 +50,5 @@ export function useRenderTime(componentName: string): void {
 
     // Reset for next render
     renderStart.current = performance.now();
-  });
+  }, [componentName]);
 }

@@ -34,6 +34,8 @@ export interface HourlyBreakdown {
   hour: number;
   order_count: number;
   revenue: number;
+  day?: number;
+  day_of_week?: number;
 }
 
 export interface RevenueChartData {

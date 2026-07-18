@@ -26,25 +26,29 @@ const PaymentMethodChart = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       setLoading(true);
       try {
         const result = await getPaymentMethodChart(selectedPeriod);
-        setData(
-          (result?.data || []).map((item: PaymentMethodDataPoint) => ({
-            method: item.method || item.mode_of_payment || 'Unknown',
-            amount: Number(item.amount) || 0,
-            count: Number(item.count) || 0,
-          }))
-        );
+        if (!cancelled) {
+          setData(
+            (result?.data || []).map((item: PaymentMethodDataPoint) => ({
+              method: item.payment_method || 'Unknown',
+              amount: Number(item.total_paid) || 0,
+              count: Number(item.transaction_count) || 0,
+            }))
+          );
+        }
       } catch (error) {
         if (import.meta.env.DEV) console.error('Failed to fetch payment method chart:', error);
-        setData([]);
+        if (!cancelled) setData([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchData();
+    return () => { cancelled = true; };
   }, [selectedPeriod]);
 
   const chartData = useMemo(() => {
@@ -70,7 +74,7 @@ const PaymentMethodChart = () => {
             {formatCurrency(item.value)}
           </p>
           <p className="text-xs text-gray-400">
-            {percentage}% of total
+            {percentage}% {t('dashboard.of_total') || 'of total'}
           </p>
         </div>
       );

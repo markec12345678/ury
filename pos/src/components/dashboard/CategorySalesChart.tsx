@@ -10,6 +10,7 @@ import {
 import { useDashboardStore } from '../../store/dashboard-store';
 import { formatCurrency } from '../../lib/utils';
 import type { CategorySalesItem } from '../../lib/dashboard-api';
+import { t } from '../../i18n';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
@@ -27,11 +28,11 @@ const CategorySalesChart = () => {
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">Sales by Category</h3>
+      <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('dashboard.sales_by_category')}</h3>
       <div className="h-64">
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-            No category data available
+            {t('dashboard.no_category_data')}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

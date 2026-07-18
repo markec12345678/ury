@@ -58,9 +58,14 @@ export function loadQzPrinter(host){
     });
 }
 
-export function disconnectQzPrinter(){
-    if(qz.websocket.isActive())
-        qz.websocket.disconnect();
+export async function disconnectQzPrinter(){
+    if(qz.websocket.isActive()){
+        try {
+            await qz.websocket.disconnect();
+        } catch (error) {
+            console.error("Error disconnecting QZ printer:", error);
+        }
+    }
 }
 
 export function printWithQz(host, htmlToPrint){

@@ -9,13 +9,13 @@
     ]"
   >
     <div class="relative">
-      <label for="first" class="absolute z-50 ml-2 mt-0.5 bg-white px-2 text-xs"
+      <label for="room-select" class="absolute z-50 ml-2 mt-0.5 bg-white px-2 text-xs"
         >Select Room</label
       >
       <select
         class="relative mt-2 w-full rounded border border-gray-300 bg-gray-50"
         :class="{ 'mb-3': this.auth.cashier }"
-        id="room"
+        id="room-select"
         v-model="table.selectedRoom"
         @change="table.handleRoomChange"
       >
@@ -46,14 +46,14 @@
     <div class="relative ml-5" v-if="this.auth.cashier">
       <div class="relative">
         <label
-          for="first"
+          for="order-type-select"
           class="absolute z-50 ml-2 mt-0.5 bg-white px-2 text-xs"
           >Order Type</label
         >
         <select
           class="relative mt-2 w-full rounded border border-gray-300 bg-gray-50"
           :class="{ 'mb-3': this.auth.cashier }"
-          id="room"
+          id="order-type-select"
           v-model="menu.selectedOrderType"
           @change="menu.orderTypeSelection()"
           :disabled="recentOrders.pastOrderType !== null && recentOrders.pastOrderType !== ''"
@@ -71,13 +71,13 @@
       class="relative ml-5"
       v-if="this.menu.selectedOrderType === 'Aggregators' && this.auth.cashier"
     >
-      <label for="first" class="absolute z-50 ml-2 mt-0.5 bg-white px-2 text-xs"
+      <label for="aggregator-select" class="absolute z-50 ml-2 mt-0.5 bg-white px-2 text-xs"
         >Aggregators List</label
       >
       <select
         class="relative mt-2 w-full rounded border border-gray-300 bg-gray-50"
         :class="{ 'mb-3': auth.cashier }"
-        id="room"
+        id="aggregator-select"
         v-model="menu.selectedAggregator"
         @change="menu.handleAggregatorChange"
         :disabled="menu.cartHasValue || recentOrders.pastOrderType !== null && recentOrders.pastOrderType !== ''"
@@ -155,7 +155,7 @@
                     <a
                       href="#"
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
-                      @click="this.table.showModal = true"
+                      @click.prevent="this.table.showModal = true"
                       >Table Transfer</a
                     >
                   </li>
@@ -163,7 +163,7 @@
                     <a
                       href="#"
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
-                      @click="this.table.showModalCaptainTransfer = true"
+                      @click.prevent="this.table.showModalCaptainTransfer = true"
                       >Captain Transfer</a
                     >
                   </li>
@@ -326,7 +326,7 @@
         >
           Table Transfer
         </h2>
-        <div class="relative" ref="container">
+        <div class="relative" ref="tableTransferContainer">
           <label
             for="newTable"
             class="mt-6 block text-left text-gray-900 dark:text-white"
@@ -345,7 +345,7 @@
           <div
             v-if="this.table.showTable"
             class="absolute left-0 top-full z-10 max-h-64 w-full overflow-y-scroll rounded bg-white shadow"
-            ref="dropdown"
+            ref="tableTransferDropdown"
           >
             <div
               class="h-16 w-full rounded p-4 hover:bg-gray-100"
@@ -416,7 +416,7 @@
         >
           Captain Transfer
         </h2>
-        <div class="relative" ref="container">
+        <div class="relative" ref="captainTransferContainer">
           <label
             for="newTable"
             class="mt-6 block text-left text-gray-900 dark:text-white"
@@ -435,7 +435,7 @@
           <div
             v-if="this.table.showCaptain"
             class="absolute left-0 top-full z-10 max-h-64 w-full overflow-y-scroll rounded bg-white shadow"
-            ref="dropdown"
+            ref="captainTransferDropdown"
           >
             <div
               class="h-16 w-full rounded p-4 hover:bg-gray-100"

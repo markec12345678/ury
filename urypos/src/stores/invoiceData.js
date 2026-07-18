@@ -397,7 +397,6 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
       recentOrders.paidAmount = 0;
       recentOrders.billAmount = 0;
       menu.aggregatorItem = []
-      recentOrders.invoiceNumber = "";
       recentOrders.selectedOrder = [];
       recentOrders.selectedTable = "";
       customers.selectedOrderType = "";
@@ -675,9 +674,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         .post("ury.ury.doctype.ury_order.ury_order.cancel_order", updatedFields)
         .then(() => {
           notification.createNotification("Invoice Cancelled");
-          router.push("/Table").then(() => {
-            router.push("/Table").catch(() => {});
-          });
+          router.push("/Table").catch(() => {});
         })
         .catch((error) => console.error(error));
     },

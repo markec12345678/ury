@@ -295,9 +295,14 @@ def sync_order(
         kot_execute(invoice.name, customer, table, items, past_item, comments)
 
     except Exception as e:
-        # If an exception occurs (e.g., "kot" app not found), it will be caught here without affect the code execution.
+        # Log the KOT error but also notify the user — kitchen won't see this order
         error_msg = f"KOT Creation Failed: {str(e)}"            
         frappe.log_error(error_msg, "KOT Error")
+        frappe.msgprint(
+            title=_("KOT Creation Failed"),
+            indicator="orange",
+            msg=_("The order was saved but the KOT was not sent to the kitchen. Please check the error log or retry."),
+        )
 
     # table status
     if invoice.invoice_printed == 0:

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (Round 36)
+
+- **POS React (4 CRITICAL)**: PaymentMethodChart used wrong field names (`method`→`payment_method`, `amount`→`total_paid`, `count`→`transaction_count`) — chart always showed zero data. HourlyBreakdown type missing optional `day`/`day_of_week` fields. PaymentMethodChart useEffect missing cleanup on unmount. Dashboard error state never displayed (blank screen on API failure).
+- **POS React (8 HIGH)**: 20+ hardcoded English strings in 6 dashboard components wrapped with `t()` i18n. 20+ new translation keys added to 4 locale files. Unused `_colorMap` removed. `PERIODS` array moved outside component. `useRenderTime` missing dependency array fixed. Missing ARIA roles on period/granularity toggles. Unused `orders` field in RevenueChart removed.
+- **Mosaic KDS (4 CRITICAL)**: `showUpdateButtton` typo in Cart.vue (3 t's) — Update button never visible. `incrementItemQuantity` pushed incomplete item to cart (missing `rate`, `item_name`) causing NaN totals. `addToSelectedTables` doesn't await API — route navigates before data loads. `billing()` never resets `isPrinting` on API error — overlay permanently blocked.
+- **Mosaic KDS (8 HIGH)**: Duplicate `ref` names in Table.vue and Customer.vue fixed with unique names. Dead transfer links removed from takeAwayTable.vue. `href="#"` links now use `.prevent` modifier. `posClosing` deep-copies state before mutation. `orderTypeSelection` missing `return` after alert. Qty bound as string via `@input` → `Number()` coercion in Menu.vue and Cart.vue.
+- **Mosaic KDS (6 MEDIUM)**: Duplicate `id="room"` → unique IDs in Table.vue. `Customer.js` uses store's `db` instance instead of creating new one. `posClosing` calculates `totalInvoices`. `PrintWithQz.disconnectQzPrinter` now async with try/catch. Module-level timer cleanup documented.
+- **Backend (2 CRITICAL)**: 20 whitelisted endpoints in `ury_pos/api.py` had zero `frappe.only_for()` calls — any authenticated user could access financial data. Path traversal in `network_printing` via `file_path` parameter — server now generates path internally.
+- **Backend (4 HIGH)**: Race condition in order number generation fixed with cache mutex. Scheduled `kotValidationThread` overlap protection with cache lock. Type mismatch in `custom_ury_last_aggregator_invoice` (stored integer instead of invoice name). `frappe.db.commit()` removed from `create_customer`.
+- **Backend (4 MEDIUM)**: KOT creation failure in `sync_order` now shows `msgprint` to user. Dashboard IN clause capped at 1000 invoices. `float(rate)` calls wrapped in try/except. `os.makedirs` now uses `exist_ok=True`.
+
 ### Fixed (Round 35)
 
 - **POS React (2 CRITICAL)**: Broken JSX structure in POS.tsx — missing `</div>` closing tag causing build failure. Missing `setCurrencySymbol` export in utils.ts causing Vite build failure.

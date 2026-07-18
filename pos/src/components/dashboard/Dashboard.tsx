@@ -30,23 +30,25 @@ type PeriodOption = {
   label: string;
 };
 
+const PERIODS: PeriodOption[] = [
+  { value: 'today', label: t('dashboard.today') },
+  { value: 'yesterday', label: t('dashboard.yesterday') },
+  { value: 'this_week', label: t('dashboard.this_week') },
+  { value: 'last_week', label: t('dashboard.last_week') },
+  { value: 'this_month', label: t('dashboard.this_month') },
+  { value: 'last_month', label: t('dashboard.last_month') },
+  { value: 'last_7_days', label: t('dashboard.last_7_days') },
+  { value: 'last_30_days', label: t('dashboard.last_30_days') },
+  { value: 'last_90_days', label: t('dashboard.last_90_days') },
+];
+
 const Dashboard = () => {
-  const periods: PeriodOption[] = [
-    { value: 'today', label: t('dashboard.today') },
-    { value: 'yesterday', label: t('dashboard.yesterday') },
-    { value: 'this_week', label: t('dashboard.this_week') },
-    { value: 'last_week', label: t('dashboard.last_week') },
-    { value: 'this_month', label: t('dashboard.this_month') },
-    { value: 'last_month', label: t('dashboard.last_month') },
-    { value: 'last_7_days', label: t('dashboard.last_7_days') },
-    { value: 'last_30_days', label: t('dashboard.last_30_days') },
-    { value: 'last_90_days', label: t('dashboard.last_90_days') },
-  ];
   const {
     summary,
     tableOccupancy,
     selectedPeriod,
     loading,
+    error,
     autoRefresh,
     refreshInterval,
     fetchAll,
@@ -88,10 +90,10 @@ const Dashboard = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-blue-600" />
-            {t('dashboard.title') || 'Dashboard'}
+            {t('dashboard.title')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {t('dashboard.subtitle') || 'Real-time insights and analytics'}
+            {t('dashboard.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -119,9 +121,11 @@ const Dashboard = () => {
 
       {/* Period Selector */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-        {periods.map((p) => (
+        {PERIODS.map((p) => (
           <button
             key={p.value}
+            role="tab"
+            aria-selected={selectedPeriod === p.value}
             className={cn(
               'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
               selectedPeriod === p.value
@@ -138,6 +142,16 @@ const Dashboard = () => {
       {loading && !summary ? (
         <div className="flex-1 flex items-center justify-center">
           <Spinner className="w-8 h-8" />
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg font-semibold text-red-600 mb-2">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4 me-1" />
+              {t('common.retry')}
+            </Button>
+          </div>
         </div>
       ) : (
         <>
@@ -252,14 +266,6 @@ interface KPICardProps {
 }
 
 const KPICard = ({ title, value, icon, color, subtitle, trend, trendValue }: KPICardProps) => {
-  const _colorMap = {
-    blue: 'bg-blue-50 text-blue-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    purple: 'bg-purple-50 text-purple-600',
-    amber: 'bg-amber-50 text-amber-600',
-    red: 'bg-red-50 text-red-600',
-  };
-
   const iconBgMap = {
     blue: 'bg-blue-100 text-blue-600',
     emerald: 'bg-emerald-100 text-emerald-600',

@@ -47,11 +47,11 @@ const OrderTypeChart = () => {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-sm bg-blue-500" />
-              <span className="text-xs text-gray-600">Orders: {data.orders}</span>
+              <span className="text-xs text-gray-600">{t('dashboard.tooltip_orders')}: {data.orders}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
-              <span className="text-xs text-gray-600">Revenue: {formatCurrency(data.revenue)}</span>
+              <span className="text-xs text-gray-600">{t('dashboard.tooltip_revenue')}: {formatCurrency(data.revenue)}</span>
             </div>
           </div>
         </div>

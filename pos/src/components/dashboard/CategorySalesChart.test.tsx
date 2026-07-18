@@ -57,14 +57,14 @@ describe('CategorySalesChart', () => {
 
   it('renders the Sales by Category title', () => {
     render(<CategorySalesChart />);
-    expect(screen.getByText('Sales by Category')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.sales_by_category')).toBeInTheDocument();
   });
 
   // ─── Empty State ───────────────────────────────────────────────────
 
   it('shows no data message when categorySales is null', () => {
     render(<CategorySalesChart />);
-    expect(screen.getByText('No category data available')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.no_category_data')).toBeInTheDocument();
   });
 
   it('shows no data message when categorySales has empty data', () => {
@@ -72,7 +72,7 @@ describe('CategorySalesChart', () => {
       categorySales: { data: [] },
     };
     render(<CategorySalesChart />);
-    expect(screen.getByText('No category data available')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.no_category_data')).toBeInTheDocument();
   });
 
   // ─── Chart Rendering ───────────────────────────────────────────────

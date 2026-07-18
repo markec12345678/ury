@@ -8,7 +8,6 @@
     </div>
     <div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
       <div
-        w-full
         class="w-full max-w-sm rounded border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800"
         v-for="table in this.table.takeAway"
         :key="table.name"
@@ -54,22 +53,6 @@
               v-show="this.table.activeDropdown === table.name"
             >
               <ul class="py-2">
-                <li>
-                  <a
-                    href="#"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
-                    @click="this.table.showModal = true"
-                    >Table Transfer</a
-                  >
-                </li>
-                <li v-if="this.auth.hasAccess">
-                  <a
-                    href="#"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
-                    @click="this.table.showModalCaptainTransfer = true"
-                    >Captain Transfer</a
-                  >
-                </li>
               </ul>
             </div>
           </div>

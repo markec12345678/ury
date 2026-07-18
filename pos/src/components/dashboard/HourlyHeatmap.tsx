@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useDashboardStore } from '../../store/dashboard-store';
 import { t } from '../../i18n';
 import { cn } from '../../lib/utils';
@@ -15,6 +15,7 @@ interface HeatmapCell {
 const HourlyHeatmap = () => {
   const { summary } = useDashboardStore();
   const [hoveredCell, setHoveredCell] = useState<HeatmapCell | null>(null);
+  const handleCellHover = useCallback((cell: HeatmapCell | null) => setHoveredCell(cell), []);
 
   const heatmapData = useMemo(() => {
     if (!summary?.hourly_breakdown) return { cells: [] as HeatmapCell[], maxCount: 0 };
@@ -73,10 +74,10 @@ const HourlyHeatmap = () => {
 
   const legendSteps = [
     { label: '0', color: 'bg-blue-50' },
-    { label: 'Low', color: 'bg-blue-200' },
-    { label: 'Med', color: 'bg-blue-400' },
-    { label: 'High', color: 'bg-blue-600' },
-    { label: 'Peak', color: 'bg-blue-700' },
+    { label: t('dashboard.legend_low'), color: 'bg-blue-200' },
+    { label: t('dashboard.legend_med'), color: 'bg-blue-400' },
+    { label: t('dashboard.legend_high'), color: 'bg-blue-600' },
+    { label: t('dashboard.legend_peak'), color: 'bg-blue-700' },
   ];
 
   return (
@@ -103,7 +104,7 @@ const HourlyHeatmap = () => {
                 {DAYS_OF_WEEK[hoveredCell.day]} {hoveredCell.hour}:00 - {hoveredCell.hour + 1}:00
               </p>
               <p className="text-xs text-gray-500">
-                {hoveredCell.count} orders
+                {hoveredCell.count} {t('dashboard.orders_count')}
               </p>
             </div>
           )}
@@ -142,8 +143,8 @@ const HourlyHeatmap = () => {
                               ? 'ring-2 ring-blue-400 scale-110'
                               : ''
                           )}
-                          onMouseEnter={() => setHoveredCell({ day: dayIndex, hour, count })}
-                          onMouseLeave={() => setHoveredCell(null)}
+                          onMouseEnter={() => handleCellHover({ day: dayIndex, hour, count })}
+                          onMouseLeave={() => handleCellHover(null)}
                         >
                           {count > 0 && (
                             <span className={cn('text-[8px] leading-none font-medium', getCellTextColor(count, heatmapData.maxCount))}>
@@ -161,13 +162,13 @@ const HourlyHeatmap = () => {
 
           {/* Legend */}
           <div className="flex items-center justify-end gap-2 mt-3">
-            <span className="text-[10px] text-gray-400 mr-1">Less</span>
+            <span className="text-[10px] text-gray-400 mr-1">{t('dashboard.legend_less')}</span>
             {legendSteps.map((step) => (
               <div key={step.label} className="flex items-center gap-1">
                 <div className={cn('w-3 h-3 rounded-sm', step.color)} />
               </div>
             ))}
-            <span className="text-[10px] text-gray-400 ml-1">More</span>
+            <span className="text-[10px] text-gray-400 ml-1">{t('dashboard.legend_more')}</span>
           </div>
         </div>
       )}

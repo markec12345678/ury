@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RevenueChartComponent from './RevenueChart';
 
+// Mock i18n to return keys (tests should use keys, not English text)
+vi.mock('../../i18n', () => ({
+  t: (key: string) => key,
+}));
+
 // Mock storage for formatCurrency
 vi.mock('../../lib/storage', () => ({
   storage: {
@@ -48,21 +53,21 @@ describe('RevenueChart', () => {
 
   it('renders the Revenue Overview title', () => {
     render(<RevenueChartComponent />);
-    expect(screen.getByText('Revenue Overview')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.revenue_overview')).toBeInTheDocument();
   });
 
   it('renders granularity buttons', () => {
     render(<RevenueChartComponent />);
-    expect(screen.getByText('Hourly')).toBeInTheDocument();
-    expect(screen.getByText('Daily')).toBeInTheDocument();
-    expect(screen.getByText('Weekly')).toBeInTheDocument();
-    expect(screen.getByText('Monthly')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.hourly')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.daily')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.weekly')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.monthly')).toBeInTheDocument();
   });
 
   it('shows no data message when chartData is empty', () => {
     mockDashboardStoreState.revenueChart = null;
     render(<RevenueChartComponent />);
-    expect(screen.getByText('No revenue data available')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.no_revenue_data')).toBeInTheDocument();
   });
 
   it('renders chart when data exists', () => {
@@ -78,39 +83,39 @@ describe('RevenueChart', () => {
 
   it('calls setSelectedGranularity when granularity button is clicked', () => {
     render(<RevenueChartComponent />);
-    fireEvent.click(screen.getByText('Hourly'));
+    fireEvent.click(screen.getByText('dashboard.hourly'));
     expect(mockDashboardStoreState.setSelectedGranularity).toHaveBeenCalledWith('hourly');
   });
 
   it('calls setSelectedGranularity for Daily', () => {
     render(<RevenueChartComponent />);
-    fireEvent.click(screen.getByText('Daily'));
+    fireEvent.click(screen.getByText('dashboard.daily'));
     expect(mockDashboardStoreState.setSelectedGranularity).toHaveBeenCalledWith('daily');
   });
 
   it('calls setSelectedGranularity for Weekly', () => {
     render(<RevenueChartComponent />);
-    fireEvent.click(screen.getByText('Weekly'));
+    fireEvent.click(screen.getByText('dashboard.weekly'));
     expect(mockDashboardStoreState.setSelectedGranularity).toHaveBeenCalledWith('weekly');
   });
 
   it('calls setSelectedGranularity for Monthly', () => {
     render(<RevenueChartComponent />);
-    fireEvent.click(screen.getByText('Monthly'));
+    fireEvent.click(screen.getByText('dashboard.monthly'));
     expect(mockDashboardStoreState.setSelectedGranularity).toHaveBeenCalledWith('monthly');
   });
 
   it('highlights the selected granularity button', () => {
     mockDashboardStoreState.selectedGranularity = 'daily';
     render(<RevenueChartComponent />);
-    const dailyButton = screen.getByText('Daily');
+    const dailyButton = screen.getByText('dashboard.daily');
     expect(dailyButton.className).toContain('bg-blue-100');
   });
 
   it('does not highlight non-selected granularity buttons', () => {
     mockDashboardStoreState.selectedGranularity = 'daily';
     render(<RevenueChartComponent />);
-    const hourlyButton = screen.getByText('Hourly');
+    const hourlyButton = screen.getByText('dashboard.hourly');
     expect(hourlyButton.className).not.toContain('bg-blue-100');
   });
 

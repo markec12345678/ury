@@ -1,8 +1,23 @@
 import frappe
+from frappe import _
 
 
 def set_order_number(doc, event):
     pos_profile = doc.pos_profile
+    # Use a cache lock to prevent duplicate order numbers under concurrent inserts
+    lock_key = f"ury_order_number_lock:{pos_profile}"
+    if frappe.cache().get_value(lock_key):
+        # Retry after a short delay; if still locked, skip (next save will fix)
+        return
+    frappe.cache().set_value(lock_key, True, expires_in_sec=10)
+
+    try:
+        _do_set_order_number(doc, pos_profile)
+    finally:
+        frappe.cache().delete_value(lock_key)
+
+
+def _do_set_order_number(doc, pos_profile):
     if doc.order_type == "Aggregators":
         last_invoice = frappe.db.get_value(
             "POS Opening Entry",
@@ -61,8 +76,10 @@ def set_order_number(doc, event):
                 aggregator_last_order_number = aggregator_invoice_number - 1
             except frappe.DoesNotExist:
                 aggregator_last_order_number = 0
+            # Write the invoice name (not just the number) to be consistent
+            # with set_last_invoice_in_pos_open which also writes invoice.name
             frappe.db.set_value(
-                "POS Opening Entry", pos_open_name, "custom_ury_last_aggregator_invoice", aggregator_last_order_number
+                "POS Opening Entry", pos_open_name, "custom_ury_last_aggregator_invoice", aggregator_invoice.name if aggregator_invoice else ""
             )
         else:
             try:
@@ -76,7 +93,7 @@ def set_order_number(doc, event):
                 last_order_number = 0
 
             frappe.db.set_value(
-                "POS Opening Entry", pos_open_name, "custom_ury_last_invoice", last_order_number
+                "POS Opening Entry", pos_open_name, "custom_ury_last_invoice", invoice.name if invoice else ""
             )
 
         default_value = "AGR - 1" if doc.order_type == "Aggregators" else "1"

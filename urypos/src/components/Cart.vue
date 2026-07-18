@@ -18,7 +18,7 @@
     <div class="float-right rounded" v-if="this.menu.cart.length > 0">
       <button
         class="mr-4 rounded px-4 py-2 shadow"
-        v-if="this.invoiceData.showUpdateButtton === true"
+        v-if="this.invoiceData.showUpdateButton === true"
         @click="this.invoiceData.invoiceCreation()"
       >
         Update
@@ -79,7 +79,7 @@
         name="qty_input_cart"
         class="block w-full border-none text-center text-base text-gray-900 dark:text-white"
         :value="parseInt(cart_item.qty)"
-        @input="cart_item.qty = $event.target.value"
+        @input="cart_item.qty = Number($event.target.value) || 0"
         @click="
           this.menu.showModal(cart_item);
           menu.showDialogCart = true;

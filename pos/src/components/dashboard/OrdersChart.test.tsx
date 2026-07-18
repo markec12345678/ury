@@ -47,14 +47,14 @@ describe('OrdersChartComponent', () => {
 
   it('renders the Orders Overview title', () => {
     render(<OrdersChartComponent />);
-    expect(screen.getByText('Orders Overview')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.orders_overview')).toBeInTheDocument();
   });
 
   // ─── Empty State ───────────────────────────────────────────────────
 
   it('shows no data message when ordersChart is null', () => {
     render(<OrdersChartComponent />);
-    expect(screen.getByText('No order data available')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.no_order_data')).toBeInTheDocument();
   });
 
   it('shows no data message when ordersChart has empty data', () => {
@@ -62,7 +62,7 @@ describe('OrdersChartComponent', () => {
       ordersChart: { data: [] },
     };
     render(<OrdersChartComponent />);
-    expect(screen.getByText('No order data available')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.no_order_data')).toBeInTheDocument();
   });
 
   // ─── Chart Rendering ───────────────────────────────────────────────
@@ -112,7 +112,7 @@ describe('OrdersChartComponent', () => {
     const bars = screen.getAllByTestId('chart-bar');
     const paidBar = bars.find(b => b.getAttribute('data-key') === 'paid');
     expect(paidBar).toBeTruthy();
-    expect(paidBar!.getAttribute('data-name')).toBe('Paid');
+    expect(paidBar!.getAttribute('data-name')).toBe('order_status_types.paid');
     expect(paidBar!.getAttribute('data-fill')).toBe('#10b981');
   });
 
@@ -129,7 +129,7 @@ describe('OrdersChartComponent', () => {
     const bars = screen.getAllByTestId('chart-bar');
     const draftBar = bars.find(b => b.getAttribute('data-key') === 'draft');
     expect(draftBar).toBeTruthy();
-    expect(draftBar!.getAttribute('data-name')).toBe('Draft');
+    expect(draftBar!.getAttribute('data-name')).toBe('order_status_types.draft');
     expect(draftBar!.getAttribute('data-fill')).toBe('#f59e0b');
   });
 
@@ -146,7 +146,7 @@ describe('OrdersChartComponent', () => {
     const bars = screen.getAllByTestId('chart-bar');
     const cancelledBar = bars.find(b => b.getAttribute('data-key') === 'cancelled');
     expect(cancelledBar).toBeTruthy();
-    expect(cancelledBar!.getAttribute('data-name')).toBe('Cancelled');
+    expect(cancelledBar!.getAttribute('data-name')).toBe('order_status_types.return');
     expect(cancelledBar!.getAttribute('data-fill')).toBe('#ef4444');
   });
 

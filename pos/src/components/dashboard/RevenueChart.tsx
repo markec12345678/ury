@@ -12,6 +12,7 @@ import {
 import { useDashboardStore } from '../../store/dashboard-store';
 import type { ChartGranularity } from '../../lib/dashboard-api';
 import { formatCurrency } from '../../lib/utils';
+import { t } from '../../i18n';
 
 const RevenueChartComponent = () => {
   const { revenueChart, selectedGranularity, setSelectedGranularity } = useDashboardStore();
@@ -26,25 +27,26 @@ const RevenueChartComponent = () => {
           ? point.month
           : point.date,
       revenue: Number(point.revenue) || 0,
-      orders: Number(point.order_count) || 0,
     }));
   }, [revenueChart, selectedGranularity]);
 
   const granularities = [
-    { value: 'hourly', label: 'Hourly' },
-    { value: 'daily', label: 'Daily' },
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'monthly', label: 'Monthly' },
+    { value: 'hourly', label: t('dashboard.hourly') },
+    { value: 'daily', label: t('dashboard.daily') },
+    { value: 'weekly', label: t('dashboard.weekly') },
+    { value: 'monthly', label: t('dashboard.monthly') },
   ];
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700">Revenue Overview</h3>
+        <h3 className="text-sm font-semibold text-gray-700">{t('dashboard.revenue_overview')}</h3>
         <div className="flex gap-1">
           {granularities.map((g) => (
             <button
               key={g.value}
+              role="tab"
+              aria-selected={selectedGranularity === g.value}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${
                 selectedGranularity === g.value
                   ? 'bg-blue-100 text-blue-700'
@@ -60,7 +62,7 @@ const RevenueChartComponent = () => {
       <div className="h-64">
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-            No revenue data available
+            {t('dashboard.no_revenue_data')}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -93,7 +95,7 @@ const RevenueChartComponent = () => {
                 stroke="#3b82f6"
                 fill="url(#revenueGradient)"
                 strokeWidth={2}
-                name="Revenue"
+                name={t('dashboard.revenue_overview')}
               />
             </AreaChart>
           </ResponsiveContainer>

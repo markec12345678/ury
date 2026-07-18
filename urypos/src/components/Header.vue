@@ -59,16 +59,15 @@
             class="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
           >
             <div class="py-1">
-              <a
-                href="#"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              <span
+                class="block px-4 py-2 text-sm text-gray-700"
               >
                 {{ this.auth.getLoginAvatar() }}
-              </a>
+              </span>
               <a
                 href="#"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                @click="reload"
+                @click.prevent="reload"
               >
                 Reload
               </a>
@@ -76,14 +75,14 @@
               <a
                 href="#"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                @click="this.auth.routeToHome()"
+                @click.prevent="this.auth.routeToHome()"
                 >Switch To Desk
               </a>
               <div class="border-t border-gray-200"></div>
               <a
                 href="#"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                @click="this.auth.logOut"
+                @click.prevent="this.auth.logOut"
               >
                 Log out
               </a>

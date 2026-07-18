@@ -19,9 +19,10 @@ def network_printing(
     print_format=None,
     doc=None,
     no_letterhead=0,
-    file_path=None,
 ):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    # file_path is always server-generated to prevent path traversal
+    file_path = None
     try:
         print_settings = frappe.get_doc("Network Printer Settings", printer_setting)
 

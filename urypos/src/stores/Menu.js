@@ -219,6 +219,7 @@ export const useMenuStore = defineStore("menu", {
           "Dine in is not permitted for takeaway orders.",
           "OK"
         );
+        return;
       } else {
         if (this.selectedOrderType !== "Aggregators") {
           this.fetchItems()
@@ -399,7 +400,8 @@ export const useMenuStore = defineStore("menu", {
         notification.createNotification(message);
       } else {
         item.comment = "";
-        this.cart.push({ item: item.item, qty: 1 });
+        item.qty = 1;
+        this.cart.push(JSON.parse(JSON.stringify(item)));
       }
     },
     decrementItemQuantity(item) {

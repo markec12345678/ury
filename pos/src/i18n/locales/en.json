@@ -330,7 +330,21 @@
     "updated": "Updated",
     "prev": "Prev",
     "no_recent_orders": "No recent orders",
-    "unable_to_load": "Unable to load live data"
+    "unable_to_load": "Unable to load live data",
+    "of_total": "of total",
+    "no_revenue_data": "No revenue data available",
+    "no_order_data": "No order data available",
+    "no_category_data": "No category data available",
+    "legend_less": "Less",
+    "legend_more": "More",
+    "legend_low": "Low",
+    "legend_med": "Med",
+    "legend_high": "High",
+    "legend_peak": "Peak",
+    "orders_count": "orders",
+    "tooltip_orders": "Orders",
+    "tooltip_revenue": "Revenue",
+    "failed_load": "Failed to load dashboard data"
   },
   "reports": {
     "title": "Reports",

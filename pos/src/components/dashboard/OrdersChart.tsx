@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useDashboardStore } from '../../store/dashboard-store';
 import type { OrdersChartDataPoint } from '../../lib/dashboard-api';
+import { t } from '../../i18n';
 
 const OrdersChartComponent = () => {
   const { ordersChart } = useDashboardStore();
@@ -28,11 +29,11 @@ const OrdersChartComponent = () => {
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">Orders Overview</h3>
+      <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('dashboard.orders_overview')}</h3>
       <div className="h-64">
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-            No order data available
+            {t('dashboard.no_order_data')}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -48,9 +49,9 @@ const OrdersChartComponent = () => {
                 }}
               />
               <Legend />
-              <Bar dataKey="paid" fill="#10b981" name="Paid" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="draft" fill="#f59e0b" name="Draft" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="cancelled" fill="#ef4444" name="Cancelled" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="paid" fill="#10b981" name={t('order_status_types.paid')} radius={[2, 2, 0, 0]} />
+              <Bar dataKey="draft" fill="#f59e0b" name={t('order_status_types.draft')} radius={[2, 2, 0, 0]} />
+              <Bar dataKey="cancelled" fill="#ef4444" name={t('order_status_types.return')} radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

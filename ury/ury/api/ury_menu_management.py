@@ -108,7 +108,10 @@ def toggle_menu(menu_name, enabled):
 def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
     """Add an item to a URY Menu."""
     frappe.only_for("Restaurant Manager")
-    rate = float(rate)
+    try:
+        rate = float(rate)
+    except (ValueError, TypeError):
+        frappe.throw(_("Invalid rate value"))
     if rate < 0:
         frappe.throw(_("Rate cannot be negative"))
     menu = frappe.get_doc("URY Menu", menu_name)
@@ -142,7 +145,10 @@ def update_menu_item(menu_name, item_row_name, rate=None, special_dish=None, dis
     for item in menu.items:
         if item.name == item_row_name:
             if rate is not None:
-                item.rate = float(rate)
+                try:
+                    item.rate = float(rate)
+                except (ValueError, TypeError):
+                    frappe.throw(_("Invalid rate value"))
             if special_dish is not None:
                 item.special_dish = int(special_dish)
             if disabled is not None:
@@ -196,7 +202,10 @@ def batch_update_prices(menu_name, updates):
     for update in updates:
         for item in menu.items:
             if item.name == update.get("item_row_name"):
-                rate = float(update.get("rate", item.rate))
+                try:
+                    rate = float(update.get("rate", item.rate))
+                except (ValueError, TypeError):
+                    frappe.throw(_("Invalid rate value for item {0}").format(item.item_name))
                 if rate < 0:
                     frappe.throw(_("Rate cannot be negative"))
                 item.rate = rate

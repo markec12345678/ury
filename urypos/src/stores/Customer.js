@@ -158,8 +158,7 @@ export const useCustomerStore = defineStore("customers", {
       }
 
       this.showAddNewCustomer = false;
-      const db = frappe.db();
-      db.createDoc("Customer", {
+      this.db.createDoc("Customer", {
         customer_name: this.newCustomer,
         mobile_number: this.newCustomerMobileNo.toString(),
         customer_group: this.customerGroup,

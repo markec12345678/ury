@@ -138,6 +138,7 @@ export const posClosing = defineStore("posClose", {
           });
           this.taxes = Object.values(combinedTaxes);
           this.payments = Object.values(paymentAggregated);
+          this.totalInvoices = this.invoiceDetails.length;
 
           this.posInvoice = this.invoiceDetails.map((item) => ({
             pos_invoice: item.name,
@@ -164,7 +165,7 @@ export const posClosing = defineStore("posClose", {
       } else {
         formattedTime = null;
       }
-      let payment_reconciliation = this.openingBalance;
+      let payment_reconciliation = JSON.parse(JSON.stringify(this.openingBalance));
       payment_reconciliation.forEach((item) => {
         let found = false;
         this.payments.forEach((secondItem) => {

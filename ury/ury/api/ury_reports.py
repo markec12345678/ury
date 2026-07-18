@@ -331,7 +331,7 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
     import time
     temp_dir = frappe.get_site_path("private", "reports")
     if not os.path.exists(temp_dir):
-        os.makedirs(temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
 
     # Cleanup: delete HTML files older than 1 hour
     now = time.time()

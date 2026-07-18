@@ -91,7 +91,7 @@
             name="qty_input"
             class="block w-full border border-gray-200 text-center text-sm shadow-sm"
             :value="item.qty"
-            @input="item.qty = $event.target.value"
+            @input="item.qty = Number($event.target.value) || 0"
             readonly
             @click="this.menu.showModal(item)"
           />

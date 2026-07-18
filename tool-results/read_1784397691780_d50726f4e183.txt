@@ -1,0 +1,664 @@
+     1→     1→<template>
+     2→     2→  <div class="mt-3 flex flex-col md:flex-row">
+     3→     3→    <div
+     4→     4→      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-300 bg-opacity-50 text-lg"
+     5→     5→      v-if="this.invoiceData.isPrinting"
+     6→     6→    >
+     7→     7→      Printing Invoice
+     8→     8→    </div>
+     9→     9→
+    10→    10→    <div
+    11→    11→      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-300 bg-opacity-50 text-lg"
+    12→    12→      v-if="this.recentOrders.isLoading"
+    13→    13→    >
+    14→    14→      Payment is Being Processed
+    15→    15→    </div>
+    16→    16→    <div
+    17→    17→      class="max-w-lg flex-1 rounded-lg border border-gray-200 bg-white p-4 shadow dark:border-gray-700 dark:bg-gray-800 sm:p-8"
+    18→    18→    >
+    19→    19→      <div class="mb-4 flex items-center justify-between">
+    20→    20→        <h5
+    21→    21→          class="text-xl font-bold leading-none text-gray-900 dark:text-white"
+    22→    22→        >
+    23→    23→          Recent Orders
+    24→    24→        </h5>
+    25→    25→      </div>
+    26→    26→      <div class="w-full" @click="this.recentOrders.showOrder = false">
+    27→    27→        <input
+    28→    28→          type="search"
+    29→    29→          id="orderSeach"
+    30→    30→          class="block w-full rounded-lg border-gray-300 bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+    31→    31→          placeholder="Search by Invoice Id or Customer Name or Mobile Number"
+    32→    32→          v-model="this.recentOrders.searchOrder"
+    33→    33→          @input="this.recentOrders.handleSearchInput"
+    34→    34→        />
+    35→    35→        <select
+    36→    36→          id="status"
+    37→    37→          class="mt-4 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+    38→    38→          v-model="this.recentOrders.selectedStatus"
+    39→    39→          @change="this.recentOrders.handleStatusChange"
+    40→    40→        >
+    41→    41→          <option value="Draft">Draft</option>
+    42→    42→          <option value="Unbilled">Unbilled</option>
+    43→    43→          <option
+    44→    44→            value="Recently Paid"
+    45→    45→            v-if="auth.viewAllStatus === 0 && invoiceData.paidLimit > 0"
+    46→    46→          >
+    47→    47→            Recently Paid
+    48→    48→          </option>
+    49→    49→          <option value="Paid" v-if="this.auth.viewAllStatus === 1">
+    50→    50→            Paid
+    51→    51→          </option>
+    52→    52→          <option value="Consolidated" v-if="this.auth.viewAllStatus === 1">
+    53→    53→            Consolidated
+    54→    54→          </option>
+    55→    55→          <option value="Return" v-if="this.auth.viewAllStatus === 1">
+    56→    56→            Return
+    57→    57→          </option>
+    58→    58→        </select>
+    59→    59→      </div>
+    60→    60→      <div class="flow-root">
+    61→    61→        <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">
+    62→    62→          <li
+    63→    63→            class="mt-2 py-3 sm:py-4"
+    64→    64→            :class="{
+    65→    65→              'bg-gray-200': this.recentOrders.setBackground === index,
+    66→    66→            }"
+    67→    67→            v-for="(recentOrder, index) in this.recentOrders.filteredOrders"
+    68→    68→            :key="recentOrder.name"
+    69→    69→            @click="
+    70→    70→              this.recentOrders.viewRecentOrder(recentOrder);
+    71→    71→              this.recentOrders.setBackground = index;
+    72→    72→            "
+    73→    73→          >
+    74→    74→          <div class="flex w-full">
+    75→    75→              <div class="w-3/5">
+    76→    76→                <p
+    77→    77→                  class="truncate text-base font-medium text-gray-900 dark:text-white"
+    78→    78→                >
+    79→    79→                  {{ recentOrder.name }}
+    80→    80→                </p>
+    81→    81→                <p class="truncate text-sm text-gray-600 dark:text-gray-400">
+    82→    82→                  {{ recentOrder.mobile_number }},{{ recentOrder.customer }}
+    83→    83→                </p>
+    84→    84→              </div>
+    85→    85→              <div class="w-2/5 flex">
+    86→    86→                <p class="text-base font-medium text-gray-900 dark:text-white overflow-hidden text-ellipsis">
+    87→    87→                  {{
+    88→    88→                    recentOrder.restaurant_table
+    89→    89→                      ? recentOrder.restaurant_table
+    90→    90→                      : recentOrder.order_type
+    91→    91→                  }}
+    92→    92→                </p>
+    93→    93→              </div>
+    94→    94→              <div class="w-1/5 text-right">
+    95→    95→                <p
+    96→    96→                  class="truncate text-base font-medium text-gray-900 dark:text-white"
+    97→    97→                  >
+    98→    98→                  {{ this.invoiceData.currency }}
+    99→    99→                  {{ recentOrder.grand_total }}
+   100→   100→                </p>
+   101→   101→                <p class="truncate text-sm text-gray-600 dark:text-gray-400">
+   102→   102→                  {{
+   103→   103→                    this.recentOrders.getFormattedTime(
+   104→   104→                      recentOrder.posting_time
+   105→   105→                    )
+   106→   106→                  }}
+   107→   107→                </p>
+   108→   108→              </div>
+   109→   109→            </div>
+   110→   110→          </li>
+   111→   111→        </ul>
+   112→   112→      </div>
+   113→   113→      <div class="mt-4 flex justify-center">
+   114→   114→        <button
+   115→   115→          :class="{ hidden: this.recentOrders.currentPage === 1 }"
+   116→   116→          @click="this.recentOrders.previousPageClick()"
+   117→   117→          class="mr-2 w-[80px] rounded-md border px-2 py-1"
+   118→   118→        >
+   119→   119→          Previous
+   120→   120→        </button>
+   121→   121→        <button class="mr-2 rounded-md border px-2 py-1">
+   122→   122→          {{ this.recentOrders.currentPage }}
+   123→   123→        </button>
+   124→   124→        <button
+   125→   125→          @click="this.recentOrders.nextPageClick()"
+   126→   126→          v-if="this.recentOrders.next"
+   127→   127→          class="w-[80px] rounded-md border px-2 py-1"
+   128→   128→        >
+   129→   129→          Next
+   130→   130→        </button>
+   131→   131→      </div>
+   132→   132→    </div>
+   133→   133→    <div
+   134→   134→      class="mt-5 max-w-lg flex-1 rounded-lg border border-gray-200 bg-white p-4 shadow dark:border-gray-700 dark:bg-gray-800 sm:p-8 md:ml-10 md:mt-0"
+   135→   135→      v-if="this.recentOrders.showOrder && this.recentOrders.selectedOrder"
+   136→   136→    >
+   137→   137→      <div class="flex items-center space-x-4">
+   138→   138→        <div class="min-w-0 flex-1">
+   139→   139→          <p
+   140→   140→            class="truncate text-xl font-semibold text-gray-900 dark:text-white"
+   141→   141→          >
+   142→   142→            {{ this.recentOrders.selectedOrder.customer }}
+   143→   143→          </p>
+   144→   144→          <p
+   145→   145→            class="truncate text-xl font-semibold text-gray-900 dark:text-white"
+   146→   146→          >
+   147→   147→            {{ this.recentOrders.selectedOrder.mobile_number }}
+   148→   148→          </p>
+   149→   149→          <p
+   150→   150→            class="mr-2 mt-2 truncate text-sm text-gray-500 dark:text-gray-400"
+   151→   151→          >
+   152→   152→            {{ this.recentOrders.postingDate }}
+   153→   153→          </p>
+   154→   154→
+   155→   155→          <p
+   156→   156→            class="mr-2 mt-2 truncate text-sm text-gray-500 dark:text-gray-400"
+   157→   157→            v-if="this.recentOrders.selectedOrder.waiter"
+   158→   158→          >
+   159→   159→            Waiter : {{ this.recentOrders.selectedOrder.waiter }}
+   160→   160→          </p>
+   161→   161→        </div>
+   162→   162→        <div class="items-center space-x-4 text-right">
+   163→   163→          <div class="min-w-0 flex-1">
+   164→   164→            <p
+   165→   165→              class="mr-2 truncate text-xl font-semibold text-gray-900 dark:text-white"
+   166→   166→            >
+   167→   167→              {{ this.invoiceData.currency }}
+   168→   168→              {{
+   169→   169→                this.recentOrders.selectedOrder.status === "Draft"
+   170→   170→                  ? "0.00"
+   171→   171→                  : this.recentOrders.selectedOrder.grand_total
+   172→   172→              }}
+   173→   173→            </p>
+   174→   174→            <p
+   175→   175→              class="mr-2 mt-2 truncate text-sm text-gray-500 dark:text-gray-400"
+   176→   176→            >
+   177→   177→              {{ this.recentOrders.selectedOrder.name }}
+   178→   178→            </p>
+   179→   179→
+   180→   180→            <div class="ml-5 mt-2">
+   181→   181→              <Badge
+   182→   182→                :type="
+   183→   183→                  this.recentOrders.getBadgeType(
+   184→   184→                    this.recentOrders.selectedOrder
+   185→   185→                  )
+   186→   186→                "
+   187→   187→              >
+   188→   188→                <svg
+   189→   189→                  xmlns="http://www.w3.org/2000/svg"
+   190→   190→                  width="16"
+   191→   191→                  height="16"
+   192→   192→                  fill="currentColor"
+   193→   193→                  class="bi bi-dot"
+   194→   194→                  viewBox="0 0 16 16"
+   195→   195→                >
+   196→   196→                  <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+   197→   197→                </svg>
+   198→   198→                <span class="text-xs">
+   199→   199→                  {{ this.recentOrders.selectedOrder.status }}
+   200→   200→                </span>
+   201→   201→              </Badge>
+   202→   202→            </div>
+   203→   203→          </div>
+   204→   204→        </div>
+   205→   205→      </div>
+   206→   206→      <div class="mb-2 mt-4">
+   207→   207→        <p class="truncate text-lg font-semibold text-gray-900 dark:text-white">
+   208→   208→          Items
+   209→   209→        </p>
+   210→   210→      </div>
+   211→   211→      <div class="w-full rounded bg-gray-50 p-2">
+   212→   212→        <div
+   213→   213→          class="ml-2 mt-2"
+   214→   214→          v-for="(items, itemIdx) in this.recentOrders.recentOrderListItems"
+   215→   215→          :key="items.item_code || items.item_name || itemIdx"
+   216→   216→        >
+   217→   217→          <div class="flex items-center space-x-4">
+   218→   218→            <div class="min-w-2 flex-1">
+   219→   219→              <p class="truncate text-base text-gray-800 dark:text-white">
+   220→   220→                {{ items.item_name }}
+   221→   221→              </p>
+   222→   222→            </div>
+   223→   223→            <div class="flex items-center space-x-4 text-right">
+   224→   224→              <p class="text-base text-gray-800 dark:text-white">
+   225→   225→                {{ items.qty }}
+   226→   226→              </p>
+   227→   227→            </div>
+   228→   228→            <div class="items-center space-x-4 text-right">
+   229→   229→              <p class="mr-5 truncate text-base text-gray-800 dark:text-white">
+   230→   230→                {{ this.invoiceData.currency }} {{ items.amount }}
+   231→   231→              </p>
+   232→   232→            </div>
+   233→   233→          </div>
+   234→   234→        </div>
+   235→   235→      </div>
+   236→   236→      <div
+   237→   237→        class="mt-4 rounded-md border-2 border-dotted"
+   238→   238→        :class="[
+   239→   239→          {
+   240→   240→            'border-gray-600': !recentOrders.showDiscount,
+   241→   241→            'border-green-500': recentOrders.showDiscount,
+   242→   242→            'border-red-500':recentOrders.totalAmount <= 0
+   243→   243→          },
+   244→   244→        ]"
+   245→   245→        v-if="
+   246→   246→          invoiceData.enableDiscount == 1 &&
+   247→   247→          !recentOrders.showInput &&
+   248→   248→          this.recentOrders.selectedStatus === 'Draft'
+   249→   249→        "
+   250→   250→      >
+   251→   251→        <div
+   252→   252→          @click="recentOrders.toggleDiscount"
+   253→   253→          :class="{
+   254→   254→            'flex p-3': !recentOrders.showInput && !recentOrders.showDiscount,
+   255→   255→            'flex p-3 text-green-500': recentOrders.showDiscount,
+   256→   256→            'flex p-3 text-red-500':recentOrders.totalAmount <= 0
+   257→   257→          }"
+   258→   258→        >
+   259→   259→        <svg
+   260→   260→            class="discount-icon"
+   261→   261→            width="24"
+   262→   262→            height="24"
+   263→   263→            viewBox="0 0 24 24"
+   264→   264→            stroke="currentColor"
+   265→   265→            fill="none"
+   266→   266→            xmlns="http://www.w3.org/2000/svg"
+   267→   267→          >
+   268→   268→            <path
+   269→   269→              d="M19 15.6213C19 15.2235 19.158 14.842 19.4393 14.5607L20.9393 13.0607C21.5251 12.4749 21.5251 11.5251 20.9393 10.9393L19.4393 9.43934C19.158 9.15804 19 8.7765 19 8.37868V6.5C19 5.67157 18.3284 5 17.5 5H15.6213C15.2235 5 14.842 4.84196 14.5607 4.56066L13.0607 3.06066C12.4749 2.47487 11.5251 2.47487 10.9393 3.06066L9.43934 4.56066C9.15804 4.84196 8.7765 5 8.37868 5H6.5C5.67157 5 5 5.67157 5 6.5V8.37868C5 8.7765 4.84196 9.15804 4.56066 9.43934L3.06066 10.9393C2.47487 11.5251 2.47487 12.4749 3.06066 13.0607L4.56066 14.5607C4.84196 14.842 5 15.2235 5 15.6213V17.5C5 18.3284 5.67157 19 6.5 19H8.37868C8.7765 19 9.15804 19.158 9.43934 19.4393L10.9393 20.9393C11.5251 21.5251 12.4749 21.5251 13.0607 20.9393L14.5607 19.4393C14.842 19.158 15.2235 19 15.6213 19H17.5C18.3284 19 19 18.3284 19 17.5V15.6213Z"
+   270→   270→              stroke-miterlimit="10"
+   271→   271→              stroke-linecap="round"
+   272→   272→              stroke-linejoin="round"
+   273→   273→            ></path>
+   274→   274→            <path
+   275→   275→              d="M15 9L9 15"
+   276→   276→              stroke-miterlimit="10"
+   277→   277→              stroke-linecap="round"
+   278→   278→              stroke-linejoin="round"
+   279→   279→            ></path>
+   280→   280→            <path
+   281→   281→              d="M10.5 9.5C10.5 10.0523 10.0523 10.5 9.5 10.5C8.94772 10.5 8.5 10.0523 8.5 9.5C8.5 8.94772 8.94772 8.5 9.5 8.5C10.0523 8.5 10.5 8.94772 10.5 9.5Z"
+   282→   282→              fill="white"
+   283→   283→              stroke-linecap="round"
+   284→   284→              stroke-linejoin="round"
+   285→   285→            ></path>
+   286→   286→            <path
+   287→   287→              d="M15.5 14.5C15.5 15.0523 15.0523 15.5 14.5 15.5C13.9477 15.5 13.5 15.0523 13.5 14.5C13.5 13.9477 13.9477 13.5 14.5 13.5C15.0523 13.5 15.5 13.9477 15.5 14.5Z"
+   288→   288→              fill="white"
+   289→   289→              stroke-linecap="round"
+   290→   290→              stroke-linejoin="round"
+   291→   291→            ></path>
+   292→   292→          </svg>
+   293→   293→
+   294→   294→          <template v-if="!recentOrders.showDiscount">
+   295→   295→            <span>Add Discount</span>
+   296→   296→          </template>
+   297→   297→
+   298→   298→          <template v-else>
+   299→   299→            <span v-if="recentOrders.totalAmount > 0">
+   300→   300→              Additional {{ recentOrders.percentage }}% discount Applied
+   301→   301→            </span>
+   302→   302→            <span v-else class="text-red-500">
+   303→   303→              {{ recentOrders.percentage }}% cannot be Applied
+   304→   304→            </span>
+   305→   305→          </template>
+   306→   306→        </div>
+   307→   307→      </div>
+   308→   308→      <div class="relative mb-6 mt-6" v-if="this.recentOrders.showInput">
+   309→   309→        <input
+   310→   310→          type="number"
+   311→   311→          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+   312→   312→          placeholder="Enter Discount Percentage"
+   313→   313→          v-model="this.recentOrders.percentage"
+   314→   314→          @input="this.recentOrders.updatePercentage"
+   315→   315→          @keyup.enter="this.recentOrders.applyDiscount"
+   316→   316→          @keyup="this.recentOrders.resetTimer"
+   317→   317→        />
+   318→   318→      </div>
+   319→   319→      <div class="mb-2 mt-5">
+   320→   320→        <p class="truncate text-lg font-semibold text-gray-900 dark:text-white">
+   321→   321→          Totals
+   322→   322→        </p>
+   323→   323→      </div>
+   324→   324→      <div class="w-full rounded bg-gray-50 p-2">
+   325→   325→        <div class="ml-2 mt-2 flex items-center space-x-4">
+   326→   326→          <div class="min-w-2 flex-1">
+   327→   327→            <p class="truncate text-base text-gray-800 dark:text-white">
+   328→   328→              Net Total
+   329→   329→            </p>
+   330→   330→          </div>
+   331→   331→
+   332→   332→          <div class="items-center space-x-4 text-right">
+   333→   333→            <p class="mr-5 truncate text-base text-gray-800 dark:text-white">
+   334→   334→              {{ this.invoiceData.currency }} {{ this.recentOrders.netTotal }}
+   335→   335→            </p>
+   336→   336→          </div>
+   337→   337→        </div>
+   338→   338→        <div class="ml-2" v-for="(tax, taxIdx) in this.recentOrders.taxDetails" :key="tax.description || taxIdx">
+   339→   339→          <div class="mt-2 flex items-center space-x-4">
+   340→   340→            <div class="min-w-2 flex-1">
+   341→   341→              <p class="truncate text-base text-gray-800 dark:text-white">
+   342→   342→                {{ tax.description }}
+   343→   343→              </p>
+   344→   344→            </div>
+   345→   345→
+   346→   346→            <div class="items-center space-x-4 text-right">
+   347→   347→              <p class="mr-5 truncate text-base text-gray-800 dark:text-white">
+   348→   348→                {{ this.invoiceData.currency }} {{ tax.rate }}
+   349→   349→              </p>
+   350→   350→            </div>
+   351→   351→          </div>
+   352→   352→        </div>
+   353→   353→        <div
+   354→   354→          class="ml-2 mt-2 flex items-center space-x-4"
+   355→   355→          v-if="this.recentOrders.additionalPiscountPercentage"
+   356→   356→        >
+   357→   357→          <div class="min-w-2 flex-1">
+   358→   358→            <p
+   359→   359→              class="truncate text-base font-semibold text-gray-800 dark:text-white"
+   360→   360→            >
+   361→   361→              Discount({{ this.recentOrders.additionalPiscountPercentage }})
+   362→   362→            </p>
+   363→   363→          </div>
+   364→   364→          <div class="items-center space-x-4 text-right">
+   365→   365→            <p
+   366→   366→              class="mr-5 truncate text-base font-semibold text-gray-800 dark:text-white"
+   367→   367→            >
+   368→   368→              {{ this.invoiceData.currency }}
+   369→   369→              {{ this.recentOrders.discountAmount }}
+   370→   370→            </p>
+   371→   371→          </div>
+   372→   372→        </div>
+   373→   373→        <div class="ml-2 mt-2 flex items-center space-x-4">
+   374→   374→          <div class="min-w-2 flex-1">
+   375→   375→            <p
+   376→   376→              class="truncate text-base font-semibold text-gray-800 dark:text-white"
+   377→   377→            >
+   378→   378→              Grand Total
+   379→   379→            </p>
+   380→   380→          </div>
+   381→   381→          <div class="items-center space-x-4 text-right">
+   382→   382→            <p
+   383→   383→              class="mr-5 truncate text-base font-semibold text-gray-800 dark:text-white"
+   384→   384→            >
+   385→   385→              {{ this.invoiceData.currency }}
+   386→   386→              {{
+   387→   387→                this.recentOrders.totalAmount > 0
+   388→   388→                  ? this.recentOrders.totalAmount
+   389→   389→                  : this.recentOrders.grandTotal
+   390→   390→              }}
+   391→   391→            </p>
+   392→   392→          </div>
+   393→   393→        </div>
+   394→   394→      </div>
+   395→   395→      <div
+   396→   396→        class="mt-2 rounded px-4 py-2 text-center"
+   397→   397→        v-if="
+   398→   398→          this.recentOrders.selectedStatus !== 'Draft' &&
+   399→   399→          recentOrders.selectedStatus !== 'Unbilled'
+   400→   400→        "
+   401→   401→      >
+   402→   402→        <button
+   403→   403→          type="button"
+   404→   404→          class="mb-2 mr-2 rounded-lg border border-gray-400 bg-white px-5 py-2.5 text-sm font-medium text-gray-800 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+   405→   405→          @click="this.invoiceData.printFunction()"
+   406→   406→        >
+   407→   407→          Print Receipt
+   408→   408→        </button>
+   409→   409→      </div>
+   410→   410→      <div
+   411→   411→        class="mt-2 rounded px-4 py-2 text-center"
+   412→   412→        v-if="
+   413→   413→          this.recentOrders.selectedStatus === 'Draft' ||
+   414→   414→          recentOrders.selectedStatus === 'Unbilled'
+   415→   415→        "
+   416→   416→      >
+   417→   417→        <button
+   418→   418→          type="button"
+   419→   419→          class="mb-2 mr-2 w-36 rounded-lg border bg-white px-5 py-2.5 text-sm font-medium focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+   420→   420→          :class="{
+   421→   421→            'border-gray-200 text-gray-300':
+   422→   422→              this.recentOrders.orderType === 'Aggregators',
+   423→   423→            'border-gray-300 text-gray-700':
+   424→   424→              this.recentOrders.orderType !== 'Aggregators',
+   425→   425→          }"
+   426→   426→          @click="
+   427→   427→            this.recentOrders.orderType !== 'Aggregators'
+   428→   428→              ? this.recentOrders.editOrder()
+   429→   429→              : ''
+   430→   430→          "
+   431→   431→        >
+   432→   432→          Edit
+   433→   433→        </button>
+   434→   434→        <button
+   435→   435→          type="button"
+   436→   436→          class="mb-2 mr-2 w-36 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+   437→   437→          @click="this.invoiceData.printFunction()"
+   438→   438→        >
+   439→   439→          Print Receipt
+   440→   440→        </button>
+   441→   441→      </div>
+   442→   442→      <div
+   443→   443→        class="mt-2 rounded px-4 py-2 text-center"
+   444→   444→        v-if="
+   445→   445→          this.recentOrders.selectedStatus === 'Draft' ||
+   446→   446→          this.recentOrders.selectedStatus === 'Unbilled'
+   447→   447→        "
+   448→   448→      >
+   449→   449→        <button
+   450→   450→          type="button"
+   451→   451→          class="mb-2 mr-2 w-36 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+   452→   452→          @click="this.recentOrders.billing()"
+   453→   453→        >
+   454→   454→          Make Payment
+   455→   455→        </button>
+   456→   456→        <button
+   457→   457→          type="button"
+   458→   458→          class="mb-2 mr-2 w-36 rounded-lg border bg-white px-5 py-2.5 text-sm font-medium focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+   459→   459→          :class="{
+   460→   460→            'border-gray-200 text-gray-300':
+   461→   461→              this.recentOrders.invoicePrinted === 1 ||
+   462→   462→              this.recentOrders.selectedStatus === 'Unbilled',
+   463→   463→            'border-gray-300 text-gray-700': !(
+   464→   464→              this.recentOrders.invoicePrinted === 1 ||
+   465→   465→              this.recentOrders.selectedStatus === 'Unbilled'
+   466→   466→            ),
+   467→   467→          }"
+   468→   468→          @click="
+   469→   469→            this.recentOrders.invoicePrinted === 0 &&
+   470→   470→            this.recentOrders.selectedStatus === 'Draft'
+   471→   471→              ? this.recentOrders.showCancelInvoiceModal()
+   472→   472→              : ''
+   473→   473→          "
+   474→   474→        >
+   475→   475→          Cancel Order
+   476→   476→        </button>
+   477→   477→      </div>
+   478→   478→      <div
+   479→   479→        v-if="this.recentOrders.cancelInvoiceFlag === true"
+   480→   480→        class="fixed inset-0 z-10 mt-20 overflow-y-auto bg-gray-100"
+   481→   481→      >
+   482→   482→        <div class="mt-20 flex items-center justify-center">
+   483→   483→          <div class="w-full rounded-lg bg-white p-6 shadow-lg md:max-w-md">
+   484→   484→            <div class="flex justify-end">
+   485→   485→              <span class="sr-only">Close</span>
+   486→   486→              <svg
+   487→   487→                xmlns="http://www.w3.org/2000/svg"
+   488→   488→                class="h-5 w-5"
+   489→   489→                fill="none"
+   490→   490→                viewBox="0 0 24 24"
+   491→   491→                stroke="currentColor"
+   492→   492→                @click="this.recentOrders.cancelInvoiceFlag = false"
+   493→   493→              >
+   494→   494→                <path
+   495→   495→                  stroke-linecap="round"
+   496→   496→                  stroke-linejoin="round"
+   497→   497→                  stroke-width="2"
+   498→   498→                  d="M6 18L18 6M6 6l12 12"
+   499→   499→                />
+   500→   500→              </svg>
+   501→   501→            </div>
+   502→   502→            <h2
+   503→   503→              class="mt-1 block text-left text-xl font-medium text-gray-900 dark:text-white"
+   504→   504→            >
+   505→   505→              Are you sure to cancel
+   506→   506→            </h2>
+   507→   507→            <div class="relative">
+   508→   508→              <label
+   509→   509→                for="cancelReason"
+   510→   510→                class="mt-6 block text-left text-gray-900 dark:text-white"
+   511→   511→              >
+   512→   512→                Reason
+   513→   513→              </label>
+   514→   514→              <input
+   515→   515→                type="text"
+   516→   516→                id="cancelReason"
+   517→   517→                class="mt-4 w-full appearance-none rounded border p-2 leading-tight text-gray-900 shadow focus:outline-none"
+   518→   518→                v-model="this.recentOrders.cancelReason"
+   519→   519→              />
+   520→   520→            </div>
+   521→   521→            <div class="flex justify-end">
+   522→   522→              <button
+   523→   523→                @click="this.recentOrders.cancelInvoiceFlag = false"
+   524→   524→                class="mr-3 mt-6 rounded border border-gray-300 bg-gray-50 px-3 py-2"
+   525→   525→              >
+   526→   526→                No
+   527→   527→              </button>
+   528→   528→              <button
+   529→   529→                @click="handleConfirmCancellation()"
+   530→   530→                class="mt-6 rounded bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
+   531→   531→              >
+   532→   532→                Yes
+   533→   533→              </button>
+   534→   534→            </div>
+   535→   535→          </div>
+   536→   536→        </div>
+   537→   537→      </div>
+   538→   538→      <div
+   539→   539→        v-if="this.recentOrders.showPayment"
+   540→   540→        class="fixed inset-0 z-10 mt-14 overflow-y-auto bg-gray-100"
+   541→   541→      >
+   542→   542→        <div class="mt-10 flex items-center justify-center">
+   543→   543→          <div class="h-82 w-full rounded-lg bg-white p-6 shadow-lg md:w-3/5">
+   544→   544→            <div class="flex justify-end">
+   545→   545→              <span class="sr-only">Close</span>
+   546→   546→              <svg
+   547→   547→                xmlns="http://www.w3.org/2000/svg"
+   548→   548→                class="h-5 w-5"
+   549→   549→                fill="none"
+   550→   550→                viewBox="0 0 24 24"
+   551→   551→                stroke="currentColor"
+   552→   552→                @click="this.recentOrders.showPayment = false"
+   553→   553→              >
+   554→   554→                <path
+   555→   555→                  stroke-linecap="round"
+   556→   556→                  stroke-linejoin="round"
+   557→   557→                  stroke-width="2"
+   558→   558→                  d="M6 18L18 6M6 6l12 12"
+   559→   559→                />
+   560→   560→              </svg>
+   561→   561→            </div>
+   562→   562→            <h2
+   563→   563→              class="mt-1 block text-left text-xl font-medium text-gray-900 dark:text-white"
+   564→   564→            >
+   565→   565→              Select Mode Of Payment
+   566→   566→            </h2>
+   567→   567→            <div class="mt-8 flex items-center justify-center">
+   568→   568→              <div class="w-full max-w-full overflow-x-auto">
+   569→   569→                <div class="flex flex-nowrap">
+   570→   570→                  <div
+   571→   571→                    v-for="(
+   572→   572→                      modeOfPayment, index
+   573→   573→                    ) in recentOrders.modeOfPaymentList"
+   574→   574→                    :key="index"
+   575→   575→                    class="mr-4 w-64 flex-shrink-0 rounded-lg border border-gray-200 bg-white p-4 shadow dark:border-gray-700 dark:bg-gray-800"
+   576→   576→                  >
+   577→   577→                    <label
+   578→   578→                      :for="'modeofPayments-' + index"
+   579→   579→                      class="block text-left text-lg dark:text-white"
+   580→   580→                    >
+   581→   581→                      {{ modeOfPayment.mode_of_payment }}
+   582→   582→                    </label>
+   583→   583→                    <input
+   584→   584→                      :id="'modeofPayments-' + index"
+   585→   585→                      type="number"
+   586→   586→                      name="modeofPayments"
+   587→   587→                      class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-500 dark:bg-gray-600 dark:text-white dark:placeholder-gray-400"
+   588→   588→                      required
+   589→   589→                      v-model.number="modeOfPayment.value"
+   590→   590→                      @click="recentOrders.calculatePaidAmount(modeOfPayment)"
+   591→   591→                      @input="
+   592→   592→                        recentOrders.changePaidAmount(
+   593→   593→                          modeOfPayment.mode_of_payment,
+   594→   594→                          $event.target.value
+   595→   595→                        )
+   596→   596→                      "
+   597→   597→                    />
+   598→   598→                  </div>
+   599→   599→                </div>
+   600→   600→              </div>
+   601→   601→            </div>
+   602→   602→            <div v-if="recentOrders.changeAmount > 0" class="mt-4 p-4 bg-gray-50 rounded-lg">
+   603→   603→              <div class="flex justify-between items-center mt-2 text-green-600">
+   604→   604→                <span class="text-lg font-medium">Change Amount:</span>
+   605→   605→                <span class="text-lg">{{ invoiceData.currency }} {{ (recentOrders.changeAmount || 0).toFixed(2) }}</span>
+   606→   606→              </div>
+   607→   607→            </div>
+   608→   608→            <div class="flex justify-end">
+   609→   609→              <button
+   610→   610→                @click="
+   611→   611→                  this.recentOrders.showPayment = false;
+   612→   612→                  this.recentOrders.makePayment();
+   613→   613→                "
+   614→   614→                class="mt-10 rounded bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
+   615→   615→              >
+   616→   616→                Submit
+   617→   617→              </button>
+   618→   618→            </div>
+   619→   619→          </div>
+   620→   620→        </div>
+   621→   621→      </div>
+   622→   622→    </div>
+   623→   623→  </div>
+   624→   624→</template>
+   625→   625→
+   626→   626→<script>
+   627→   627→import { usetoggleRecentOrder } from "@/stores/recentOrder.js";
+   628→   628→import { useInvoiceDataStore } from "@/stores/invoiceData.js";
+   629→   629→import { useAuthStore } from "@/stores/Auth.js";
+   630→   630→import { Badge } from "flowbite-vue";
+   631→   631→import { useNotifications } from "@/stores/Notification.js";
+   632→   632→export default {
+   633→   633→  name: "RecentOrder",
+   634→   634→  components: {
+   635→   635→    Badge,
+   636→   636→  },
+   637→   637→  methods: {
+   638→   638→    handleConfirmCancellation() {
+   639→   639→      if (!this.recentOrders.cancelReason || this.recentOrders.cancelReason.trim() === '') {
+   640→   640→        this.notification.createNotification('Please enter a reason for cancellation');
+   641→   641→        return;
+   642→   642→      }
+   643→   643→      this.recentOrders.cancelInvoice();
+   644→   644→      this.recentOrders.cancelInvoiceFlag = false;
+   645→   645→    },
+   646→   646→  },
+   647→   647→  setup() {
+   648→   648→    const recentOrders = usetoggleRecentOrder();
+   649→   649→    const invoiceData = useInvoiceDataStore();
+   650→   650→    const auth = useAuthStore();
+   651→   651→    const notification = useNotifications();
+   652→   652→    return { recentOrders, invoiceData, auth, notification };
+   653→   653→  },
+   654→   654→  mounted() {
+   655→   655→    this.recentOrders.handleStatusChange();
+   656→   656→  },
+   657→   657→};
+   658→   658→</script>
+   659→   659→<style scoped>
+   660→   660→.modal-backdrop {
+   661→   661→  background-color: rgba(0, 0, 0, 0.2);
+   662→   662→}
+   663→   663→</style>
+   664→   664→

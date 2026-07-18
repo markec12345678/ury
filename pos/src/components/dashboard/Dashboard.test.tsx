@@ -135,22 +135,22 @@ describe('Dashboard', () => {
 
   it('renders Total Revenue KPI card', () => {
     render(<Dashboard />);
-    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.total_revenue')).toBeInTheDocument();
   });
 
   it('renders Total Orders KPI card', () => {
     render(<Dashboard />);
-    expect(screen.getByText('Total Orders')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.total_orders')).toBeInTheDocument();
   });
 
   it('renders Unique Customers KPI card', () => {
     render(<Dashboard />);
-    expect(screen.getByText('Unique Customers')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.unique_customers')).toBeInTheDocument();
   });
 
   it('renders Table Occupancy KPI card', () => {
     render(<Dashboard />);
-    expect(screen.getByText('Table Occupancy')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.table_occupancy')).toBeInTheDocument();
   });
 
   it('shows formatted revenue value', () => {
@@ -170,39 +170,39 @@ describe('Dashboard', () => {
 
   it('renders period selector buttons', () => {
     render(<Dashboard />);
-    expect(screen.getByText('Today')).toBeInTheDocument();
-    expect(screen.getByText('Yesterday')).toBeInTheDocument();
-    expect(screen.getByText('This Week')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.today')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.yesterday')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.this_week')).toBeInTheDocument();
   });
 
   it('calls setSelectedPeriod when period button is clicked', () => {
     render(<Dashboard />);
-    fireEvent.click(screen.getByText('Yesterday'));
+    fireEvent.click(screen.getByText('dashboard.yesterday'));
     expect(mockDashboardStoreState.setSelectedPeriod).toHaveBeenCalledWith('yesterday');
   });
 
   it('highlights the selected period', () => {
     mockDashboardStoreState.selectedPeriod = 'today';
     render(<Dashboard />);
-    const todayButton = screen.getByText('Today');
+    const todayButton = screen.getByText('dashboard.today');
     expect(todayButton.className).toContain('bg-blue-600');
   });
 
   it('renders auto-refresh button', () => {
     render(<Dashboard />);
-    expect(screen.getByText('Auto-refresh')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.auto_refresh')).toBeInTheDocument();
   });
 
   it('toggles auto-refresh on click', () => {
     render(<Dashboard />);
-    fireEvent.click(screen.getByText('Auto-refresh'));
+    fireEvent.click(screen.getByText('dashboard.auto_refresh'));
     expect(mockDashboardStoreState.setAutoRefresh).toHaveBeenCalledWith(true);
   });
 
   it('shows Live text when auto-refresh is enabled', () => {
     mockDashboardStoreState.autoRefresh = true;
     render(<Dashboard />);
-    expect(screen.getByText('Live')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.live')).toBeInTheDocument();
   });
 
   it('renders all chart components', () => {
@@ -228,6 +228,6 @@ describe('Dashboard', () => {
     mockDashboardStoreState.loading = true;
     render(<Dashboard />);
     // Summary exists, so spinner should not be shown
-    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.total_revenue')).toBeInTheDocument();
   });
 });
