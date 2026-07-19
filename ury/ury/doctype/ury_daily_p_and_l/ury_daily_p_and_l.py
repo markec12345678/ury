@@ -17,14 +17,14 @@ def _inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=No
 
     if depth > max_depth:
         frappe.log_error(
-            f"BOM recursion depth exceeded max_depth={max_depth} for BOM {bom.name}",
+            f"BOM recursion depth exceeded max_depth={max_depth} for BOM {bom.name}\n{frappe.get_traceback()}",
             "BOM Depth Limit Warning"
         )
         return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
 
     if bom.name in visited:
         frappe.log_error(
-            f"Circular BOM reference detected: {bom.name} already visited",
+            f"Circular BOM reference detected: {bom.name} already visited\n{frappe.get_traceback()}",
             "BOM Circular Reference Warning"
         )
         return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
@@ -564,8 +564,16 @@ class URYDailyPandL(Document):
                         if attendance["Status"] == "Present":
                                 salary_cost_gross = flt(salary_cost_gross + attendance["Salary"], 2)
 
-                date_str =  self.date
-                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                # R43-FIX: Handle both string and date objects for self.date
+                date_str = str(self.date) if self.date else ""
+                if not date_str or date_str == "None":
+                        frappe.throw(_("Date is required for P&L calculation"))
+                try:
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                except ValueError:
+                        # Could already be a date object or different format
+                        from frappe.utils import getdate
+                        date_obj = getdate(self.date)
                 year = date_obj.year
                 month_number = date_obj.month
                 days = calendar.monthrange(year, month_number)[1]

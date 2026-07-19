@@ -48,6 +48,11 @@ class ShortcutRegistry {
   private shortcuts = new Map<string, KeyboardShortcut>();
   private activeScope: KeyboardShortcut['scope'] = 'global';
   private listenerAttached = false;
+  // R43-FIX: Store listener reference so it can be removed on destroy().
+  // Previously, ensureListener() attached a keydown handler that was never
+  // removed, causing a memory leak in HMR/testing scenarios where multiple
+  // ShortcutRegistry instances could be created.
+  private boundHandler: ((e: KeyboardEvent) => void) | null = null;
 
   /**
    * Register a keyboard shortcut.
@@ -134,10 +139,24 @@ class ShortcutRegistry {
   private ensureListener(): void {
     if (this.listenerAttached) return;
     this.listenerAttached = true;
-
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
+    // R43-FIX: Store bound handler so destroy() can remove it
+    this.boundHandler = (e: KeyboardEvent) => {
       this.handleKeyDown(e);
-    });
+    };
+    document.addEventListener('keydown', this.boundHandler);
+  }
+
+  /**
+   * Remove the global keydown listener and clear all shortcuts.
+   * Call this when the registry is no longer needed (e.g., during HMR or testing).
+   */
+  destroy(): void {
+    if (this.boundHandler) {
+      document.removeEventListener('keydown', this.boundHandler);
+      this.boundHandler = null;
+    }
+    this.listenerAttached = false;
+    this.shortcuts.clear();
   }
 
   private handleKeyDown(e: KeyboardEvent): void {

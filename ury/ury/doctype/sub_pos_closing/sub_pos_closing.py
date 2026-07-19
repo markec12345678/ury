@@ -3,7 +3,7 @@ import frappe
 from frappe import _
 from frappe.utils import now
 from frappe.model.document import Document
-from ury.ury_pos.api import getBranch
+from ury.ury.api.utils import _get_user_branch
 
 
 class SubPOSClosing(Document):
@@ -77,7 +77,7 @@ class SubPOSClosing(Document):
 @frappe.whitelist()
 def get_pos_profile():
     frappe.only_for("Restaurant Manager", "Cashier")
-    branch = getBranch()
+    branch = _get_user_branch()
     pos_profile = frappe.db.get_value("POS Profile", {"branch": branch}, "name")
     return pos_profile
 

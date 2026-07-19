@@ -6,6 +6,7 @@ import { getTableOrder, POSInvoice } from '../lib/order-api';
 import { Button } from './ui';
 import { t } from '../i18n';
 import { getActiveDirection } from '../i18n';
+import { showToast } from './ui/toast';
 
 
 type TableShapeName = 'Circle' | 'Square' | 'Rectangle';
@@ -246,10 +247,13 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
       const table = tablesWithPosition.find(t => t.name === draggedTable);
       if (table) {
         // table.x and table.y are already updated via local state during drag
-        persistTableUpdate(table.name, {
+        // R43-FIX: Show user-facing error toast instead of silently swallowing
+    persistTableUpdate(table.name, {
           layout_x: table.x,
           layout_y: table.y
-        }).catch(err => { if (import.meta.env.DEV) console.error("Failed to save layout", err); });
+        }).catch(() => {
+          showToast.error(t('errors.failed_save_layout'));
+        });
       }
     }
 
@@ -269,9 +273,14 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
       // Previously the .then() callback ran unconditionally, potentially
       // setting selectedTableOrder for a table the user is no longer viewing.
       const myId = ++requestIdRef.current;
+      // R43-FIX: Added user-facing error feedback for production.
+      // Previously the catch only logged in DEV mode, silently swallowing
+      // errors in production — leaving selectedTableOrder in a stale state.
       getTableOrder(table.name).then(res => {
         if (requestIdRef.current === myId) setSelectedTableOrder(res.message);
-      }).catch(err => { if (import.meta.env.DEV) console.error(err); });
+      }).catch(() => {
+        if (requestIdRef.current === myId) setSelectedTableOrder(null);
+      });
     } else {
       setSelectedTableOrder(null);
     }
@@ -312,8 +321,11 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
       }
     }));
 
+    // R43-FIX: Show user-facing error toast instead of silently swallowing
     updateTableLayout(selectedTable, { no_of_seats: capacity })
-      .catch(err => { if (import.meta.env.DEV) console.error(err); });
+      .catch(() => {
+        showToast.error(t('errors.failed_update_table'));
+      });
   }
 
   const handleDropdownShapeChange = (shape: string) => {
@@ -329,8 +341,11 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
       }
     }));
 
+    // R43-FIX: Show user-facing error toast instead of silently swallowing
     updateTableLayout(selectedTable, { table_shape: shape as TableShapeName })
-      .catch(err => { if (import.meta.env.DEV) console.error(err); });
+      .catch(() => {
+        showToast.error(t('errors.failed_update_table'));
+      });
   }
 
   const selectedTableData = tablesWithPosition.find(t => t.name === selectedTable);

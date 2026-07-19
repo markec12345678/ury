@@ -188,20 +188,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     };
   }, [onClose]);
 
-  // Handle escape key to close dialog
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setSelectedItem(null);
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose]);
+  // R43-FIX: Removed the separate Escape key handler. The Dialog component
+  // already handles Escape via its onOpenChange prop (which calls handleClose).
+  // Previously, both handlers fired on Escape — the custom one called
+  // setSelectedItem(null) + onClose(), and Dialog's handler called
+  // onOpenChange(handleClose). This caused double-close behavior and
+  // unnecessary re-renders. Now only Dialog's built-in handling is used.
 
   if (!selectedItem) return null;
 

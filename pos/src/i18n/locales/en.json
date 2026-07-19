@@ -169,7 +169,9 @@
     "failed_fetch_item_details": "Failed to fetch item details",
     "failed_fetch_addons": "Failed to fetch add-ons",
     "no_rooms_for_branch": "No rooms found for this branch",
-    "no_payment_modes": "No payment modes available"
+    "no_payment_modes": "No payment modes available",
+    "failed_save_layout": "Failed to save table layout",
+    "failed_update_table": "Failed to update table"
   },
   "success": {
     "order_cancelled": "Order cancelled successfully",
@@ -456,7 +458,10 @@
   },
   "aggregator": {
     "loading": "Loading aggregators...",
-    "select_placeholder": "Select an aggregator"
+    "select_placeholder": "Select an aggregator",
+    "failed_load": "Failed to load aggregators",
+    "failed_load_menu": "Failed to load aggregator menu",
+    "retry_placeholder": "Failed to load — tap to retry"
   },
   "accessibility": {
     "loading_content": "Loading content...",

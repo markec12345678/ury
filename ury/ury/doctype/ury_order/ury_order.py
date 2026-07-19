@@ -5,8 +5,10 @@ import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
 from erpnext.controllers.queries import item_query
-from ury.ury_pos.api import getBranch, getBranchRoom
+from ury.ury.api.utils import _get_user_branch
+from ury.ury_pos.api import getBranchRoom
 from ury.ury.api.ury_kot_generate import kot_execute
 from ury.ury.api.ury_kot_generate import process_items_for_cancel_kot
 
@@ -98,17 +100,19 @@ def _get_order_invoice_doc(table=None, invoiceNo=None, order_type=None, is_payme
             invoice.is_pos = 1
             invoice.update_stock = 1
         
-        branch = getBranch()
+        branch = _get_user_branch()
         restaurant = frappe.db.get_value("URY Restaurant", {"branch": branch}, "name")
-   
+
         menu=get_menu_name(order_type)
- 
+
         if (order_type == "Aggregators" and frappe.db.get_value("Branch", branch, "custom_no_taxes") == 0) or order_type != "Aggregators":
             invoice.taxes_and_charges = frappe.db.get_value("URY Restaurant", restaurant, "default_tax_template")
         
         invoice.selling_price_list = frappe.db.get_value(
             "Price List", dict(restaurant_menu=menu, enabled=1)
         )
+        # R43-FIX: Set branch on non-table invoices to prevent branchless invoices
+        invoice.branch = branch
 
     return invoice
 
@@ -178,7 +182,7 @@ def sync_order(
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     # Validate pos_profile belongs to user's branch (BE-R36-002)
     pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
-    user_branch = getBranch()
+    user_branch = _get_user_branch()
     if pos_profile_branch != user_branch:
         frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
     user_role = frappe.get_roles()
@@ -448,7 +452,7 @@ def get_restaurant_and_menu_name(table):
 @frappe.whitelist()
 def get_menu_name(order_type):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branch = getBranch()
+    branch = _get_user_branch()
     restaurant = frappe.get_value(
         "URY Restaurant",
         {"branch": branch},
@@ -528,7 +532,7 @@ def table_transfer(table, newTable, invoice):
     inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
     if not inv_branch:
         frappe.throw(_("POS Invoice {0} not found").format(invoice))
-    user_branch = getBranch()
+    user_branch = _get_user_branch()
     if inv_branch != user_branch:
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     # Lock both source and destination tables to prevent race conditions (BE-R36-007)
@@ -590,7 +594,7 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
     inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
     if not inv_branch:
         frappe.throw(_("POS Invoice {0} not found").format(invoice))
-    user_branch = getBranch()
+    user_branch = _get_user_branch()
     if inv_branch != user_branch:
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     # Validate newCaptain user exists and has restaurant role (BE-R36-009)
@@ -625,7 +629,7 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
 def customer_favourite_item(customer_name):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     # R39-FIX: Scope invoices to user's branch to prevent cross-branch data access
-    branch = getBranch()
+    branch = _get_user_branch()
     # Get invoice names for this customer within the user's branch
     invoice_names = frappe.db.get_list(
         "POS Invoice",
@@ -666,7 +670,7 @@ def cancel_order(invoice_id, reason):
     inv_branch = frappe.db.get_value("POS Invoice", invoice_id, "branch")
     if not inv_branch:
         frappe.throw(_("POS Invoice {0} not found").format(invoice_id))
-    user_branch = getBranch()
+    user_branch = _get_user_branch()
     if inv_branch != user_branch:
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
@@ -707,7 +711,7 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
 
     # R39-FIX: Validate POS Profile belongs to user's branch
     pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
-    user_branch = getBranch()
+    user_branch = _get_user_branch()
     if pos_profile_branch != user_branch:
         frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
 
@@ -733,7 +737,10 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
         if amount < 0:
             frappe.throw(_("Payment amount cannot be negative"))
 
-    order_type = frappe.get_value("POS Invoice", invoice, "order_type")
+    # R43-FIX: Guard against None invoice — get_value with None returns None/error
+    order_type = None
+    if invoice:
+        order_type = frappe.get_value("POS Invoice", invoice, "order_type")
     # R41-FIX: Use _get_order_invoice_doc to get the document object, not a dict.
     # make_invoice needs to call .save() and .submit() on the document.
     invoice = _get_order_invoice_doc(table, invoice, order_type, "Payments")

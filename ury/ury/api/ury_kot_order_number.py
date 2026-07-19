@@ -22,7 +22,7 @@ def set_order_number(doc, event):
                 break
         time.sleep(0.3)
     if not lock_acquired:
-        frappe.log_error(f"Order number lock timeout for {pos_profile}", "URY Order Number")
+        frappe.log_error(f"Order number lock timeout for {pos_profile}\n{frappe.get_traceback()}", "URY Order Number")
         frappe.throw(_("Could not acquire order number lock for POS Profile {0}. Please try again.").format(pos_profile))
 
     try:
@@ -82,7 +82,7 @@ def _do_set_order_number(doc, pos_profile):
             "name",
         )
         if not pos_open_name:
-            frappe.log_error(f"No open POS Opening Entry for profile {pos_profile}", "Order Number Error")
+            frappe.log_error(f"No open POS Opening Entry for profile {pos_profile}\n{frappe.get_traceback()}", "Order Number Error")
             return
 
         if doc.order_type == "Aggregators":

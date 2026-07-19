@@ -3,6 +3,7 @@ import { usePOSStore } from '../store/pos-store';
 import { t } from '../i18n';
 import { Select, SelectItem } from './ui/select';
 import { getAggregators, type Aggregator } from '../lib/aggregator-api';
+import { showToast } from './ui/toast';
 
 interface AggregatorSelectProps {
   disabled?: boolean;
@@ -14,16 +15,20 @@ export function AggregatorSelect({ disabled }: AggregatorSelectProps) {
   const fetchAggregatorMenu = usePOSStore((s) => s.fetchAggregatorMenu);
   const [aggregators, setAggregators] = useState<Aggregator[]>([]);
   const [loading, setLoading] = useState(false);
+  // R43-FIX: Add error state so users see feedback when the API fails
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const fetchAggregatorsList = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await getAggregators();
         if (!cancelled) setAggregators(data);
       } catch (error) {
-        if (!cancelled && import.meta.env.DEV) console.error('Failed to fetch aggregators:', error);
+        // R43-FIX: Set error state so users see feedback in production
+        if (!cancelled) setError(t('aggregator.failed_load'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -38,10 +43,11 @@ export function AggregatorSelect({ disabled }: AggregatorSelectProps) {
     setSelectedAggregator(aggregator || null);
 
     if (aggregator) {
+      // R43-FIX: Show error toast if aggregator menu fetch fails
       try {
         await fetchAggregatorMenu(aggregator.customer);
-      } catch (error) {
-        if (import.meta.env.DEV) console.error('Failed to fetch aggregator menu:', error);
+      } catch {
+        showToast.error(t('aggregator.failed_load_menu'));
       }
     }
   };
@@ -52,7 +58,7 @@ export function AggregatorSelect({ disabled }: AggregatorSelectProps) {
         value={selectedAggregator?.customer || ''}
         onValueChange={handleAggregatorChange}
         disabled={disabled || loading}
-        placeholder={loading ? t('aggregator.loading') : t('aggregator.select_placeholder')}
+        placeholder={loading ? t('aggregator.loading') : error ? t('aggregator.retry_placeholder') : t('aggregator.select_placeholder')}
       >
         {aggregators.map((aggregator) => (
           <SelectItem 

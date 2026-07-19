@@ -35,7 +35,14 @@ export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (se
   cartId: null,
 
   initializeCart: async () => {
-    set({ cartId: uuidv4() });
+    // R43-FIX: Only generate a new cartId if one doesn't already exist.
+    // Previously, calling initializeCart() when a cartId was already set would
+    // silently overwrite it with a new UUID, potentially orphaning any server-side
+    // cart associated with the old ID. Now we preserve the existing cartId.
+    const currentId = get().cartId;
+    if (!currentId) {
+      set({ cartId: uuidv4() });
+    }
   },
 
   addToOrder: async (item: OrderItem) => {
@@ -146,8 +153,13 @@ export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (se
   },
 
   getItemQuantityFromCart: (item: MenuItem): number => {
-    const uniqueId = generateUniqueId(item as OrderItem);
-    const cartItem = get().activeOrders.find(orderItem => orderItem.uniqueId === uniqueId);
+    // R43-FIX: Build a minimal OrderItem-like object for generateUniqueId
+    // without using an `as OrderItem` cast that masks type mismatches.
+    const orderItemForId: Parameters<typeof generateUniqueId>[0] = {
+      ...item,
+      quantity: 0,
+    };
+    const cartItem = get().activeOrders.find(orderItem => orderItem.uniqueId === generateUniqueId(orderItemForId));
     return cartItem?.quantity || 0;
   },
 });

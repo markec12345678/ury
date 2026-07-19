@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, validate_phone_number
 from datetime import timedelta
+from ury.ury.api.utils import _get_user_branch
 
 
 @frappe.whitelist()
@@ -20,7 +21,7 @@ def getRestaurantMenu(pos_profile, room=None, order_type=None):
     )
     cashier = bool(user_roles.intersection(billing_roles))
 
-    branch_name = getBranch()
+    branch_name = _get_user_branch()
     restaurant = frappe.db.get_value("URY Restaurant", {"branch": branch_name}, "name")
 
     if not restaurant:
@@ -117,21 +118,10 @@ def getMenuCourses():
 
 @frappe.whitelist()
 def getBranch():
+    """Deprecated: Use _get_user_branch() from utils for new code.
+    Kept for backward compatibility with existing callers."""
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    user = frappe.session.user
-    sql_query = """
-        SELECT b.branch
-        FROM `tabURY User` AS a
-        INNER JOIN `tabBranch` AS b ON a.parent = b.name
-        WHERE a.user = %s
-    """
-    branch_array = frappe.db.sql(sql_query, user, as_dict=True)
-    if not branch_array:
-        frappe.throw(_("User is not associated with any branch. Please refresh the page."))
-
-    branch_name = branch_array[0].get("branch")
-
-    return branch_name
+    return _get_user_branch()
 
 def _get_user_branch_rooms():
     """Shared query for user's branch-room mapping."""
@@ -234,21 +224,21 @@ def _get_invoices_list(branch, status, limit, limit_start, cashier=None):
 @frappe.whitelist()
 def getInvoiceForCashier(status, cashier, limit, limit_start):
     frappe.only_for("Restaurant Manager", "Cashier")
-    branch = getBranch()
+    branch = _get_user_branch()
     return _get_invoices_list(branch, status, limit, limit_start, cashier=cashier)
 
 
 @frappe.whitelist()
 def getPosInvoice(status, limit, limit_start):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branch = getBranch()
+    branch = _get_user_branch()
     return _get_invoices_list(branch, status, limit, limit_start)
 
 
 @frappe.whitelist()
 def searchPosInvoice(query,status):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branch = getBranch()
+    branch = _get_user_branch()
     if not query:
         return {"data": [], "next": False}
     query = query.lower()
@@ -292,7 +282,7 @@ def get_select_field_options():
 def fav_items(customer):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     # R39-FIX: Scope invoices to user's branch to prevent cross-branch data access
-    branch = getBranch()
+    branch = _get_user_branch()
     invoice_names = frappe.get_all(
         "POS Invoice", filters={"customer": customer, "branch": branch, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]}, fields=["name"], pluck="name"
     )
@@ -327,7 +317,7 @@ def _get_opening_entry_for_room(branch, room):
 @frappe.whitelist()
 def getCashier(room):
     frappe.only_for("Restaurant Manager", "Cashier")
-    branch = getBranch()
+    branch = _get_user_branch()
     opening_name = _get_opening_entry_for_room(branch, room)
     if opening_name:
         return frappe.db.get_value("POS Opening Entry", opening_name, "user")
@@ -337,7 +327,7 @@ def getCashier(room):
 @frappe.whitelist()
 def getPosProfile():
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branchName = getBranch()
+    branchName = _get_user_branch()
     waiter = frappe.session.user
 
     pos_profile_name = frappe.db.exists("POS Profile", {"branch": branchName})
@@ -437,7 +427,7 @@ def getPosInvoiceItems(invoice):
     inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
     if not inv_branch:
         frappe.throw(_("POS Invoice {0} not found").format(invoice))
-    user_branch = getBranch()
+    user_branch = _get_user_branch()
     if inv_branch != user_branch:
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     items = frappe.get_all(
@@ -458,7 +448,7 @@ def getPosInvoiceItems(invoice):
 @frappe.whitelist()
 def posOpening():
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branchName = getBranch()
+    branchName = _get_user_branch()
     has_open = frappe.db.exists(
         "POS Opening Entry",
         {"branch": branchName, "status": "Open", "docstatus": 1},
@@ -471,7 +461,7 @@ def posOpening():
 @frappe.whitelist()
 def getAggregator():
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branchName = getBranch()
+    branchName = _get_user_branch()
     aggregatorList = frappe.get_all(
         "Aggregator Settings",
         fields=["customer"],
@@ -483,7 +473,7 @@ def getAggregator():
 @frappe.whitelist()
 def getAggregatorItem(aggregator):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branchName = getBranch()
+    branchName = _get_user_branch()
     aggregatorItemList = []
     priceList = frappe.db.get_value(
         "Aggregator Settings",
@@ -527,7 +517,7 @@ def getAggregatorItem(aggregator):
 @frappe.whitelist()
 def getAggregatorMOP(aggregator):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    branchName = getBranch()
+    branchName = _get_user_branch()
     
     modeOfPayment = frappe.db.get_value(
         "Aggregator Settings",

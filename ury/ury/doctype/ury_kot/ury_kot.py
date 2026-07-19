@@ -24,7 +24,7 @@ class URYKOT(Document):
                 print_by_server("URY KOT", self.name, printer, kot_print_format)
             except Exception:
                 frappe.log_error(
-                    f"KOT Print Failed for {self.name} on printer {printer}",
+                    f"KOT Print Failed for {self.name} on printer {printer}\n{frappe.get_traceback()}",
                     "KOT Print Error",
                 )
 

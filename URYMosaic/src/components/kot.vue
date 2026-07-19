@@ -315,7 +315,9 @@ export default {
       this.setStatusMessage('Display error — refreshing...');
       this.hideStatusMessageAfterDelay();
       // Attempt recovery by re-fetching KOT data (with retry for transient errors)
-      this.fetchKOTWithRetry().then(() => { this.masonryLoading(); }).catch(() => {}).finally(() => {
+      // R43-FIX: Remove redundant .then(() => masonryLoading()) — fetchKOT()
+      // already calls masonryLoading(true) on success.
+      this.fetchKOTWithRetry().catch(() => {}).finally(() => {
         this._errorCapturedRecovering = false;
       });
     }
@@ -400,6 +402,33 @@ export default {
                   this.notifiedKots.delete(name);
                 }
               }
+              // R43-FIX: Clean up orphaned localStorage strike-through keys.
+              // When KOTs are removed server-side (served/cancelled without going
+              // through the KDS UI), their _strike keys accumulate in localStorage
+              // indefinitely. Over time this causes updateQtyColorTable's full-scan
+              // to slow down and wastes storage. Only keep keys for current KOTs.
+              try {
+                const validStrikeKeys = new Set();
+                (Array.isArray(msg.KOT) ? msg.KOT : []).forEach(k => {
+                  if (k.kot_items) {
+                    k.kot_items.forEach(item => {
+                      validStrikeKeys.add(`${k.name}_${item.name}_strike`);
+                    });
+                  }
+                });
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && key.endsWith('_strike') && !validStrikeKeys.has(key)) {
+                    keysToRemove.push(key);
+                  }
+                }
+                keysToRemove.forEach(key => {
+                  try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+                });
+              } catch (e) {
+                if (import.meta.env?.DEV) console.error('localStorage cleanup failed:', e);
+              }
               const newChannel = `kot_update_${this.branch}_${this.production}`;
               // R38-FIX: Always remove old listener before adding to prevent duplicate registrations.
               // Previously, off() only ran when channel changed, so repeated fetchKOT() calls
@@ -415,7 +444,9 @@ export default {
               this._sortedItemsCache.clear();
               // R39-FIX: Removed showDiv: false — it was always false (dead code)
               // and needlessly added a reactive property to every KOT object.
-              this.kot = (msg.KOT || []).map(k => ({
+              // R43-FIX: Guard against non-array msg.KOT — if the server returns
+              // a non-array truthy value (e.g., an error object), .map() would throw.
+              this.kot = (Array.isArray(msg.KOT) ? msg.KOT : []).map(k => ({
                 isRotated: false, timecolor: 'text-black', timeRemaining: '— : —', ...k
               }));
               this.updateQtyColorTable();
@@ -553,22 +584,12 @@ export default {
       }
     },
     updateQtyColorTable() {
-      // R38-FIX: Batch-read localStorage once instead of per-item getItem calls.
-      // Build a map of strike states keyed by "kotName_kotItemName_strike" in a
-      // single pass, then look up from the map. This replaces N individual
-      // localStorage.getItem() calls with one iteration + O(1) map lookups.
-      const strikeMap = {};
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key.endsWith('_strike')) {
-            strikeMap[key] = localStorage.getItem(key);
-          }
-        }
-      } catch (e) {
-        if (import.meta.env?.DEV) console.error('localStorage read failed:', e);
-      }
-
+      // R43-FIX: Read only relevant localStorage keys instead of iterating ALL
+      // localStorage keys. The old approach scanned every key in localStorage
+      // (including unrelated Frappe keys), which was O(localStorage.length) and
+      // slowed down as orphaned _strike keys accumulated. Now we read only the
+      // keys for current KOT items: O(kots * items) getItem calls, which is
+      // typically 50-500 vs potentially thousands of localStorage keys.
       this.kot.forEach((kot) => {
         this.updateColorandTable(
           kot,
@@ -581,13 +602,17 @@ export default {
         if (!kot.kot_items) return;
         kot.kot_items.forEach((kotitem) => {
           const key = `${kot.name}_${kotitem.name}_strike`;
-          const savedState = strikeMap[key];
-          if (savedState !== undefined) {
-            try {
-              kotitem.striked = JSON.parse(savedState);
-            } catch (e) {
-              kotitem.striked = false;
+          try {
+            const savedState = localStorage.getItem(key);
+            if (savedState !== null) {
+              try {
+                kotitem.striked = JSON.parse(savedState);
+              } catch (e) {
+                kotitem.striked = false;
+              }
             }
+          } catch (e) {
+            // localStorage access can fail in private browsing mode
           }
           this.calculateQty(
             kotitem,
@@ -762,6 +787,9 @@ export default {
       // R39-FIX: Use non-reactive _masonry instead of reactive masonry from data()
       if (this._masonry && !forceRecreate) {
         this.$nextTick(() => {
+          // R43-FIX: Re-check _isMounted inside $nextTick callback — component
+          // could unmount between the outer _isMounted check and this callback.
+          if (!this._isMounted) return;
           if (this._masonry) {
             this._masonry.reloadItems?.();
             this._masonry.layout();
@@ -774,6 +802,8 @@ export default {
         this._masonry = null;
       }
       this.$nextTick(() => {
+        // R43-FIX: Re-check _isMounted inside $nextTick callback
+        if (!this._isMounted) return;
         if (!this.$el) return;
         const grid = this.$el.querySelector(".grid");
         if (!grid) return;
@@ -815,7 +845,8 @@ export default {
       // without this the user sees "You are online" but stale/empty data.
       this.fetchKOTWithRetry().then(() => {
         if (!this._isMounted) return;
-        this.masonryLoading();
+        // R43-FIX: Removed redundant masonryLoading() — fetchKOT() already calls
+        // masonryLoading(true) on success.
       }).catch((e) => {
         console.error("KOT fetch failed:", e);
         if (this._isMounted) {
@@ -908,7 +939,7 @@ export default {
       if (event.persisted) {
         // Page was restored from bfcache — re-fetch data and re-init socket
         // R39-FIX: Use retry wrapper for bfcache restore re-fetch
-        this.fetchKOTWithRetry().then(() => { this.masonryLoading(); }).catch(() => {});
+        this.fetchKOTWithRetry().catch(() => {});
         if (this._socket && !this._socket.connected) {
           this._socket.connect();
         }
@@ -985,7 +1016,9 @@ export default {
           // R38-FIX: Re-fetch KOT data after reconnect to sync any missed updates
           // during disconnection period. Without this, the UI could show stale KOTs.
           // R39-FIX: Use retry wrapper for transient errors on reconnect
-          this.fetchKOTWithRetry().then(() => { this.masonryLoading(); }).catch(() => {});
+          // R43-FIX: Remove redundant .then(() => masonryLoading()) — fetchKOT()
+          // already calls masonryLoading(true) on success.
+          this.fetchKOTWithRetry().catch(() => {});
         });
 
         // R39-FIX: Use retry wrapper for initial fetch — transient server errors
@@ -1012,25 +1045,28 @@ export default {
             // localStorage value as a signal to do a full refresh.
             let kottime = localStorage.getItem("kot_time_" + this.production);
             if (doc.last_kot_time !== kottime || kottime === null) {
-              // R41-FIX: Full refresh needed — use return to prevent fall-through to
-              // the incremental-path logic below (cancel timeout + localStorage write).
-              // Previously, lines 922-941 ran after BOTH branches, causing:
-              // 1. A redundant re-fetch 1.5s after the full refresh (via _cancelTimeout)
-              // 2. Potentially storing null-ish doc.kot.time into localStorage
-              // Update localStorage sentinel if doc.kot.time is valid, then return.
-              if (doc.kot && doc.kot.time != null) {
-                try {
-                  localStorage.setItem("kot_time_" + this.production, doc.kot.time);
-                } catch (e) {
-                  if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+              // R43-FIX: Move localStorage sentinel update AFTER fetchKOT succeeds.
+              // Previously, localStorage.setItem ran before fetchKOT, so if the fetch
+              // failed, the sentinel was already updated. Subsequent socket events
+              // would take the incremental path instead of the full-refresh path,
+              // potentially missing KOTs that were added/removed server-side.
+              // R43-FIX: Remove redundant masonryLoading() — fetchKOT() already calls
+              // masonryLoading(true) at the end of its .then() handler.
+              this.fetchKOT().then(() => {
+                if (doc.kot && doc.kot.time != null) {
+                  try {
+                    localStorage.setItem("kot_time_" + this.production, doc.kot.time);
+                  } catch (e) {
+                    if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+                  }
                 }
-              }
-              this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
+              }).catch((e) => { console.error("KOT fetch failed:", e); });
               return;
             }
             // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
+            // R43-FIX: Remove redundant masonryLoading() — fetchKOT() already calls it.
             if (!doc.kot) {
-              this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
+              this.fetchKOT().catch((e) => { console.error("KOT fetch failed:", e); });
               return;
             }
             // Incremental update — deduplicate to avoid duplicate cards
@@ -1040,7 +1076,12 @@ export default {
               const strikeMap = new Map(
                 (this.kot[existingIndex].kot_items || []).map(i => [i.name, i.striked])
               );
-              Object.assign(this.kot[existingIndex], { timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot });
+              // R43-FIX: Exclude 'name' from the spread to prevent overwriting the KOT's
+              // primary key. If the server sends a different name in doc.kot, the KOT
+              // would become orphaned — findIndex in serveOrder/confirmOrder uses the
+              // original name as the lookup key.
+              const { name: _incomingName, ...kotData } = doc.kot;
+              Object.assign(this.kot[existingIndex], { timecolor: 'text-black', timeRemaining: '— : —', ...kotData });
               // Restore strikethrough state after Object.assign
               if (this.kot[existingIndex].kot_items) {
                 this.kot[existingIndex].kot_items.forEach(i => {
@@ -1065,9 +1106,8 @@ export default {
             if (doc.kot.type === "Cancelled") {
               this._cancelTimeout = setTimeout(() => {
                 if (!this._isMounted) return;
-                this.fetchKOT().then(() => {
-                  this.masonryLoading();
-                }).catch((e) => { console.error("KOT fetch failed:", e); });
+                // R43-FIX: Remove redundant masonryLoading() — fetchKOT() calls it.
+                this.fetchKOT().catch((e) => { console.error("KOT fetch failed:", e); });
               }, 1500);
             }
             // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
@@ -1193,9 +1233,7 @@ export default {
         this._socket.off(this.kot_channel, this.socketHandler);
       }
       // fetchKOT will set the new kot_channel and re-register the handler
-      this.fetchKOTWithRetry().then(() => {
-        this.masonryLoading();
-      }).catch(() => {});
+      this.fetchKOTWithRetry().catch(() => {});
     },
   },
 };
