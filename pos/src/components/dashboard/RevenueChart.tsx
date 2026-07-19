@@ -15,7 +15,10 @@ import { formatCurrency } from '../../lib/utils';
 import { t } from '../../i18n';
 
 const RevenueChartComponent = () => {
-  const { revenueChart, selectedGranularity, setSelectedGranularity } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selectors instead of useDashboardStore()
+  const revenueChart = useDashboardStore((s) => s.revenueChart);
+  const selectedGranularity = useDashboardStore((s) => s.selectedGranularity);
+  const setSelectedGranularity = useDashboardStore((s) => s.setSelectedGranularity);
 
   const chartData = useMemo(() => {
     if (!revenueChart?.data) return [];

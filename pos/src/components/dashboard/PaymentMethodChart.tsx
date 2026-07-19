@@ -21,7 +21,8 @@ interface PaymentMethodData {
 }
 
 const PaymentMethodChart = () => {
-  const { selectedPeriod } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selector instead of useDashboardStore()
+  const selectedPeriod = useDashboardStore((s) => s.selectedPeriod);
   const [data, setData] = useState<PaymentMethodData[]>([]);
   const [loading, setLoading] = useState(false);
 

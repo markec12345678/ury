@@ -13,7 +13,9 @@ interface ComparisonMetric {
 }
 
 const PeriodComparison = () => {
-  const { summary, previousSummary } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selectors instead of useDashboardStore()
+  const summary = useDashboardStore((s) => s.summary);
+  const previousSummary = useDashboardStore((s) => s.previousSummary);
 
   const metrics = useMemo<ComparisonMetric[]>(() => {
     if (!summary) return [];

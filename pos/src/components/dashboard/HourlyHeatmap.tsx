@@ -13,7 +13,8 @@ interface HeatmapCell {
 }
 
 const HourlyHeatmap = () => {
-  const { summary } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selector instead of useDashboardStore()
+  const summary = useDashboardStore((s) => s.summary);
   const [hoveredCell, setHoveredCell] = useState<HeatmapCell | null>(null);
   const handleCellHover = useCallback((cell: HeatmapCell | null) => setHoveredCell(cell), []);
 

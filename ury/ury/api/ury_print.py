@@ -46,7 +46,7 @@ def network_printing(
             cups.setPort(print_settings.port)
             conn = cups.Connection()
         except Exception as e:
-            frappe.log_error(str(e))
+            frappe.log_error(frappe.get_traceback(), "CUPS Connection Error")
             frappe.throw(_("An error occurred. Please check the error log."))
 
         try:

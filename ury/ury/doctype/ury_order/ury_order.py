@@ -355,8 +355,8 @@ def sync_order(
     try:
         invoice.save()
     except Exception as e:
-        frappe.log_error(str(e))
-        frappe.throw(_("An error occurred. Please check the error log."))   
+        frappe.log_error(frappe.get_traceback(), "Invoice Save Error")
+        frappe.throw(_("An error occurred. Please check the error log."))
 
 
     try:
@@ -763,10 +763,9 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
     try:
         invoice.submit()
     except Exception as e:
-        frappe.log_error(str(e))
+        frappe.log_error(frappe.get_traceback(), "Invoice Submit Error")
         frappe.throw(_("An error occurred. Please check the error log."))
-    
-    
+
 
 # Cancel KOT Doc Creation
 def cancel_kot(invoice_id):

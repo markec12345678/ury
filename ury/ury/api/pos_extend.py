@@ -3,6 +3,7 @@ import re
 import frappe
 from frappe import _
 from frappe.utils import cint
+from ury.ury_pos.api import _get_user_branch_rooms
 
 
 def validate_search_input(search_term):
@@ -42,14 +43,7 @@ def overrided_past_order_list(search_term, status, limit=20):
 
     # Non-administrators are restricted to their assigned branch/room
     if user != "Administrator":
-        row = frappe.db.sql(
-            """SELECT b.branch, a.room
-               FROM `tabURY User` a
-               JOIN `tabBranch` b ON a.parent = b.name
-               WHERE a.user = %s""",
-            user,
-            as_dict=True,
-        )
+        row = _get_user_branch_rooms()
         if not row:
             frappe.throw(_("User is not associated with any Branch. Please refresh the page."))
 

@@ -6,16 +6,17 @@ import { t } from '../../i18n';
 // R36-FIX: Removed unused DOMPurify import (no dangerouslySetInnerHTML used)
 
 const AIInsightsPanel = () => {
-  const {
-    panelOpen,
-    loading,
-    error,
-    messages,
-    togglePanel,
-    sendMessage,
-    generateQuickInsight,
-    clearConversation,
-  } = useAIStore();
+  // R41-FIX: Use individual Zustand selectors instead of useAIStore()
+  // which subscribes to ALL state changes (messages, enabled, etc.),
+  // causing unnecessary re-renders when unrelated state changes.
+  const panelOpen = useAIStore((s) => s.panelOpen);
+  const loading = useAIStore((s) => s.loading);
+  const error = useAIStore((s) => s.error);
+  const messages = useAIStore((s) => s.messages);
+  const togglePanel = useAIStore((s) => s.togglePanel);
+  const sendMessage = useAIStore((s) => s.sendMessage);
+  const generateQuickInsight = useAIStore((s) => s.generateQuickInsight);
+  const clearConversation = useAIStore((s) => s.clearConversation);
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);

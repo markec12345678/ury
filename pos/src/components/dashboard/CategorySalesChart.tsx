@@ -15,7 +15,8 @@ import { t } from '../../i18n';
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
 const CategorySalesChart = () => {
-  const { categorySales } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selector instead of useDashboardStore()
+  const categorySales = useDashboardStore((s) => s.categorySales);
 
   const chartData = useMemo(() => {
     if (!categorySales?.data) return [];

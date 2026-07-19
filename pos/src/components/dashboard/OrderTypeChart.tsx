@@ -25,7 +25,8 @@ const ORDER_TYPE_COLORS: Record<string, string> = {
 const DEFAULT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
 const OrderTypeChart = () => {
-  const { summary } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selector instead of useDashboardStore()
+  const summary = useDashboardStore((s) => s.summary);
 
   const chartData = useMemo(() => {
     if (!summary?.order_type_breakdown) return [];

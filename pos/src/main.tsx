@@ -30,7 +30,14 @@ async function bootstrap() {
 
   await initI18n();
 
-  createRoot(document.getElementById('root') as HTMLElement).render(
+  // R41-FIX: Use null-safe root element access instead of non-null assertion.
+  // `document.getElementById` can return null if the element doesn't exist.
+  // Previously used `as HTMLElement` which bypasses strictNullChecks.
+  const rootEl = document.getElementById('root');
+  if (!rootEl) {
+    throw new Error('Root element #root not found in DOM');
+  }
+  createRoot(rootEl).render(
     <StrictMode>
       <ErrorBoundary>
         <App />
@@ -41,17 +48,4 @@ async function bootstrap() {
 
 bootstrap().catch((err) => {
   console.error('Failed to bootstrap app:', err);
-  // R41-FIX: Use non-null assertion with HTMLElement cast instead of `!`
-  // which bypasses strictNullChecks. If root is null the app can't render
-  // anyway, so this is safe. The explicit cast makes the intent clearer.
-  const rootEl = document.getElementById('root') as HTMLElement | null;
-  if (rootEl) {
-    createRoot(rootEl).render(
-      <StrictMode>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </StrictMode>,
-    );
-  }
 });

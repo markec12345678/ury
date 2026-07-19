@@ -15,7 +15,9 @@ import { formatCurrency, cn } from '../../lib/utils';
 import { t } from '../../i18n';
 
 const SalesReportView = () => {
-  const { salesReport, previousSalesReport } = useReportsStore();
+  // R41-FIX: Use individual Zustand selectors instead of useReportsStore()
+  const salesReport = useReportsStore((s) => s.salesReport);
+  const previousSalesReport = useReportsStore((s) => s.previousSalesReport);
 
   const hourlyChartData = useMemo(() => {
     if (!salesReport?.hourly_sales) return [];

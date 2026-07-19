@@ -14,7 +14,8 @@ import type { OrdersChartDataPoint } from '../../lib/dashboard-api';
 import { t } from '../../i18n';
 
 const OrdersChartComponent = () => {
-  const { ordersChart } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selector instead of useDashboardStore()
+  const ordersChart = useDashboardStore((s) => s.ordersChart);
 
   const chartData = useMemo(() => {
     if (!ordersChart?.data) return [];

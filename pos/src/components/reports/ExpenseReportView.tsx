@@ -2,7 +2,8 @@ import { useReportsStore, ExpenseItem } from '../../store/reports-store';
 import { formatCurrency } from '../../lib/utils';
 
 const ExpenseReportView = () => {
-  const { expenseReport } = useReportsStore();
+  // R41-FIX: Use individual Zustand selector instead of useReportsStore()
+  const expenseReport = useReportsStore((s) => s.expenseReport);
 
   if (!expenseReport) {
     return (

@@ -3,7 +3,8 @@ import { formatCurrency } from '../../lib/utils';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 const ProfitLossView = () => {
-  const { profitLossReport } = useReportsStore();
+  // R41-FIX: Use individual Zustand selector instead of useReportsStore()
+  const profitLossReport = useReportsStore((s) => s.profitLossReport);
 
   if (!profitLossReport) {
     return (

@@ -35,7 +35,8 @@ const placeholderInventory: InventoryReport = {
 };
 
 const InventoryReportView = () => {
-  const { inventoryReport } = useReportsStore();
+  // R41-FIX: Use individual Zustand selector instead of useReportsStore()
+  const inventoryReport = useReportsStore((s) => s.inventoryReport);
 
   // Use real data if available, otherwise use placeholder
   const report = inventoryReport || placeholderInventory;

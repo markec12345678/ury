@@ -575,13 +575,9 @@ function generateInventoryCsv(report: InventoryReport): string {
 
 // Helper to get the Y position after the last autoTable
 function getLastTableY(doc: jsPDF): number {
-  // R41-FIX: Use proper type assertion for jsPDF autotable plugin extension.
-  // jspdf-autotable adds `lastAutoTable` to the jsPDF instance at runtime.
-  // The `as any` was necessary because the type definitions don't include it.
-  // Using a declared module augmentation would be cleaner but requires a .d.ts
-  // file that may conflict with jspdf-autotable's own types.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (doc as any).lastAutoTable?.finalY || 80;
+  // R41-FIX: Use module augmentation (vite-env.d.ts) instead of `as any`.
+  // jspdf-autotable adds `lastAutoTable` to jsPDF instances at runtime.
+  return doc.lastAutoTable?.finalY ?? 80;
 }
 
 function addReportHeader(doc: jsPDF, reportType: ReportType): void {

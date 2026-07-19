@@ -6,7 +6,11 @@ import { cn } from '../../lib/utils';
 import { t } from '../../i18n';
 
 const LiveMetricsPanel = () => {
-  const { liveMetrics, liveLoading, fetchLiveMetrics, autoRefresh } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selectors instead of useDashboardStore()
+  const liveMetrics = useDashboardStore((s) => s.liveMetrics);
+  const liveLoading = useDashboardStore((s) => s.liveLoading);
+  const fetchLiveMetrics = useDashboardStore((s) => s.fetchLiveMetrics);
+  const autoRefresh = useDashboardStore((s) => s.autoRefresh);
 
   useEffect(() => {
     fetchLiveMetrics();

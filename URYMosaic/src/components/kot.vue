@@ -15,12 +15,12 @@
             <span
               class="w-3 h-3 rounded-full inline-block mr-1 bg-red-500"
             ></span>
-            Not Permitted
+            {{ modalTitle }}
           </p>
           <hr class="border-gray-200" />
 
           <p class="text-left text-xl mt-6 font-medium text-gray-500">
-            Log in to access this page.
+            {{ modalMessage }}
           </p>
 
           <div class="flex justify-center">
@@ -288,6 +288,10 @@ export default {
       kot_channel: "",
       loggeduser: "",
       showModal: false,
+      // R41-FIX: Dynamic modal content — differentiates auth errors from
+      // network/server errors instead of always showing "Not Permitted".
+      modalTitle: "Connection Error",
+      modalMessage: "Unable to reach the server. Please check your connection and try again.",
       kot_alert_time: "",
       showAudioAlertMessage: false,
       audio_alert: 0,
@@ -326,9 +330,20 @@ export default {
       if (!this._alertAudio) {
         this._alertAudio = new Audio(audio_path);
       } else {
-        this._alertAudio.src = audio_path;
+        // R41-FIX: If same source is already playing, just restart from beginning.
+        // Setting .src to the same value causes an unnecessary load delay and can
+        // trigger AbortError in some browsers when the pending play() is interrupted.
+        if (this._alertAudio.src !== audio_path) {
+          this._alertAudio.src = audio_path;
+        }
       }
-      this._alertAudio.play().catch(() => {
+      // R41-FIX: Reset to start so rapid alerts replay the sound from the top
+      this._alertAudio.currentTime = 0;
+      this._alertAudio.play().catch((err) => {
+        // R41-FIX: AbortError means a new play() interrupted an ongoing one —
+        // audio IS working, so don't show the "disabled" message.
+        // NotAllowedError is the real autoplay restriction.
+        if (err && err.name === 'AbortError') return;
         // R36-FIX: Show UI fallback when audio fails — kitchen staff need to know
         if (!this._isMounted) return; // R37-FIX: Guard against post-unmount
         this.showAudioAlertMessage = true;
@@ -348,6 +363,12 @@ export default {
         })
         .catch((error) => {
           if (import.meta.env?.DEV) console.error(error);
+          // R41-FIX: Mark auth as failed so the route guard doesn't trap
+          // the user in a loop (Home → modal "Login" → Login page →
+          // guard redirects back to Home because isLoggedIn is still true).
+          if (this.authState) {
+            this.authState.isLoggedIn = false;
+          }
           throw error; // Re-throw so callers can catch
         });
     },
@@ -490,6 +511,10 @@ export default {
         .catch((error) => { if (import.meta.env?.DEV) console.error(error); });
     },
     toggleItemStrikeThrough(kotitem, kot) {
+      // R41-FIX: Guard against null/undefined names — if kot.name or
+      // kotitem.name is null, the localStorage key would be "null_undefined_strike",
+      // which is corrupt and would never be cleaned up by removeAllItemsFromLocalStorage.
+      if (!kot.name || !kotitem.name) return;
       kotitem.striked = !kotitem.striked;
       try {
         localStorage.setItem(
@@ -614,7 +639,13 @@ export default {
         const validMinutes = isNaN(minutes) ? Infinity : minutes;
 
         if (
-          validMinutes === Number(this.kot_alert_time) &&
+          // R41-FIX: Use >= instead of === for alert threshold comparison.
+          // With ===, a KOT that was already past the threshold on page load
+          // (e.g., after a page refresh) or that crossed the threshold between
+          // timer ticks (throttled background tab) would never trigger the
+          // notification. The notifiedKots set still prevents duplicate
+          // notifications within the same session.
+          validMinutes >= Number(this.kot_alert_time) &&
           kot.type !== "Cancelled" &&
           kot.type !== "Partially cancelled" &&
           !this.notifiedKots.has(kot.name)
@@ -754,10 +785,18 @@ export default {
       this.setStatusMessage("You are online");
       this.hideStatusMessageAfterDelay();
       // R39-FIX: Use retry wrapper for transient network errors on reconnect
+      // R41-FIX: Show error feedback if fetch fails after all retries —
+      // without this the user sees "You are online" but stale/empty data.
       this.fetchKOTWithRetry().then(() => {
         if (!this._isMounted) return;
         this.masonryLoading();
-      }).catch((e) => { console.error("KOT fetch failed:", e); });
+      }).catch((e) => {
+        console.error("KOT fetch failed:", e);
+        if (this._isMounted) {
+          this.setStatusMessage("Back online but data refresh failed. Click Refresh.");
+          this.hideStatusMessageAfterDelay();
+        }
+      });
     },
     handleOffline() {
       // R37-FIX: Guard against post-unmount execution
@@ -1002,7 +1041,24 @@ export default {
         console.error("Initialization or authentication error:", error);
         // R40-FIX: this._socket is now stored early, so beforeUnmount will
         // disconnect it. No need for manual cleanup here.
-        if (this._isMounted) this.showModal = true;
+        if (this._isMounted) {
+          // R41-FIX: Differentiate auth errors from network/server errors.
+          // Auth failure → "Not Permitted" with login prompt.
+          // Network/server failure → "Connection Error" with retry guidance.
+          const isAuthError = error && (
+            error.httpStatus === 401 ||
+            error.httpStatus === 403 ||
+            /auth/i.test(String(error.message || ''))
+          );
+          if (isAuthError) {
+            this.modalTitle = "Not Permitted";
+            this.modalMessage = "Log in to access this page.";
+          } else {
+            this.modalTitle = "Connection Error";
+            this.modalMessage = "Unable to reach the server. Please check your connection and try again.";
+          }
+          this.showModal = true;
+        }
       });
     this.timer = setInterval(this.updateTimeRemaining, 60000);
   },
@@ -1056,6 +1112,26 @@ export default {
         return this.kot;
       }
       return this.kot.filter(kot => kot.production === this.production);
+    },
+  },
+  watch: {
+    // R41-FIX: Vue reuses component instances when navigating between routes
+    // that use the same component (Home). Without this watcher, navigating
+    // from /station/kitchen to /station/bar would NOT re-mount the KOT
+    // component, so this.production would still be "kitchen" and the KDS
+    // would filter for the wrong station.
+    '$route.params.production'(newVal) {
+      const decoded = decodeURIComponent(newVal || '');
+      if (decoded === this.production) return;
+      this.production = decoded;
+      // Re-register socket handler on the new channel
+      if (this.kot_channel && this._socket && this.socketHandler) {
+        this._socket.off(this.kot_channel, this.socketHandler);
+      }
+      // fetchKOT will set the new kot_channel and re-register the handler
+      this.fetchKOTWithRetry().then(() => {
+        this.masonryLoading();
+      }).catch(() => {});
     },
   },
 };

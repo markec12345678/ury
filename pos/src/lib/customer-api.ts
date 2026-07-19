@@ -135,6 +135,9 @@ export async function searchCustomers(search: string, limit = 5) {
 
     return res.map((doc: { name: string; customer_name?: string; mobile_number?: string }) => ({
       ...doc,
+      // R41-FIX: Keep the content field for backward compatibility with any
+      // consumers that still reference it, but the primary fields are now
+      // the typed `customer_name` and `mobile_number` properties.
       content: `Customer Name : ${doc.customer_name ?? ""} | Mobile Number : ${doc.mobile_number ?? ""}`,
     }));
   } catch (error) {

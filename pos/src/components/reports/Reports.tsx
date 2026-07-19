@@ -29,26 +29,29 @@ type ReportType = 'sales' | 'expense' | 'profit_loss' | 'inventory';
 type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yesterday' | 'last_7_days' | 'last_30_days' | 'last_month';
 
 const Reports = () => {
-  const {
-    selectedReportType,
-    selectedPeriod,
-    loading,
-    exporting,
-    comparePeriods,
-    fetchCurrentReport,
-    exportToPdf,
-    exportToCsv,
-    setSelectedReportType,
-    setSelectedPeriod,
-    setCustomDateRange,
-    setComparePeriods,
-    salesReport,
-    expenseReport,
-    profitLossReport,
-    inventoryReport,
-  } = useReportsStore();
+  // R41-FIX: Use individual Zustand selectors instead of useReportsStore()
+  // which subscribes to ALL state changes (sales, expense, profit, inventory),
+  // causing unnecessary re-renders when unrelated reports update.
+  const selectedReportType = useReportsStore((s) => s.selectedReportType);
+  const selectedPeriod = useReportsStore((s) => s.selectedPeriod);
+  const loading = useReportsStore((s) => s.loading);
+  const exporting = useReportsStore((s) => s.exporting);
+  const comparePeriods = useReportsStore((s) => s.comparePeriods);
+  const fetchCurrentReport = useReportsStore((s) => s.fetchCurrentReport);
+  const exportToPdf = useReportsStore((s) => s.exportToPdf);
+  const exportToCsv = useReportsStore((s) => s.exportToCsv);
+  const setSelectedReportType = useReportsStore((s) => s.setSelectedReportType);
+  const setSelectedPeriod = useReportsStore((s) => s.setSelectedPeriod);
+  const setCustomDateRange = useReportsStore((s) => s.setCustomDateRange);
+  const setComparePeriods = useReportsStore((s) => s.setComparePeriods);
+  const salesReport = useReportsStore((s) => s.salesReport);
+  const expenseReport = useReportsStore((s) => s.expenseReport);
+  const profitLossReport = useReportsStore((s) => s.profitLossReport);
+  const inventoryReport = useReportsStore((s) => s.inventoryReport);
 
-  const { setReportContext, panelOpen } = useAIStore();
+  // R41-FIX: Use individual Zustand selectors instead of useAIStore()
+  const setReportContext = useAIStore((s) => s.setReportContext);
+  const panelOpen = useAIStore((s) => s.panelOpen);
   const aiEnabled = isAIEnabled();
 
   const [showCustomDate, setShowCustomDate] = useState(false);

@@ -43,19 +43,20 @@ const PERIODS: PeriodOption[] = [
 ];
 
 const Dashboard = () => {
-  const {
-    summary,
-    tableOccupancy,
-    selectedPeriod,
-    loading,
-    error,
-    autoRefresh,
-    refreshInterval,
-    fetchAll,
-    fetchLiveMetrics,
-    setSelectedPeriod,
-    setAutoRefresh,
-  } = useDashboardStore();
+  // R41-FIX: Use individual Zustand selectors instead of useDashboardStore()
+  // which subscribes to ALL state changes (revenueChart, ordersChart, etc.),
+  // causing unnecessary re-renders when unrelated state changes.
+  const summary = useDashboardStore((s) => s.summary);
+  const tableOccupancy = useDashboardStore((s) => s.tableOccupancy);
+  const selectedPeriod = useDashboardStore((s) => s.selectedPeriod);
+  const loading = useDashboardStore((s) => s.loading);
+  const error = useDashboardStore((s) => s.error);
+  const autoRefresh = useDashboardStore((s) => s.autoRefresh);
+  const refreshInterval = useDashboardStore((s) => s.refreshInterval);
+  const fetchAll = useDashboardStore((s) => s.fetchAll);
+  const fetchLiveMetrics = useDashboardStore((s) => s.fetchLiveMetrics);
+  const setSelectedPeriod = useDashboardStore((s) => s.setSelectedPeriod);
+  const setAutoRefresh = useDashboardStore((s) => s.setAutoRefresh);
 
   const [refreshing, setRefreshing] = useState(false);
 
