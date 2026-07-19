@@ -5,7 +5,7 @@ Provides aggregated data for the advanced dashboard with charts.
 
 import frappe
 from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, flt
-from ury.ury.api.utils import _get_user_branch
+from ury.ury.api.utils import _get_user_branch, _branch_filter
 
 
 @frappe.whitelist()
@@ -163,14 +163,8 @@ def get_payment_method_chart(period="this_month"):
     from_date, to_date = _get_period_dates(period)
     branch = _get_user_branch()
 
-    filters = {
-        "posting_date": ["between", [from_date, to_date]],
-        "docstatus": 1,
-    }
-    if branch:
-        filters["branch"] = branch
-
-    branch_clause = "AND pe.branch = %s" if branch else ""
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    branch_sql, branch_params = _branch_filter(branch, alias="pe")
 
     payments = frappe.db.sql("""
         SELECT 
@@ -183,10 +177,10 @@ def get_payment_method_chart(period="this_month"):
         WHERE per.reference_doctype = 'POS Invoice'
         AND pe.posting_date BETWEEN %s AND %s
         AND pe.docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY mop.mode_of_payment
         ORDER BY total_amount DESC
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     return {"data": payments}
 
@@ -371,7 +365,9 @@ def _get_order_type_breakdown(from_date, to_date, branch=None):
 
 def _get_hourly_breakdown(from_date, to_date, branch=None):
     """Get hourly revenue/order breakdown."""
-    branch_clause = "AND branch = %s" if branch else ""
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    # (was missing .format() call entirely — {branch_clause} was sent as literal SQL)
+    branch_sql, branch_params = _branch_filter(branch)
 
     data = frappe.db.sql("""
         SELECT 
@@ -381,19 +377,18 @@ def _get_hourly_breakdown(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY HOUR(posting_time)
         ORDER BY hour
-    """,
-    (from_date, to_date, branch) if branch else (from_date, to_date),
-    as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     return data
 
 
 def _get_daily_revenue(from_date, to_date, branch=None):
     """Get daily revenue data."""
-    branch_clause = "AND branch = %s" if branch else ""
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    branch_sql, branch_params = _branch_filter(branch)
 
     data = frappe.db.sql("""
         SELECT 
@@ -405,17 +400,18 @@ def _get_daily_revenue(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY posting_date
         ORDER BY posting_date
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     return data
 
 
 def _get_weekly_revenue(from_date, to_date, branch=None):
     """Get weekly revenue data."""
-    branch_clause = "AND branch = %s" if branch else ""
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    branch_sql, branch_params = _branch_filter(branch)
 
     data = frappe.db.sql("""
         SELECT 
@@ -427,17 +423,18 @@ def _get_weekly_revenue(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY YEARWEEK(posting_date, 1)
         ORDER BY week
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     return data
 
 
 def _get_monthly_revenue(from_date, to_date, branch=None):
     """Get monthly revenue data."""
-    branch_clause = "AND branch = %s" if branch else ""
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    branch_sql, branch_params = _branch_filter(branch)
 
     data = frappe.db.sql("""
         SELECT 
@@ -447,17 +444,18 @@ def _get_monthly_revenue(from_date, to_date, branch=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY month
         ORDER BY month
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     return data
 
 
 def _get_daily_orders(from_date, to_date, branch=None):
     """Get daily order counts with status breakdown."""
-    branch_clause = "AND branch = %s" if branch else ""
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    branch_sql, branch_params = _branch_filter(branch)
 
     data = frappe.db.sql("""
         SELECT 
@@ -468,9 +466,9 @@ def _get_daily_orders(from_date, to_date, branch=None):
             SUM(CASE WHEN docstatus = 2 THEN 1 ELSE 0 END) as cancelled_orders
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY posting_date
         ORDER BY posting_date
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     return data

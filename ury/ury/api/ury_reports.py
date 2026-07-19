@@ -8,7 +8,7 @@ from frappe import _
 import html as _html
 from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, flt, fmt_money
 import json
-from ury.ury.api.utils import _get_user_branch
+from ury.ury.api.utils import _get_user_branch, _branch_filter
 
 
 @frappe.whitelist()
@@ -24,7 +24,9 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         to_date = getdate(to_date)
 
     branch = _get_user_branch()
-    branch_clause = "AND branch = %s" if branch else ""
+
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    branch_sql, branch_params = _branch_filter(branch)
 
     # Overall summary
     summary = frappe.db.sql("""
@@ -38,8 +40,8 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
-    """, (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+        """ + branch_sql,
+        [from_date, to_date] + branch_params, as_dict=True)
 
     summary_data = summary[0] if summary else {}
     summary_data["total_revenue"] = flt(summary_data.get("total_revenue", 0), 2)
@@ -47,7 +49,8 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
     summary_data["total_tax"] = flt(summary_data.get("total_tax", 0), 2)
     summary_data["avg_order_value"] = flt(summary_data.get("avg_order_value", 0), 2)
 
-    # Item-wise sales
+    # Item-wise sales — uses pi.branch
+    item_branch_sql, item_branch_params = _branch_filter(branch, alias="pi")
     item_sales = frappe.db.sql("""
         SELECT 
             ii.item_code,
@@ -59,10 +62,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         JOIN `tabPOS Invoice` pi ON ii.parent = pi.name
         WHERE pi.posting_date BETWEEN %s AND %s
         AND pi.docstatus = 1
-        {branch_clause}
+        """ + item_branch_sql + """
         GROUP BY ii.item_code, ii.item_name
         ORDER BY total_amount DESC
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + item_branch_params, as_dict=True)
 
     # Order type breakdown
     order_type_sales = frappe.db.sql("""
@@ -73,10 +76,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY order_type
         ORDER BY revenue DESC
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     # Hourly breakdown
     hourly_sales = frappe.db.sql("""
@@ -87,10 +90,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY HOUR(posting_time)
         ORDER BY hour
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     # Cancelled orders
     cancelled = frappe.db.sql("""
@@ -100,12 +103,13 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 2
-        {branch_clause}
-    """, (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+        """ + branch_sql,
+        [from_date, to_date] + branch_params, as_dict=True)
 
     cancelled_data = cancelled[0] if cancelled else {}
 
-    # Payment method summary
+    # Payment method summary — uses pe.branch
+    pe_branch_sql, pe_branch_params = _branch_filter(branch, alias="pe")
     payment_summary = frappe.db.sql("""
         SELECT 
             pe.mode_of_payment as payment_method,
@@ -116,10 +120,10 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         WHERE per.reference_doctype = 'POS Invoice'
         AND pe.posting_date BETWEEN %s AND %s
         AND pe.docstatus = 1
-        {branch_clause}
+        """ + pe_branch_sql + """
         GROUP BY pe.mode_of_payment
         ORDER BY total_paid DESC
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + pe_branch_params, as_dict=True)
 
     # Top customers
     top_customers = frappe.db.sql("""
@@ -131,11 +135,11 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
+        """ + branch_sql + """
         GROUP BY customer, customer_name
         ORDER BY total_spent DESC
         LIMIT 10
-    """.format(branch_clause=branch_clause), (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+    """, [from_date, to_date] + branch_params, as_dict=True)
 
     return {
         "period": period,
@@ -254,7 +258,9 @@ def get_profit_loss_report(from_date=None, to_date=None):
     from_date = getdate(from_date)
     to_date = getdate(to_date)
     branch = _get_user_branch()
-    branch_clause = "AND branch = %s" if branch else ""
+
+    # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
+    branch_sql, branch_params = _branch_filter(branch)
 
     # Revenue
     revenue_data = frappe.db.sql("""
@@ -265,8 +271,8 @@ def get_profit_loss_report(from_date=None, to_date=None):
         FROM `tabPOS Invoice`
         WHERE posting_date BETWEEN %s AND %s
         AND docstatus = 1
-        {branch_clause}
-    """, (from_date, to_date, branch) if branch else (from_date, to_date), as_dict=True)
+        """ + branch_sql,
+        [from_date, to_date] + branch_params, as_dict=True)
 
     revenue = revenue_data[0] if revenue_data else {}
     total_revenue = flt(revenue.get("total_revenue", 0), 2)
@@ -446,11 +452,11 @@ def _sales_report_html(data, company, currency):
         <div class="header-info">
             <div>
                 <h1>Sales Report</h1>
-                <p class="period">{data.get('from_date', '')} - {data.get('to_date', '')}</p>
+                <p class="period">{_html.escape(str(data.get('from_date', '')))} - {_html.escape(str(data.get('to_date', '')))}</p>
             </div>
             <div style="text-align: right;">
                 <strong>{_html.escape(str(company))}</strong><br>
-                <span class="period">Generated: {frappe.utils.now()}</span>
+                <span class="period">Generated: {_html.escape(str(frappe.utils.now()))}</span>
             </div>
         </div>
 
@@ -518,7 +524,7 @@ def _expense_report_html(data, company, currency):
     </head>
     <body>
         <h1>Expense Report</h1>
-        <p>Period: {data.get('from_date', '')} - {data.get('to_date', '')}</p>
+        <p>Period: {_html.escape(str(data.get('from_date', '')))} - {_html.escape(str(data.get('to_date', '')))}</p>
         <div class="summary-grid">
             <div class="summary-card">
                 <div class="label">Fixed Expenses</div>
@@ -555,7 +561,7 @@ def _pl_report_html(data, company, currency):
     </head>
     <body>
         <h1>Profit & Loss Report</h1>
-        <p>Period: {data.get('from_date', '')} - {data.get('to_date', '')}</p>
+        <p>Period: {_html.escape(str(data.get('from_date', '')))} - {_html.escape(str(data.get('to_date', '')))}</p>
         <div class="pl-section">
             <div class="pl-row"><span>Total Revenue</span><span>{fmt_money(data.get('total_revenue', 0), currency=currency)}</span></div>
             <div class="pl-row"><span>Cost of Goods</span><span class="negative">-{fmt_money(data.get('cost_of_goods', 0), currency=currency)}</span></div>
@@ -567,7 +573,7 @@ def _pl_report_html(data, company, currency):
         </div>
         <div class="pl-section" style="background: #ecfdf5;">
             <div class="pl-row total"><span>Net Profit</span><span class="{'positive' if data.get('net_profit', 0) >= 0 else 'negative'}">{fmt_money(data.get('net_profit', 0), currency=currency)}</span></div>
-            <div class="pl-row"><span>Profit Margin</span><span>{data.get('profit_margin', 0)}%</span></div>
+            <div class="pl-row"><span>Profit Margin</span><span>{flt(data.get('profit_margin', 0), 1)}%</span></div>
         </div>
     </body>
     </html>"""

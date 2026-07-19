@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Trash2, Edit, FrownIcon, Plus, Loader2, MessageSquare } from 'lucide-react';
 import { usePOSStore } from '../store/pos-store';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, roundMoney } from '../lib/utils';
 import { CustomerSelect } from './CustomerSelect';
 import ProductDialog from './ProductDialog';
 import OrderTypeSelect from './OrderTypeSelect';
@@ -75,9 +75,10 @@ const OrderPanel = () => {
   const [showCommentDialog, setShowCommentDialog] = useState(false);
 
   const calculateItemTotal = (item: typeof activeOrders[0]) => {
+    // R37-FIX: Use roundMoney to prevent floating-point errors in displayed totals
     const basePrice = item.selectedVariant?.price || item.price;
     const addonsTotal = item.selectedAddons?.reduce((sum, addon) => sum + addon.price, 0) || 0;
-    return (basePrice + addonsTotal) * item.quantity;
+    return roundMoney((basePrice + addonsTotal) * item.quantity);
   };
 
   const total = activeOrders.reduce(

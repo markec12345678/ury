@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PaymentDialog from './PaymentDialog';
-import { call } from '../lib/frappe-sdk';
+// R37-FIX: Import from frappe-sdk-retry to match production code
+import { call } from '../lib/frappe-sdk-retry';
 
 // Mock the i18n module
 vi.mock('../i18n', () => ({
@@ -38,8 +39,8 @@ vi.mock('../i18n', () => ({
   initI18n: vi.fn(),
 }));
 
-// Mock the frappe-sdk
-vi.mock('../lib/frappe-sdk', () => ({
+// R37-FIX: Mock frappe-sdk-retry to match the production import
+vi.mock('../lib/frappe-sdk-retry', () => ({
   call: {
     get: vi.fn(),
     post: vi.fn(),
@@ -51,7 +52,7 @@ vi.mock('../lib/frappe-sdk', () => ({
     getCount: vi.fn(),
   },
   auth: {
-    login: vi.fn(),
+    getLoggedInUser: vi.fn(),
     logout: vi.fn(),
   },
 }));

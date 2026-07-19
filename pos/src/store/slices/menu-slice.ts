@@ -13,6 +13,8 @@ export interface MenuState {
   menuLoading: boolean;
   customerGroups: string[];
   territories: string[];
+  /** R37-FIX: Sequence counter to discard stale menu fetch responses */
+  _fetchMenuSeq: number;
 }
 
 export interface MenuActions {
@@ -33,14 +35,21 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
   menuLoading: false,
   customerGroups: [],
   territories: [],
+  _fetchMenuSeq: 0,
 
   fetchMenuItems: async () => {
     const { posProfile, selectedRoom, selectedOrderType } = get();
     if (!posProfile?.restaurant) return;
 
+    // R37-FIX: Increment sequence counter to detect stale responses
+    const seq = get()._fetchMenuSeq + 1;
+    set({ _fetchMenuSeq: seq, menuLoading: true, error: null });
+
     try {
-      set({ menuLoading: true, error: null });
       const items = await getRestaurantMenu(posProfile.name, selectedRoom, selectedOrderType);
+
+      // Discard stale response if a newer fetch was started
+      if (get()._fetchMenuSeq !== seq) return;
 
       const menuItems: MenuItem[] = items.map(item => ({
         id: item.item,
@@ -57,12 +66,11 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
         tax_rate: 0,
       }));
 
-      set({ menuItems });
+      set({ menuItems, menuLoading: false });
     } catch (error) {
-      set({ error: 'Failed to load menu items' });
+      if (get()._fetchMenuSeq !== seq) return;
+      set({ error: 'Failed to load menu items', menuLoading: false });
       if (import.meta.env.DEV) console.error('Error loading menu items:', error);
-    } finally {
-      set({ menuLoading: false });
     }
   },
 

@@ -10,6 +10,15 @@ export function setCurrencySymbol(symbol: string): void {
   storage.setItem('currencySymbol', symbol);
 }
 
+/**
+ * Round a number to 2 decimal places using the "round half away from zero" method.
+ * Prevents floating-point precision errors in financial calculations.
+ * e.g. 0.1 + 0.2 = 0.30000000000000004 → roundMoney(0.30000000000000004) = 0.3
+ */
+export function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 export function formatCurrency(amount: number): string {
   const symbol = storage.getItem('currencySymbol');
   if (isNaN(amount)) return symbol ? `${symbol} 0.00` : '0.00';

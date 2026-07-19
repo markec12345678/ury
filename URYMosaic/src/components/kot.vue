@@ -223,8 +223,8 @@ let host = window.location.hostname;
 let port = window.location.port;
 let protocol = window.location.protocol;
 let url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
-let siteName = '';
-let alertAudio = null; 
+// R37-REMOVED: module-level siteName and alertAudio — siteName was shared mutable state (race condition risk),
+// alertAudio was unused after R36 moved to instance-level this._alertAudio
 
 function debounce(fn, delay) {
     let timer = null;
@@ -234,7 +234,8 @@ function debounce(fn, delay) {
     };
 }
 
-async function fetchAndSetSiteName() {
+// R37-FIX: fetchAndSetSiteName now returns siteName instead of mutating module-level state
+async function fetchSiteName() {
     try {
         const response = await fetch('/api/method/ury.ury.api.ury_kot_display.get_site_name', {
             method: 'GET',
@@ -243,17 +244,18 @@ async function fetchAndSetSiteName() {
             }
         });
         const data = await response.json();
-        siteName = data?.message?.site_name || '';
+        return data?.message?.site_name || '';
     } catch (error) {
         if (import.meta.env?.DEV) console.error('Failed to fetch site name:', error);
+        return '';
     }
 }
 
 async function initializeSocket() {
-    await fetchAndSetSiteName();
+    // R37-FIX: Use local variable instead of module-level shared state
+    const siteName = await fetchSiteName();
     if (siteName) {
-        let site = siteName;
-        let site_url = `${url}/${site}`;
+        let site_url = `${url}/${siteName}`;
         const sock = io(site_url, {
           withCredentials: true,
           reconnection: true,
@@ -289,11 +291,12 @@ export default {
       isOnline: navigator.onLine,
       statusMessage: "",
       daily_order_number:0,
-      socketHandler: null,
+      // R37-FIX: socketHandler moved to created() as non-reactive to avoid Proxy overhead
     };
   },
   methods: {
     playAlertSound(path) {
+      if (!path) return; // R37-FIX: Guard against null/undefined audio path
       const currentDomain = window.location.origin;
       const audio_path = currentDomain + path;
       // R36-FIX: Use instance-level audio to avoid cross-instance conflicts
@@ -304,6 +307,7 @@ export default {
       }
       this._alertAudio.play().catch(() => {
         // R36-FIX: Show UI fallback when audio fails — kitchen staff need to know
+        if (!this._isMounted) return; // R37-FIX: Guard against post-unmount
         this.showAudioAlertMessage = true;
       });
     },
@@ -335,12 +339,25 @@ export default {
             .get("ury.ury.api.ury_kot_display.kot_list", {})
             .then((result) => {
               if (!this._isMounted) { resolve(); return; }
-              this.branch = result.message.Branch;
-              this.kot_alert_time = result.message.kot_alert_time;
-              this.audio_alert = result.message.audio_alert;
-              this.daily_order_number = result.message.daily_order_number;
-              this.kot_channel = `kot_update_${this.branch}_${this.production}`;
-              this.kot = result.message.KOT.map(k => ({
+              // R37-FIX: Null-check result.message to prevent TypeError crash
+              const msg = result?.message;
+              if (!msg) { resolve(); return; }
+              this.branch = msg.Branch;
+              this.kot_alert_time = msg.kot_alert_time;
+              this.audio_alert = msg.audio_alert;
+              this.daily_order_number = msg.daily_order_number;
+              const newChannel = `kot_update_${this.branch}_${this.production}`;
+              // R37-FIX: Re-register socket listener if channel changed (e.g. branch switch)
+              if (this.kot_channel && this.kot_channel !== newChannel && this._socket && this.socketHandler) {
+                this._socket.off(this.kot_channel, this.socketHandler);
+              }
+              this.kot_channel = newChannel;
+              if (this._socket && this.socketHandler) {
+                this._socket.on(this.kot_channel, this.socketHandler);
+              }
+              // R37-FIX: Invalidate sorted items cache on full refresh
+              this._sortedItemsCache.clear();
+              this.kot = (msg.KOT || []).map(k => ({
                 isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...k
               }));
               this.updateQtyColorTable();
@@ -374,6 +391,9 @@ export default {
           const idx = this.kot.findIndex(k => k.name === kot.name);
           if (idx !== -1) this.kot.splice(idx, 1);
           this.removeAllItemsFromLocalStorage(kot);
+          // R37-FIX: Clean up notifiedKots entry and sorted cache for removed KOT
+          this.notifiedKots.delete(kot.name);
+          this._sortedItemsCache.delete(kot.name);
           this.masonryLoading();
         })
         .catch((error) => {
@@ -391,6 +411,9 @@ export default {
           const idx = this.kot.findIndex(k => k.name === kot.name);
           if (idx !== -1) this.kot.splice(idx, 1);
           this.removeAllItemsFromLocalStorage(kot);
+          // R37-FIX: Clean up notifiedKots entry and sorted cache for removed KOT
+          this.notifiedKots.delete(kot.name);
+          this._sortedItemsCache.delete(kot.name);
           this.masonryLoading();
         })
         .catch(() => {
@@ -451,6 +474,8 @@ export default {
           kot.table_takeaway
         );
 
+        // R37-FIX: Null-check kot_items before forEach
+        if (!kot.kot_items) return;
         kot.kot_items.forEach((kotitem) => {
           const savedState = localStorage.getItem(
             `${kot.name}_${kotitem.name}_strike`
@@ -472,9 +497,11 @@ export default {
       });
     },
     calculateQty(kotitem, qty, type, cancelled_qty) {
-      kotitem.qty = qty;
+      // R37-FIX: Guard against negative quantities from cancelled_qty > qty
       if (type === "Partially cancelled" || type === "Cancelled") {
-        kotitem.qty = qty - cancelled_qty;
+        kotitem.qty = Math.max(0, qty - cancelled_qty);
+      } else {
+        kotitem.qty = qty;
       }
     },
     removeAllItemsFromLocalStorage(kot) {
@@ -577,14 +604,19 @@ export default {
       this.showAudioAlertMessage = false;
     },
     handleOnline() {
+      // R37-FIX: Guard against post-unmount execution
+      if (!this._isMounted) return;
       this.isOnline = true;
       this.setStatusMessage("You are online");
       this.hideStatusMessageAfterDelay();
       this.fetchKOT().then(() => {
+        if (!this._isMounted) return;
         this.masonryLoading();
       }).catch((e) => { console.error("KOT fetch failed:", e); });
     },
     handleOffline() {
+      // R37-FIX: Guard against post-unmount execution
+      if (!this._isMounted) return;
       this.isOnline = false;
       this.setStatusMessage("You are Offline");
     },
@@ -594,6 +626,8 @@ export default {
     hideStatusMessageAfterDelay() {
       if (this._statusTimeout) clearTimeout(this._statusTimeout);
       this._statusTimeout = setTimeout(() => {
+        // R37-FIX: Guard against mutating unmounted component
+        if (!this._isMounted) return;
         this.statusMessage = "";
       }, 3000);
     },
@@ -611,6 +645,10 @@ export default {
     this.notifiedKots = new Set();
     // API client as non-reactive instance property (avoids Proxy overhead)
     this.call = markRaw(frappe.call());
+    // R37-FIX: socketHandler as non-reactive to avoid unnecessary Proxy overhead
+    this.socketHandler = null;
+    // R37-FIX: sortedItems cache map — avoids mutating reactive kot objects in computed
+    this._sortedItemsCache = new Map();
   },
   mounted() {
     this._isMounted = true;
@@ -690,6 +728,8 @@ export default {
                     if (strikeMap.has(i.name)) i.striked = strikeMap.get(i.name);
                   });
                 }
+                // R37-FIX: Invalidate sorted cache for this KOT since items may have changed
+                this._sortedItemsCache.delete(doc.kot.name);
               } else {
                 const newKot = { isRotated: false, showDiv: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
                 this.kot.unshift(newKot);
@@ -749,12 +789,20 @@ export default {
   },
   computed: {
     sortedKotItems() {
+      // R37-FIX: Pure computed — no side effects on reactive kot objects.
+      // Uses instance-level _sortedItemsCache Map (non-reactive) instead of
+      // mutating kot._sortedItems / kot._sortKey which caused reactivity issues
+      // and stale cache after Object.assign overwrites kot_items in socket handler.
       return (kot) => {
-        if (!kot._sortedItems || kot._sortKey !== (kot.kot_items || []).length) {
-          kot._sortKey = (kot.kot_items || []).length;
-          kot._sortedItems = [...(kot.kot_items || [])].sort((a, b) => a.serve_priority - b.serve_priority);
+        const items = kot.kot_items || [];
+        const key = `${kot.name}:${items.length}:${items.map(i => i.name).join(',')}`;
+        const cached = this._sortedItemsCache.get(kot.name);
+        if (cached && cached.key === key) {
+          return cached.items;
         }
-        return kot._sortedItems;
+        const sorted = [...items].sort((a, b) => (a.serve_priority || 0) - (b.serve_priority || 0));
+        this._sortedItemsCache.set(kot.name, { key, items: sorted });
+        return sorted;
       };
     },
     visibleKots() {

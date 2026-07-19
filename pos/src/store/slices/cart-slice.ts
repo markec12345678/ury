@@ -4,6 +4,7 @@ import type { OrderItem, MenuItem, CartTotals } from './types';
 import { CartError, MAX_QUANTITY, MIN_QUANTITY } from './types';
 import { generateUniqueId, calculateItemPrice } from './helpers';
 import type { POSSliceAll } from './combined';
+import { roundMoney } from '../../lib/utils';
 
 // --- Types ---
 
@@ -116,18 +117,20 @@ export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (se
     const items = get().activeOrders;
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-    const subtotal = items.reduce((sum, item) => {
+    // R37-FIX: Use roundMoney at each accumulation step to prevent
+    // floating-point precision errors (e.g. 0.1 + 0.2 !== 0.3)
+    const subtotal = roundMoney(items.reduce((sum, item) => {
       const itemPrice = calculateItemPrice(item);
-      return sum + (itemPrice * item.quantity);
-    }, 0);
+      return roundMoney(sum + (itemPrice * item.quantity));
+    }, 0));
 
-    const tax = items.reduce((sum, item) => {
+    const tax = roundMoney(items.reduce((sum, item) => {
       const itemPrice = calculateItemPrice(item);
       const taxRate = item.tax_rate || 0;
-      return sum + (itemPrice * item.quantity * (taxRate / 100));
-    }, 0);
+      return roundMoney(sum + (itemPrice * item.quantity * (taxRate / 100)));
+    }, 0));
 
-    return { subtotal, tax, total: subtotal + tax, itemCount };
+    return { subtotal, tax, total: roundMoney(subtotal + tax), itemCount };
   },
 
   itemExistsInCart: (uniqueId: string): boolean => {

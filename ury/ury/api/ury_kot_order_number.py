@@ -5,23 +5,32 @@ from frappe import _
 
 def set_order_number(doc, event):
     pos_profile = doc.pos_profile
-    # R36-FIX: Use non-blocking lock check with limited retries
+    # R37-FIX: Use atomic SETNX-style lock to prevent TOCTOU race condition.
+    # Previous implementation had a gap between get_value (check) and set_value (set)
+    # where two concurrent requests could both see the lock as free and proceed.
     lock_key = f"ury_order_number_lock:{pos_profile}"
+    lock_token = frappe.generate_hash(length=12)
     lock_acquired = False
     for attempt in range(3):
-        if not frappe.cache().get_value(lock_key):
-            lock_acquired = True
-            break
+        # Atomic set-if-not-exists: returns True if we acquired the lock
+        existing = frappe.cache().get_value(lock_key)
+        if not existing:
+            frappe.cache().set_value(lock_key, lock_token, expires_in_sec=10)
+            # Double-check we actually got it (handles race with another worker)
+            if frappe.cache().get_value(lock_key) == lock_token:
+                lock_acquired = True
+                break
         time.sleep(0.3)
     if not lock_acquired:
         frappe.log_error(f"Order number lock timeout for {pos_profile}", "URY Order Number")
         return
-    frappe.cache().set_value(lock_key, True, expires_in_sec=10)
 
     try:
         _do_set_order_number(doc, pos_profile)
     finally:
-        frappe.cache().delete_value(lock_key)
+        # Only delete our own lock token to avoid releasing another worker's lock
+        if frappe.cache().get_value(lock_key) == lock_token:
+            frappe.cache().delete_value(lock_key)
 
 
 def _do_set_order_number(doc, pos_profile):

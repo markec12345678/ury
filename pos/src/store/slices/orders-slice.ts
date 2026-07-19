@@ -187,10 +187,10 @@ export const createOrdersSlice: StateCreator<
         status,
       });
 
-      // Refresh the orders list after status update
+      // R37-FIX: fetchOrders manages its own orderLoading via seq counter,
+      // so we only set orderLoading: false here if fetchOrders is NOT called
+      // (which it always is). Let fetchOrders handle the final orderLoading state.
       await get().fetchOrders(get().pagination.currentPage);
-      
-      set({ orderLoading: false });
     } catch (error) {
       set({ 
         error: getErrorMessage(error),

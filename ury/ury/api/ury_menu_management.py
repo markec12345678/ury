@@ -115,6 +115,10 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
     if rate < 0:
         frappe.throw(_("Rate cannot be negative"))
     menu = frappe.get_doc("URY Menu", menu_name)
+    # R37-FIX: Validate menu belongs to user's branch (was missing)
+    user_branch = _get_user_branch()
+    if menu.branch != user_branch:
+        frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
 
     for existing_item in menu.items:
         if existing_item.item == item:

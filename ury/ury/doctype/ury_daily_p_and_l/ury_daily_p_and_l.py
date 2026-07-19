@@ -503,9 +503,9 @@ class URYDailyPandL(Document):
                                 AND b.`status` IN ("Present", "Half Day")
                 ''', {"branch": self.branch, "date": self.date}, as_dict=True)    
 
-                attendance_count =  attendance_count[0]
+                attendance_count =  attendance_count[0] if attendance_count else None
 
-                if attendance_count['Total Attendance'] == 0:
+                if not attendance_count or attendance_count.get('Total Attendance', 0) == 0:
                         frappe.throw(title=_('No Attendance'), msg=_("Attendance not marked"))
 
                 ns_employee_attendance_list = frappe.db.sql(''' 

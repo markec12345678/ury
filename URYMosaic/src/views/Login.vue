@@ -102,8 +102,9 @@ export default {
           if (this.authState) {
             this.authState.isLoggedIn = true;
           }
-          // Navigate to the intended route or home
-          const redirectPath = this.$route.query.route || "/";
+          // R37-FIX: Sanitize redirect path to prevent open redirect attacks
+          const rawPath = this.$route.query.route || "/";
+          const redirectPath = rawPath.startsWith('/') && !rawPath.startsWith('//') ? rawPath : "/";
           this.password = '';
           this.username = '';
           this.$router.push(redirectPath);

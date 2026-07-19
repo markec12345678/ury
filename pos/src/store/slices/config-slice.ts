@@ -1,14 +1,25 @@
 import { StateCreator } from 'zustand';
 import { AuthSlice } from './auth-slice';
-import { getCombinedPosProfile, PosProfileCombined } from '../../lib/pos-profile-api';
+import type { PosProfileCombined } from '../../lib/pos-profile-api';
 import type { RolePermission } from '../../lib/pos-profile-api';
 import { getErrorMessage } from '../../lib/error-utils';
+
+// R37-FIX: Eliminate divergent posProfile state.
+// config-slice no longer stores its own posProfile copy.
+// Instead, it delegates fetching to usePOSStore (app-slice) and reads
+// the single source of truth from there. This prevents the two stores
+// from holding different posProfile values after a force-refresh.
+import { usePOSStore } from '../pos-store';
 
 export interface ConfigState {
   allowedRoles: string[];
   configLoading: boolean;
   configError: string | null;
   hasAccess: boolean;
+  /**
+   * posProfile is now derived from usePOSStore to avoid divergent state.
+   * Use getPosProfile() to read the current value.
+   */
   posProfile: PosProfileCombined | null;
 }
 
@@ -16,6 +27,8 @@ export interface ConfigActions {
   checkAccess: () => void;
   setAllowedRoles: (roles: string[]) => void;
   fetchPosProfile: (forceRefresh?: boolean) => Promise<void>;
+  /** Read posProfile from the single source of truth (usePOSStore) */
+  getPosProfile: () => PosProfileCombined | null;
 }
 
 export type ConfigSlice = ConfigState & ConfigActions;
@@ -36,35 +49,33 @@ export const createConfigSlice: StateCreator<
 > = (set, get) => ({
   ...initialState,
 
+  getPosProfile: () => {
+    // Single source of truth: always read from usePOSStore
+    return usePOSStore.getState().posProfile;
+  },
+
   fetchPosProfile: async (forceRefresh = false) => {
     try {
       set({ configLoading: true, configError: null });
 
-      // Check session storage first if not forcing refresh
-      const cached = sessionStorage.getItem('posProfile');
-      if (cached && !forceRefresh) {
-        try {
-          const profile = JSON.parse(cached);
-          set({ posProfile: profile });
-          // Extract and set allowed roles from the profile
-          const allowedRoles = profile.role_allowed_for_billing?.map((role: RolePermission) => role.role) || [];
-          get().setAllowedRoles(allowedRoles);
-          set({ configLoading: false });
-          return;
-        } catch {
-          sessionStorage.removeItem('posProfile');
-        }
+      // R37-FIX: Delegate to usePOSStore's fetchPosProfile to avoid divergent state.
+      // When force-refresh is requested, invalidate the session cache first so
+      // app-slice's fetchPosProfile will re-fetch from the API.
+      if (forceRefresh) {
+        sessionStorage.removeItem('posProfile');
       }
 
-      // If not in cache or forcing refresh, fetch from API
-      const profile = await getCombinedPosProfile();
-      
-      // Cache the profile
-      sessionStorage.setItem('posProfile', JSON.stringify(profile));
+      // Call the primary store's fetchPosProfile (single source of truth)
+      await usePOSStore.getState().fetchPosProfile();
+
+      // Read the profile from the primary store
+      const profile = usePOSStore.getState().posProfile;
+
+      // Sync to local state for backwards compatibility with AuthGuard selectors
       set({ posProfile: profile });
 
       // Extract and set allowed roles from the profile
-      const allowedRoles = profile.role_allowed_for_billing?.map((role: RolePermission) => role.role) || [];
+      const allowedRoles = profile?.role_allowed_for_billing?.map((role: RolePermission) => role.role) || [];
       get().setAllowedRoles(allowedRoles);
       set({ configLoading: false });
     } catch (error) {
