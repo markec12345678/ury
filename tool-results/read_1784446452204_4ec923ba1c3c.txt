@@ -503,9 +503,9 @@
    503→                                AND b.`status` IN ("Present", "Half Day")
    504→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)    
    505→
-   506→                attendance_count =  attendance_count[0]
+   506→                attendance_count =  attendance_count[0] if attendance_count else None
    507→
-   508→                if attendance_count['Total Attendance'] == 0:
+   508→                if not attendance_count or attendance_count.get('Total Attendance', 0) == 0:
    509→                        frappe.throw(title=_('No Attendance'), msg=_("Attendance not marked"))
    510→
    511→                ns_employee_attendance_list = frappe.db.sql(''' 

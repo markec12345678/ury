@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { X, Plus, Minus } from 'lucide-react';
 import { OrderItem, usePOSStore } from '../store/pos-store';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, roundMoney } from '../lib/utils';
 import { Button, Dialog, DialogContent, Input } from './ui';
 import { db } from '../lib/frappe-sdk-retry';
 import { t } from '../i18n';
@@ -211,7 +211,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
   const basePrice = selectedItem?.price ? Number(selectedItem.price) : 0;
   const numericQuantity = quantity === '' ? 0 : parseInt(quantity, 10);
   const addonsTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
-  const total = (basePrice + addonsTotal) * numericQuantity;
+  // R38-FIX: Use roundMoney to prevent floating-point errors in displayed total
+  const total = roundMoney((basePrice + addonsTotal) * numericQuantity);
 
   const handleQuantityChange = (value: string) => {
     // Allow empty string or numbers

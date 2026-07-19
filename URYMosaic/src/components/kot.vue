@@ -347,8 +347,10 @@ export default {
               this.audio_alert = msg.audio_alert;
               this.daily_order_number = msg.daily_order_number;
               const newChannel = `kot_update_${this.branch}_${this.production}`;
-              // R37-FIX: Re-register socket listener if channel changed (e.g. branch switch)
-              if (this.kot_channel && this.kot_channel !== newChannel && this._socket && this.socketHandler) {
+              // R38-FIX: Always remove old listener before adding to prevent duplicate registrations.
+              // Previously, off() only ran when channel changed, so repeated fetchKOT() calls
+              // with the same channel accumulated duplicate listeners, causing N executions per event.
+              if (this.kot_channel && this._socket && this.socketHandler) {
                 this._socket.off(this.kot_channel, this.socketHandler);
               }
               this.kot_channel = newChannel;
@@ -466,6 +468,22 @@ export default {
       }
     },
     updateQtyColorTable() {
+      // R38-FIX: Batch-read localStorage once instead of per-item getItem calls.
+      // Build a map of strike states keyed by "kotName_kotItemName_strike" in a
+      // single pass, then look up from the map. This replaces N individual
+      // localStorage.getItem() calls with one iteration + O(1) map lookups.
+      const strikeMap = {};
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.endsWith('_strike')) {
+            strikeMap[key] = localStorage.getItem(key);
+          }
+        }
+      } catch (e) {
+        if (import.meta.env?.DEV) console.error('localStorage read failed:', e);
+      }
+
       this.kot.forEach((kot) => {
         this.updateColorandTable(
           kot,
@@ -477,10 +495,9 @@ export default {
         // R37-FIX: Null-check kot_items before forEach
         if (!kot.kot_items) return;
         kot.kot_items.forEach((kotitem) => {
-          const savedState = localStorage.getItem(
-            `${kot.name}_${kotitem.name}_strike`
-          );
-          if (savedState) {
+          const key = `${kot.name}_${kotitem.name}_strike`;
+          const savedState = strikeMap[key];
+          if (savedState !== undefined) {
             try {
               kotitem.striked = JSON.parse(savedState);
             } catch (e) {
@@ -505,12 +522,14 @@ export default {
       }
     },
     removeAllItemsFromLocalStorage(kot) {
-      // Get all keys in local storage
-      const keys = Object.keys(localStorage);
-      // Remove keys that start with `${kot.name}_`
-      keys.forEach((key) => {
-        if (key.startsWith(`${kot.name}_`)) {
-          localStorage.removeItem(key);
+      // R38-FIX: Remove strike-state keys for this KOT's items by known key pattern
+      // instead of iterating ALL localStorage keys (which may include unrelated Frappe keys).
+      if (!kot.kot_items) return;
+      kot.kot_items.forEach((kotitem) => {
+        try {
+          localStorage.removeItem(`${kot.name}_${kotitem.name}_strike`);
+        } catch (e) {
+          if (import.meta.env?.DEV) console.error('localStorage removeItem failed:', e);
         }
       });
     },
@@ -535,7 +554,10 @@ export default {
           this.notifiedKots.add(kot.name);
           this.orderDelayNotify(kot);
         }
-        if (validMinutes >= this.kot_alert_time) {
+        // R38-FIX: Guard against empty/falsy kot_alert_time. An empty string
+        // coerces to 0 in >= comparison, making ALL KOTs show red time.
+        const alertThreshold = Number(this.kot_alert_time);
+        if (alertThreshold > 0 && validMinutes >= alertThreshold) {
           kot.timecolor = "text-[#DC0000]";
         } else {
           kot.timecolor = "text-black";
@@ -571,9 +593,10 @@ export default {
       }).catch((e) => { console.error("KOT fetch failed:", e); });
     },
     redirectToLogin() {
-      const currentDomain = window.location.origin;
-      window.location.href =
-        currentDomain + "/login?redirect-to=" + encodeURIComponent("URYMosaic/" + this.production);
+      // R38-FIX: Use Vue Router instead of window.location.href to avoid full page reload
+      // and preserve app state. The previous approach caused a hard navigation that
+      // lost all Vue state and required a full re-initialization.
+      this.$router.push({ name: 'Login', query: { route: this.$route.path } });
     },
     masonryLoading(forceRecreate = false) {
       if (this.masonry && !forceRecreate) {
@@ -688,6 +711,9 @@ export default {
           if (!this._isMounted) return;
           this.setStatusMessage("Reconnected");
           this.hideStatusMessageAfterDelay();
+          // R38-FIX: Re-fetch KOT data after reconnect to sync any missed updates
+          // during disconnection period. Without this, the UI could show stale KOTs.
+          this.fetchKOT().then(() => { this.masonryLoading(); }).catch(() => {});
         });
 
         return this.fetchKOT();

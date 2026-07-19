@@ -138,20 +138,39 @@ def get_category_sales_chart(period="this_month"):
     if len(invoice_names) > MAX_INVOICES:
         invoice_names = invoice_names[:MAX_INVOICES]
 
-    # Get item-wise sales with course info
-    items = frappe.db.sql("""
-        SELECT 
-            COALESCE(mi.course, 'Uncategorized') as category,
-            SUM(ii.qty) as total_qty,
-            SUM(ii.amount) as total_amount
-        FROM `tabPOS Invoice Item` ii
-        JOIN `tabPOS Invoice` pi ON ii.parent = pi.name
-        LEFT JOIN `tabURY Menu Item` mi ON mi.item = ii.item_code AND mi.parenttype = 'URY Menu'
-        WHERE pi.name IN %s
-        AND pi.docstatus = 1
-        GROUP BY category
-        ORDER BY total_amount DESC
-    """, (tuple(invoice_names),), as_dict=True)
+    # R38-FIX: Look up the branch's menu to ensure course mapping is branch-scoped
+    branch_menu = frappe.db.get_value("URY Menu", {"branch": branch}, "name") if branch else None
+
+    # Get item-wise sales with course info (scoped to branch's menu)
+    if branch_menu:
+        items = frappe.db.sql("""
+            SELECT
+                COALESCE(mi.course, 'Uncategorized') as category,
+                SUM(ii.qty) as total_qty,
+                SUM(ii.amount) as total_amount
+            FROM `tabPOS Invoice Item` ii
+            JOIN `tabPOS Invoice` pi ON ii.parent = pi.name
+            LEFT JOIN `tabURY Menu Item` mi ON mi.item = ii.item_code
+                AND mi.parenttype = 'URY Menu' AND mi.parent = %s
+            WHERE pi.name IN %s
+            AND pi.docstatus = 1
+            GROUP BY category
+            ORDER BY total_amount DESC
+        """, (branch_menu, tuple(invoice_names)), as_dict=True)
+    else:
+        items = frappe.db.sql("""
+            SELECT
+                COALESCE(mi.course, 'Uncategorized') as category,
+                SUM(ii.qty) as total_qty,
+                SUM(ii.amount) as total_amount
+            FROM `tabPOS Invoice Item` ii
+            JOIN `tabPOS Invoice` pi ON ii.parent = pi.name
+            LEFT JOIN `tabURY Menu Item` mi ON mi.item = ii.item_code AND mi.parenttype = 'URY Menu'
+            WHERE pi.name IN %s
+            AND pi.docstatus = 1
+            GROUP BY category
+            ORDER BY total_amount DESC
+        """, (tuple(invoice_names),), as_dict=True)
 
     return {"data": items}
 
@@ -303,6 +322,10 @@ def _get_period_dates(period):
     elif period == "last_90_days":
         return add_days(today, -89), today
     else:
+        frappe.log_error(
+            f"Unknown period '{period}' passed to _get_period_dates, defaulting to today",
+            "URY Dashboard Warning"
+        )
         return today, today
 
 

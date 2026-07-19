@@ -4,6 +4,7 @@ from frappe import _
 import os
 
 from pypdf import PdfWriter
+from ury.ury.api.utils import _get_user_branch
 
 no_cache = 1
 
@@ -90,6 +91,14 @@ def network_printing(
 @frappe.whitelist()
 def select_network_printer(pos_profile, invoice_id):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    # R38-FIX: Validate invoice belongs to user's branch
+    inv_branch = frappe.db.get_value("POS Invoice", invoice_id, "branch")
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} not found").format(invoice_id))
+    user_branch = _get_user_branch()
+    if inv_branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+
     table = frappe.db.get_value("POS Invoice", invoice_id, "restaurant_table")
     print_format = frappe.db.get_value("POS Profile", pos_profile, "print_format")
 
@@ -118,6 +127,14 @@ def select_network_printer(pos_profile, invoice_id):
 @frappe.whitelist()
 def qz_print_update(invoice):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    # R38-FIX: Validate invoice belongs to user's branch
+    inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} not found").format(invoice))
+    user_branch = _get_user_branch()
+    if inv_branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+
     try:
         table = frappe.db.get_value("POS Invoice", invoice, "restaurant_table")
 
@@ -155,6 +172,10 @@ def print_pos_page(doctype, name, print_format):
     if not result:
         frappe.throw(_("POS Invoice {0} not found").format(name))
     restaurant_table, branch, invoice_name = result
+    # R38-FIX: Validate invoice belongs to user's branch
+    user_branch = _get_user_branch()
+    if branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     print_channel = "{}_{}".format("print", branch)
     frappe.publish_realtime(print_channel, {"data": data})
 

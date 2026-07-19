@@ -2,12 +2,21 @@ import frappe
 from frappe import _
 from frappe.utils import cint
 from frappe.utils.print_format import print_by_server
+from ury.ury.api.utils import _get_user_branch
 
 
 
 @frappe.whitelist()
 def reprint_kot(invoice_number):
     frappe.only_for("Restaurant Manager", "Restaurant User")
+
+    # R38-FIX: Validate invoice belongs to user's branch
+    inv_branch = frappe.db.get_value("POS Invoice", invoice_number, "branch")
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} not found.").format(invoice_number))
+    user_branch = _get_user_branch()
+    if inv_branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
 
     try:
         result = frappe.db.get_value(

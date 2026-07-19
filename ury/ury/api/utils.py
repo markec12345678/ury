@@ -3,6 +3,7 @@ URY Shared API Utilities
 Common helper functions used across multiple API modules.
 """
 
+import re
 import frappe
 from frappe import _
 
@@ -40,6 +41,9 @@ def _branch_filter(branch, alias=""):
         sql = "SELECT ... WHERE x=%s " + branch_sql + " GROUP BY ..."
         frappe.db.sql(sql, params + branch_params)
     """
+    # R38-FIX: Validate alias is alphanumeric to prevent SQL injection
+    if alias and not re.match(r'^[a-zA-Z_]\w*$', alias):
+        frappe.throw(_("Invalid SQL alias: {0}").format(alias), frappe.ValidationError)
     if branch:
         col = f"{alias}.branch" if alias else "branch"
         return f"AND {col} = %s", [branch]

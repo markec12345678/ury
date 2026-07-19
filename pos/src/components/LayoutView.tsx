@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { CreditCard as Edit3, Save, Users, Move, X, Grid3x3 as Grid3X3, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { cn, formatInvoiceTime } from '../lib/utils';
+import { cn, formatCurrency, formatInvoiceTime } from '../lib/utils';
 import { Table, updateTableLayout } from '../lib/table-api';
 import { getTableOrder, POSInvoice } from '../lib/order-api';
 import { Button } from './ui';
@@ -562,8 +562,9 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
                   {selectedTableOrder && (
                     <div className="flex justify-between items-center pt-2 mt-2 border-t border-blue-200">
                       <span>{t('tables.total_amount')}</span>
+                      {/* R38-FIX: Use formatCurrency instead of raw .toFixed(2) for consistency */ }
                       <span className="font-bold text-lg text-blue-800">
-                        {selectedTableOrder.grand_total.toFixed(2)}
+                        {formatCurrency(selectedTableOrder.grand_total)}
                       </span>
                     </div>
                   )}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Square, AlertTriangle } from 'lucide-react';
 import { usePOSStore } from '../store/pos-store';
 import { Dialog, DialogContent } from './ui/dialog';
@@ -19,6 +19,9 @@ const TableSelectionDialog: React.FC<Props> = ({ onClose }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [tablesCache, setTablesCache] = useState<Record<string, Table[]>>({});
+  // R38-FIX: Use ref to avoid stale closure over tablesCache in useEffect
+  const tablesCacheRef = useRef(tablesCache);
+  tablesCacheRef.current = tablesCache;
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
@@ -70,9 +73,9 @@ const TableSelectionDialog: React.FC<Props> = ({ onClose }) => {
     async function fetchTables() {
       if (!selectedRoom) return;
       setError(null);
-      // If already cached, use cache
-      if (tablesCache[selectedRoom]) {
-        setTables(sortTables(tablesCache[selectedRoom]));
+      // If already cached, use cache (R38-FIX: read from ref to avoid stale closure)
+      if (tablesCacheRef.current[selectedRoom]) {
+        setTables(sortTables(tablesCacheRef.current[selectedRoom]));
         setLoadingTables(false);
         return;
       }

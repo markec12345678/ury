@@ -81,8 +81,10 @@ const OrderPanel = () => {
     return roundMoney((basePrice + addonsTotal) * item.quantity);
   };
 
+  // R38-FIX: Use roundMoney at each accumulation step to prevent floating-point
+  // precision drift when summing many item totals (e.g. 0.1+0.2+0.3 !== 0.6)
   const total = activeOrders.reduce(
-    (sum, item) => sum + calculateItemTotal(item),
+    (sum, item) => roundMoney(sum + calculateItemTotal(item)),
     0
   );
 

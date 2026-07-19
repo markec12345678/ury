@@ -2,12 +2,21 @@ import frappe
 from frappe import _
 from ury.ury_pos.api import getBranch
 from frappe.utils import get_datetime
+from ury.ury.api.utils import _get_user_branch
 
 
 # Function to set order status in a KOT document
 @frappe.whitelist()
 def serve_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
+    # R38-FIX: Validate KOT belongs to user's branch
+    kot_branch = frappe.db.get_value("URY KOT", name, "branch")
+    if not kot_branch:
+        frappe.throw(_("KOT {0} not found").format(name))
+    user_branch = _get_user_branch()
+    if kot_branch != user_branch:
+        frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
+
     current_time = get_datetime()
     creation_time = frappe.db.get_value("URY KOT", name, "creation")
     if not creation_time:
@@ -26,6 +35,13 @@ def serve_kot(name):
 @frappe.whitelist()
 def confirm_cancel_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
+    # R38-FIX: Validate KOT belongs to user's branch
+    kot_branch = frappe.db.get_value("URY KOT", name, "branch")
+    if not kot_branch:
+        frappe.throw(_("KOT {0} not found").format(name))
+    user_branch = _get_user_branch()
+    if kot_branch != user_branch:
+        frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
     # Use server-side identity instead of client-supplied user parameter
     verified_by = frappe.session.user
     frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by})

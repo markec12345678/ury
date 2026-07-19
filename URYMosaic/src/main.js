@@ -11,10 +11,12 @@ app.use(router);
 
 // Auth state shared between router guard and components
 const authState = reactive({ isLoggedIn: false });
-app.provide('authState', authState);
 
-// Check for existing Frappe session on startup
-fetch("/api/method/frappe.auth.get_logged_user")
+// R38-FIX: Track whether the initial auth check has completed.
+// Without this, the router guard runs before the async fetch resolves,
+// causing authenticated users to flash the login page on refresh.
+let authChecked = false;
+const authCheckPromise = fetch("/api/method/frappe.auth.get_logged_user")
   .then(res => res.ok ? res.json() : Promise.reject())
   .then(data => {
     if (data.message && data.message !== "Guest") {
@@ -23,11 +25,18 @@ fetch("/api/method/frappe.auth.get_logged_user")
   })
   .catch(() => {
     // Not logged in — stay on login page
+  })
+  .finally(() => {
+    authChecked = true;
   });
 
 // Configure route guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   try {
+    // Wait for the initial auth check on first navigation only
+    if (!authChecked) {
+      await authCheckPromise;
+    }
     if (to.matched.some((record) => !record.meta.isLoginPage)) {
       // This route requires auth, check if logged in
       if (!authState.isLoggedIn) {
@@ -48,4 +57,5 @@ router.beforeEach((to, from, next) => {
   }
 });
 
+app.provide('authState', authState);
 app.mount("#app");

@@ -27,6 +27,9 @@ export interface AIState {
   currency: string;
   lastModel: string | null;
   totalTokensUsed: number;
+  /** R38-FIX: Counter moved from module-level global into store state to avoid
+   *  duplicate IDs on hot-module reload and to reset on clearConversation. */
+  _messageCounter: number;
 }
 
 export interface AIActions {
@@ -44,12 +47,11 @@ export type AIStore = AIState & AIActions;
 
 // ---- Helpers ----
 
-let messageCounter = 0;
-
-function createMessage(role: 'user' | 'assistant', content: string): AIConversationMessage {
-  messageCounter += 1;
+// R38-FIX: messageCounter moved into store state (_messageCounter) to:
+// 1) Reset on clearConversation, 2) Avoid duplicate IDs on HMR, 3) Be testable
+function createMessage(counter: number, role: 'user' | 'assistant', content: string): AIConversationMessage {
   return {
-    id: `ai-msg-${messageCounter}-${Date.now()}`,
+    id: `ai-msg-${counter}-${Date.now()}`,
     role,
     content,
     timestamp: Date.now(),
@@ -78,6 +80,7 @@ export const useAIStore = create<AIStore>()((set, get) => ({
   currency: 'EUR',
   lastModel: null,
   totalTokensUsed: 0,
+  _messageCounter: 0,
 
   togglePanel: () => {
     const isOpen = get().panelOpen;
@@ -100,8 +103,9 @@ export const useAIStore = create<AIStore>()((set, get) => ({
     const state = get();
     if (state.loading) return;
 
-    const userMsg = createMessage('user', content);
-    set({ loading: true, error: null, messages: [...state.messages, userMsg] });
+    const nextCounter = state._messageCounter + 1;
+    const userMsg = createMessage(nextCounter, 'user', content);
+    set({ loading: true, error: null, messages: [...state.messages, userMsg], _messageCounter: nextCounter });
 
     try {
       const history = buildHistory(state.messages);
@@ -113,20 +117,23 @@ export const useAIStore = create<AIStore>()((set, get) => ({
         state.currency
       );
 
-      const assistantMsg = createMessage('assistant', response.content);
+      const assistCounter = get()._messageCounter + 1;
+      const assistantMsg = createMessage(assistCounter, 'assistant', response.content);
       set((s) => ({
         messages: [...s.messages, assistantMsg],
         lastModel: response.model,
         totalTokensUsed: s.totalTokensUsed + (response.usage?.total_tokens || 0),
         loading: false,
+        _messageCounter: assistCounter,
       }));
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'AI request failed';
       set({ error: errorMsg, loading: false });
 
       // Add error as assistant message for visibility
-      const errorMsg2 = createMessage('assistant', `⚠️ ${errorMsg}`);
-      set((s) => ({ messages: [...s.messages, errorMsg2] }));
+      const errCounter = get()._messageCounter + 1;
+      const errorMsg2 = createMessage(errCounter, 'assistant', `⚠️ ${errorMsg}`);
+      set((s) => ({ messages: [...s.messages, errorMsg2], _messageCounter: errCounter }));
     }
   },
 
@@ -143,24 +150,27 @@ export const useAIStore = create<AIStore>()((set, get) => ({
         state.currency
       );
 
-      const insightMsg = createMessage('assistant', response.content);
+      const insightCounter = get()._messageCounter + 1;
+      const insightMsg = createMessage(insightCounter, 'assistant', response.content);
       set((s) => ({
         messages: [...s.messages, insightMsg],
         lastModel: response.model,
         totalTokensUsed: s.totalTokensUsed + (response.usage?.total_tokens || 0),
         loading: false,
+        _messageCounter: insightCounter,
       }));
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to generate insight';
       set({ error: errorMsg, loading: false });
 
-      const errorMsg2 = createMessage('assistant', `⚠️ ${errorMsg}`);
-      set((s) => ({ messages: [...s.messages, errorMsg2] }));
+      const errCounter = get()._messageCounter + 1;
+      const errorMsg2 = createMessage(errCounter, 'assistant', `⚠️ ${errorMsg}`);
+      set((s) => ({ messages: [...s.messages, errorMsg2], _messageCounter: errCounter }));
     }
   },
 
   clearConversation: () => {
-    set({ messages: [], error: null });
+    set({ messages: [], error: null, _messageCounter: 0 });
   },
 
   refreshEnabled: () => {

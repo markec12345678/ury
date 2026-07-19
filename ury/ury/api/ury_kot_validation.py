@@ -4,11 +4,18 @@ from frappe.utils import get_datetime
 
 
 def kotValidationThread():
-    # Prevent overlapping runs using a cache lock
+    # R38-FIX: Use token-based lock to prevent overlapping runs (previously,
+    # a non-atomic check-then-set allowed two workers to both see the lock as
+    # free and proceed simultaneously).
     lock_key = "ury_kot_validation_running"
-    if frappe.cache().get_value(lock_key):
+    lock_token = frappe.generate_hash(length=12)
+    existing = frappe.cache().get_value(lock_key)
+    if existing:
         return  # Previous run still in progress
-    frappe.cache().set_value(lock_key, True, expires_in_sec=120)
+    frappe.cache().set_value(lock_key, lock_token, expires_in_sec=120)
+    # Double-check: only proceed if our token is still the current value
+    if frappe.cache().get_value(lock_key) != lock_token:
+        return  # Another worker won the race
 
     try:
         current_datetime = get_datetime()
@@ -25,7 +32,9 @@ def kotValidationThread():
             except Exception:
                 frappe.log_error("URY KOT Validation Error", f"Failed to process invoice {invoice.name}")
     finally:
-        frappe.cache().delete_value(lock_key)
+        # Only delete our own lock token to avoid releasing another worker's lock
+        if frappe.cache().get_value(lock_key) == lock_token:
+            frappe.cache().delete_value(lock_key)
 
 
 def get_unprocessed_invoices(start_time, end_time):
