@@ -34,7 +34,8 @@ class SubPOSClosing(Document):
                 "docstatus": 1,
                 "status":"Paid",
                 "posting_date": ["between", [self.period_start_date, self.period_end_date]],
-                "cashier":self.user
+                "cashier":self.user,
+                "branch": branch,
             },
             fields=["name", "posting_date", "customer", "grand_total", "base_grand_total"]
         )

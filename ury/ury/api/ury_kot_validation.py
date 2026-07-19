@@ -113,7 +113,6 @@ def process_invoice(invoice):
                 posInvoice.pos_profile,
                 kot_naming_series,
                 production_items,
-                waiter,
                 production.name,
             )
 
@@ -127,7 +126,7 @@ def get_productions_for_branch(branch):
 
 
 def create_kot(
-    posInvoice, pos_profile_name, kot_naming_series, production_items, owner, production_name
+    posInvoice, pos_profile_name, kot_naming_series, production_items, production_name
 ):
     kotdoc = frappe.new_doc("URY KOT")
     kotdoc.update(

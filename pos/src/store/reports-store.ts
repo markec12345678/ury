@@ -275,23 +275,24 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
 
     setSelectedReportType: (type) => {
       set({ selectedReportType: type });
-      get().fetchCurrentReport();
+      // R44-FIX: Catch unhandled promise rejection
+      get().fetchCurrentReport().catch(() => { /* error set in fetch methods */ });
     },
 
     setSelectedPeriod: (period) => {
       set({ selectedPeriod: period });
-      get().fetchCurrentReport();
+      get().fetchCurrentReport().catch(() => { /* error set in fetch methods */ });
     },
 
     setCustomDateRange: (fromDate, toDate) => {
       set({ customFromDate: fromDate, customToDate: toDate });
-      get().fetchCurrentReport();
+      get().fetchCurrentReport().catch(() => { /* error set in fetch methods */ });
     },
 
     setComparePeriods: (compare) => {
       set({ comparePeriods: compare });
       if (compare && get().selectedReportType === 'sales') {
-        get().fetchPreviousSalesReport();
+        get().fetchPreviousSalesReport().catch(() => { /* error handled in method */ });
       }
     },
 

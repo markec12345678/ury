@@ -129,12 +129,14 @@ def set_last_invoice_in_pos_open(doc, event):
             "POS Invoice", filters={"pos_profile": doc.pos_profile, "order_type": ["!=", "Aggregators"]}
         )
         doc.custom_ury_last_invoice = invoice.name
-    except (frappe.DoesNotExistError, frappe.ValidationError):
+    # R44-FIX: Also catch frappe.DoesNotExist — get_last_doc raises this
+    # when no matching document is found (distinct from DoesNotExistError)
+    except (frappe.DoesNotExistError, frappe.DoesNotExist, frappe.ValidationError):
         frappe.log_error(f"Failed to set last invoice in POS opening: {frappe.get_traceback()}", "Order Number Error")
     try:
         aggregator_invoice = frappe.get_last_doc(
             "POS Invoice", filters={"pos_profile": doc.pos_profile, "order_type": "Aggregators"}
         )
         doc.custom_ury_last_aggregator_invoice = aggregator_invoice.name
-    except (frappe.DoesNotExistError, frappe.ValidationError):
+    except (frappe.DoesNotExistError, frappe.DoesNotExist, frappe.ValidationError):
         frappe.log_error(f"Failed to set last aggregator invoice in POS opening: {frappe.get_traceback()}", "Order Number Error")

@@ -591,36 +591,42 @@ export default {
       // keys for current KOT items: O(kots * items) getItem calls, which is
       // typically 50-500 vs potentially thousands of localStorage keys.
       this.kot.forEach((kot) => {
-        this.updateColorandTable(
-          kot,
-          kot.restaurant_table,
-          kot.type,
-          kot.table_takeaway
-        );
+        this._updateSingleKotQtyColor(kot);
+      });
+    },
+    // R44-FIX: Extract single-KOT processing from updateQtyColorTable so the
+    // incremental socket path can update just the affected KOT in O(1) instead
+    // of re-processing ALL KOTs in O(n) on every socket event.
+    _updateSingleKotQtyColor(kot) {
+      this.updateColorandTable(
+        kot,
+        kot.restaurant_table,
+        kot.type,
+        kot.table_takeaway
+      );
 
-        // R37-FIX: Null-check kot_items before forEach
-        if (!kot.kot_items) return;
-        kot.kot_items.forEach((kotitem) => {
-          const key = `${kot.name}_${kotitem.name}_strike`;
-          try {
-            const savedState = localStorage.getItem(key);
-            if (savedState !== null) {
-              try {
-                kotitem.striked = JSON.parse(savedState);
-              } catch (e) {
-                kotitem.striked = false;
-              }
+      // R37-FIX: Null-check kot_items before forEach
+      if (!kot.kot_items) return;
+      kot.kot_items.forEach((kotitem) => {
+        const key = `${kot.name}_${kotitem.name}_strike`;
+        try {
+          const savedState = localStorage.getItem(key);
+          if (savedState !== null) {
+            try {
+              kotitem.striked = JSON.parse(savedState);
+            } catch (e) {
+              kotitem.striked = false;
             }
-          } catch (e) {
-            // localStorage access can fail in private browsing mode
           }
-          this.calculateQty(
-            kotitem,
-            kotitem.quantity,
-            kot.type,
-            kotitem.cancelled_qty
-          );
-        });
+        } catch (e) {
+          // localStorage access can fail in private browsing mode
+        }
+        this.calculateQty(
+          kotitem,
+          kotitem.quantity,
+          kot.type,
+          kotitem.cancelled_qty
+        );
       });
     },
     // R39-FIX: Moved from computed (which returned a function) to method.
@@ -660,50 +666,45 @@ export default {
 
     updateTimeRemaining() {
       this.kot.forEach((kot) => {
-        kot.timeRemaining = this.calculateTimeRemaining(kot.time);
-
-        const timeRemaining = kot.timeRemaining.split(":");
-        const minutes =
-          parseInt(timeRemaining[0], 10) * 60 + parseInt(timeRemaining[1], 10);
-
-        // R36-FIX: Handle NaN from invalid time format — treat as elapsed time exceeded
-        const validMinutes = isNaN(minutes) ? Infinity : minutes;
-
-        if (
-          // R41-FIX: Use >= instead of === for alert threshold comparison.
-          // With ===, a KOT that was already past the threshold on page load
-          // (e.g., after a page refresh) or that crossed the threshold between
-          // timer ticks (throttled background tab) would never trigger the
-          // notification. The notifiedKots set still prevents duplicate
-          // notifications within the same session.
-          validMinutes >= Number(this.kot_alert_time) &&
-          kot.type !== "Cancelled" &&
-          kot.type !== "Partially cancelled" &&
-          !this.notifiedKots.has(kot.name)
-        ) {
-          // R42-FIX: Mark as notified AFTER the API call succeeds, not before.
-          // Previously, notifiedKots.add() ran before orderDelayNotify(), so if
-          // the HTTP request failed (transient network error), the notification
-          // was permanently suppressed for that KOT — kitchen staff would never
-          // be alerted about the delay. Now we only add to notifiedKots on
-          // success; on failure, the next timer tick will retry.
-          const kotName = kot.name;
-          this.orderDelayNotify(kot).then(() => {
-            this.notifiedKots.add(kotName);
-          }).catch(() => {
-            // Notification failed — don't add to notifiedKots so it retries
-            if (import.meta.env?.DEV) console.warn('orderDelayNotify failed, will retry on next tick:', kotName);
-          });
-        }
-        // R38-FIX: Guard against empty/falsy kot_alert_time. An empty string
-        // coerces to 0 in >= comparison, making ALL KOTs show red time.
-        const alertThreshold = Number(this.kot_alert_time);
-        if (alertThreshold > 0 && validMinutes >= alertThreshold) {
-          kot.timecolor = "text-[#DC0000]";
-        } else {
-          kot.timecolor = "text-black";
-        }
+        this._updateSingleKotTimeRemaining(kot);
       });
+    },
+    // R44-FIX: Extract single-KOT time processing from updateTimeRemaining so
+    // the incremental socket path can update just the affected KOT in O(1)
+    // instead of re-processing ALL KOTs in O(n) on every socket event.
+    _updateSingleKotTimeRemaining(kot) {
+      kot.timeRemaining = this.calculateTimeRemaining(kot.time);
+
+      const timeRemaining = kot.timeRemaining.split(":");
+      const minutes =
+        parseInt(timeRemaining[0], 10) * 60 + parseInt(timeRemaining[1], 10);
+
+      // R36-FIX: Handle NaN from invalid time format — treat as elapsed time exceeded
+      const validMinutes = isNaN(minutes) ? Infinity : minutes;
+
+      if (
+        // R41-FIX: Use >= instead of === for alert threshold comparison.
+        validMinutes >= Number(this.kot_alert_time) &&
+        kot.type !== "Cancelled" &&
+        kot.type !== "Partially cancelled" &&
+        !this.notifiedKots.has(kot.name)
+      ) {
+        // R42-FIX: Mark as notified AFTER the API call succeeds, not before.
+        const kotName = kot.name;
+        this.orderDelayNotify(kot).then(() => {
+          this.notifiedKots.add(kotName);
+        }).catch(() => {
+          // Notification failed — don't add to notifiedKots so it retries
+          if (import.meta.env?.DEV) console.warn('orderDelayNotify failed, will retry on next tick:', kotName);
+        });
+      }
+      // R38-FIX: Guard against empty/falsy kot_alert_time.
+      const alertThreshold = Number(this.kot_alert_time);
+      if (alertThreshold > 0 && validMinutes >= alertThreshold) {
+        kot.timecolor = "text-[#DC0000]";
+      } else {
+        kot.timecolor = "text-black";
+      }
     },
     calculateTimeRemaining(targetTime) {
       if (!targetTime || !targetTime.includes(":")) return '— : —';
@@ -824,6 +825,9 @@ export default {
       if (this._inflightOps) this._inflightOps.delete(kotName);
     },
     hideAudioAlertMessage() {
+      // R44-FIX: Guard against post-unmount state mutation — click events
+      // queued before listener removal could fire after beforeUnmount runs.
+      if (!this._isMounted) return;
       this.showAudioAlertMessage = false;
       // R41-FIX: Re-attempt audio playback on user click.
       // Browser autoplay policy blocks audio until a user gesture.
@@ -873,8 +877,13 @@ export default {
       }, 3000);
     },
     handleTransitionEnd() {
-      if (!this.isOnline) {
-        // Reset the status message after transition end
+      if (!this._isMounted) return;
+      // R44-FIX: Clear status message when transitioning TO online (green).
+      // Previously, the condition was inverted — it cleared the message when
+      // going offline, which made the "You are Offline" message disappear
+      // after the CSS transition. The offline message should persist until
+      // the user goes back online.
+      if (this.isOnline) {
         this.setStatusMessage("");
       }
     },
@@ -974,6 +983,16 @@ export default {
     const authPromise = this.auth();
     this._socketInitPromise = initSocketWithRetry();
 
+    // R44-FIX: Start data fetch as soon as auth succeeds, independently of socket
+    // init. Previously, data only loaded after BOTH socket AND auth completed,
+    // causing a blank KDS when socket init was slow (siteName fetch + WebSocket
+    // handshake can take 2-5s). Now the early fetch shows data immediately, and
+    // the socket chain's fetchKOTWithRetry is skipped if data is already loaded.
+    authPromise.then(() => {
+      if (!this._isMounted) return;
+      this.fetchKOTWithRetry().catch(() => {});
+    }).catch(() => {});
+
     this._socketInitPromise
       .then((sock) => {
         // R40-FIX: If component unmounted during socket init, disconnect immediately
@@ -1022,8 +1041,12 @@ export default {
         });
 
         // R39-FIX: Use retry wrapper for initial fetch — transient server errors
-        // should not leave the KDS permanently blank
-        return this.fetchKOTWithRetry();
+        // should not leave the KDS permanently blank.
+        // R44-FIX: Skip if early fetch (started after auth) already loaded data.
+        // This avoids a redundant full refresh when the early fetch succeeded.
+        if (this.kot.length === 0) {
+          return this.fetchKOTWithRetry();
+        }
       })
       .then(() => {
         if (!this._isMounted || !this._socket) return;
@@ -1064,27 +1087,32 @@ export default {
               return;
             }
             // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
-            // R43-FIX: Remove redundant masonryLoading() — fetchKOT() already calls it.
-            if (!doc.kot) {
+            // R44-FIX: Also guard against non-object doc.kot (e.g., array, string).
+            // If the server sends a malformed doc.kot, accessing .name would
+            // return undefined, causing findIndex to fail and the bad data to
+            // be unshifted into the KOT array, corrupting the display.
+            if (!doc.kot || typeof doc.kot !== 'object' || Array.isArray(doc.kot)) {
               this.fetchKOT().catch((e) => { console.error("KOT fetch failed:", e); });
               return;
             }
             // Incremental update — deduplicate to avoid duplicate cards
             const existingIndex = this.kot.findIndex(k => k.name === doc.kot.name);
+            let targetKot;
             if (existingIndex !== -1) {
+              targetKot = this.kot[existingIndex];
               // R36-FIX: Preserve strikethrough state before Object.assign overwrites kot_items
               const strikeMap = new Map(
-                (this.kot[existingIndex].kot_items || []).map(i => [i.name, i.striked])
+                (targetKot.kot_items || []).map(i => [i.name, i.striked])
               );
               // R43-FIX: Exclude 'name' from the spread to prevent overwriting the KOT's
               // primary key. If the server sends a different name in doc.kot, the KOT
               // would become orphaned — findIndex in serveOrder/confirmOrder uses the
               // original name as the lookup key.
               const { name: _incomingName, ...kotData } = doc.kot;
-              Object.assign(this.kot[existingIndex], { timecolor: 'text-black', timeRemaining: '— : —', ...kotData });
+              Object.assign(targetKot, { timecolor: 'text-black', timeRemaining: '— : —', ...kotData });
               // Restore strikethrough state after Object.assign
-              if (this.kot[existingIndex].kot_items) {
-                this.kot[existingIndex].kot_items.forEach(i => {
+              if (targetKot.kot_items) {
+                targetKot.kot_items.forEach(i => {
                   if (strikeMap.has(i.name)) i.striked = strikeMap.get(i.name);
                 });
               }
@@ -1092,11 +1120,13 @@ export default {
               this._sortedItemsCache.delete(doc.kot.name);
             } else {
               // R39-FIX: Removed showDiv: false — dead code
-              const newKot = { isRotated: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
-              this.kot.unshift(newKot);
+              targetKot = { isRotated: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
+              this.kot.unshift(targetKot);
             }
-            this.updateQtyColorTable();
-            this.updateTimeRemaining();
+            // R44-FIX: Use targeted single-KOT methods instead of processing ALL KOTs.
+            // The incremental path only modifies one KOT, so O(1) is sufficient.
+            this._updateSingleKotQtyColor(targetKot);
+            this._updateSingleKotTimeRemaining(targetKot);
             // R40-FIX: Use debounced masonry layout for rapid socket events
             this._debouncedMasonryLayout();
             // R41-FIX: Cancel timeout and localStorage write are now ONLY in the incremental path.

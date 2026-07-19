@@ -169,7 +169,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
       orderComment: '',
     });
 
-    get().fetchMenuItems();
+    get().fetchMenuItems().catch(() => { /* error set in slice */ });
   },
 
   isMenuInteractionDisabled: () => {

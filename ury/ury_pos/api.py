@@ -173,6 +173,13 @@ def _get_invoices_list(branch, status, limit, limit_start, cashier=None):
     except (ValueError, TypeError):
         frappe.throw(_("Invalid pagination parameters"))
     
+    # R44-FIX: Validate status to prevent SQL injection in f-string below.
+    # The status is used directly in the SQL query via f-string interpolation,
+    # so we must whitelist allowed values.
+    ALLOWED_STATUSES = {"Draft", "Paid", "Cancelled", "Return", "Unbilled", "Recently Paid"}
+    if status not in ALLOWED_STATUSES:
+        frappe.throw(_("Invalid status filter: {0}").format(status), frappe.ValidationError)
+    
     base_fields = """name, invoice_printed, grand_total, restaurant_table, 
                 cashier, waiter, net_total, posting_time, 
                 total_taxes_and_charges, customer, status, mobile_number, 
@@ -534,9 +541,11 @@ def create_customer(customer_name, mobile_number=None, customer_group="Individua
         frappe.throw(_("Customer name is required"))
     if not mobile_number:
         frappe.throw(_("Mobile Number is required"))
+    # R44-FIX: Narrow exception catch — only catch the specific validation
+    # error from validate_phone_number, not all exceptions
     try:
         validate_phone_number(mobile_number, throw=True)
-    except Exception:
+    except frappe.ValidationError:
         frappe.throw(_("Invalid mobile number format"))
 
     try:

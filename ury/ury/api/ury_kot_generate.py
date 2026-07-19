@@ -386,6 +386,11 @@ def create_cancel_kot_doc(
             },
         )
 
+    # R44-FIX: Skip creating a cancel KOT with zero items — all items may have
+    # been filtered out because no matching invoice item was found.
+    if not kot_cancel_doc.kot_items:
+        return
+
     kot_cancel_doc.insert()
     kot_cancel_doc.submit()
 

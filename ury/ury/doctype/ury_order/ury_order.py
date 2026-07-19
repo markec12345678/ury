@@ -93,6 +93,10 @@ def _get_order_invoice_doc(table=None, invoiceNo=None, order_type=None, is_payme
             
         if invoice_name:
             invoice = frappe.get_doc("POS Invoice", invoice_name)
+            # R44-FIX: Validate that the loaded invoice belongs to the user's branch
+            user_branch = _get_user_branch()
+            if invoice.branch and invoice.branch != user_branch:
+                frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
             
 
         else:
@@ -736,6 +740,11 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
         amount = flt(p.get("amount", 0))
         if amount < 0:
             frappe.throw(_("Payment amount cannot be negative"))
+
+    # R44-FIX: At least one of invoice or table must be provided — otherwise
+    # we would create an orphaned invoice with no way to reference it.
+    if not invoice and not table:
+        frappe.throw(_("Invoice or table is required to make a payment"), frappe.ValidationError)
 
     # R43-FIX: Guard against None invoice — get_value with None returns None/error
     order_type = None

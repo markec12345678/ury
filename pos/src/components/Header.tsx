@@ -95,7 +95,8 @@ const Header = () => {
     // sessionStorage.clear() would remove data from other apps sharing the
     // same origin (e.g. Frappe desk, other SPA installs), breaking them.
     const POS_LS_PREFIXES = ['pos_profile', 'currency', 'currencySymbol', 'ury_'];
-    const POS_SS_PREFIXES = ['posProfile', 'menuCategories', 'customerGroups', 'territories', 'ury_rooms_', 'ury_room_counts_'];
+    // R44-FIX: Added 'payment_modes' — cached by getPaymentModes() in sessionStorage
+    const POS_SS_PREFIXES = ['posProfile', 'menuCategories', 'customerGroups', 'territories', 'payment_modes', 'ury_rooms_', 'ury_room_counts_'];
 
     // Clear localStorage POS keys
     for (let i = localStorage.length - 1; i >= 0; i--) {

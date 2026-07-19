@@ -72,17 +72,17 @@ export const createSelectionSlice: StateCreator<POSSliceAll, [], [], SelectionSl
   setSelectedTable: (table: string | null, room: string | null, doNotLoadOrder = false) => {
     set({ selectedTable: table, selectedRoom: room });
     if (table) {
-      if (!doNotLoadOrder) get().loadTableOrder(table);
+      if (!doNotLoadOrder) get().loadTableOrder(table).catch(() => { /* error set in slice */ });
     } else {
       get().clearTableOrder();
     }
     if (room) {
-      get().fetchMenuItems();
+      get().fetchMenuItems().catch(() => { /* error set in slice */ });
     }
   },
 
   setSelectedOrderType: (type) => {
-    get().clearOrder();
+    get().clearOrder().catch(() => { /* error set in slice */ });
     set({
       selectedOrderType: type,
       isUpdatingOrder: false,
@@ -90,7 +90,7 @@ export const createSelectionSlice: StateCreator<POSSliceAll, [], [], SelectionSl
     });
 
     if (type !== 'Aggregators') {
-      get().fetchMenuItems();
+      get().fetchMenuItems().catch(() => { /* error set in slice */ });
     }
   },
 

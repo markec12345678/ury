@@ -76,6 +76,8 @@ def get_menu_detail(menu_name):
 def create_menu(branch, enabled=1):
     """Create a new URY Menu."""
     frappe.only_for("Restaurant Manager")
+    if not branch:
+        frappe.throw(_("Branch is required"), frappe.ValidationError)
     user_branch = _get_user_branch()
     if branch != user_branch:
         frappe.throw(_("Cannot create menu for a different branch"))
@@ -96,6 +98,8 @@ def create_menu(branch, enabled=1):
 def toggle_menu(menu_name, enabled):
     """Enable or disable a menu."""
     frappe.only_for("Restaurant Manager")
+    if not menu_name:
+        frappe.throw(_("Menu name is required"), frappe.ValidationError)
     menu = frappe.get_doc("URY Menu", menu_name)
     user_branch = _get_user_branch()
     if menu.branch != user_branch:
@@ -109,6 +113,8 @@ def toggle_menu(menu_name, enabled):
 def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
     """Add an item to a URY Menu."""
     frappe.only_for("Restaurant Manager")
+    if not item:
+        frappe.throw(_("Item is required"), frappe.ValidationError)
     try:
         rate = flt(rate)
     except (ValueError, TypeError):
@@ -195,6 +201,8 @@ def batch_update_prices(menu_name, updates):
     frappe.only_for("Restaurant Manager")
     if isinstance(updates, str):
         updates = json.loads(updates)
+    if not updates:
+        frappe.throw(_("No updates provided"), frappe.ValidationError)
     if len(updates) > 500:
         frappe.throw(_("Maximum 500 price updates per batch"))
 
@@ -241,6 +249,9 @@ def get_courses_detail():
 def create_menu_course(course, serving_priority=0, indicate_in_kds=0):
     """Create a new menu course/category."""
     frappe.only_for("Restaurant Manager")
+    if not course or not course.strip():
+        frappe.throw(_("Course name is required"), frappe.ValidationError)
+    course = course.strip()
     existing = frappe.get_all("URY Menu Course", filters={"course": course})
     if existing:
         frappe.throw(_("Course '{0}' already exists").format(course), frappe.DuplicateEntryError)

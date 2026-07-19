@@ -50,6 +50,7 @@ interface DashboardState {
   autoRefresh: boolean;
   refreshInterval: number; // seconds
   partialErrors: string[];
+  _autoRefreshTimer: ReturnType<typeof setInterval> | null;
 }
 
 interface DashboardActions {
@@ -65,6 +66,8 @@ interface DashboardActions {
   setSelectedGranularity: (granularity: ChartGranularity) => void;
   setAutoRefresh: (enabled: boolean) => void;
   setRefreshInterval: (seconds: number) => void;
+  /** Stop the auto-refresh interval. Call on unmount. */
+  stopAutoRefresh: () => void;
 }
 
 export const useDashboardStore = create<DashboardState & DashboardActions>(
@@ -84,6 +87,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
     autoRefresh: false,
     refreshInterval: 30,
     partialErrors: [],
+    _autoRefreshTimer: null,
 
     fetchSummary: async (period) => {
       const p = period || get().selectedPeriod;
@@ -119,6 +123,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ revenueChart });
       } catch (error) {
         logger.error('Failed to fetch revenue chart:', error);
+        // R44-FIX: Record partial error so UI can indicate failure
+        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load revenue chart'] }));
       }
     },
 
@@ -129,6 +135,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ ordersChart });
       } catch (error) {
         logger.error('Failed to fetch orders chart:', error);
+        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load orders chart'] }));
       }
     },
 
@@ -139,6 +146,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ categorySales });
       } catch (error) {
         logger.error('Failed to fetch category sales:', error);
+        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load category sales'] }));
       }
     },
 
@@ -148,6 +156,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ tableOccupancy });
       } catch (error) {
         logger.error('Failed to fetch table occupancy:', error);
+        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load table occupancy'] }));
       }
     },
 
@@ -189,22 +198,52 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
       }
     },
 
+    // R44-FIX: Track the auto-refresh interval timer so it can be cleared
+    _autoRefreshTimer: null as ReturnType<typeof setInterval> | null,
+
     setSelectedPeriod: (period) => {
       set({ selectedPeriod: period });
-      get().fetchAll(period);
+      get().fetchAll(period).catch(() => { /* fetchAll sets its own error state */ });
     },
 
     setSelectedGranularity: (granularity) => {
       set({ selectedGranularity: granularity });
-      get().fetchRevenueChart(undefined, granularity);
+      get().fetchRevenueChart(undefined, granularity).catch(() => { /* error handled in method */ });
     },
 
     setAutoRefresh: (enabled) => {
       set({ autoRefresh: enabled });
+      // R44-FIX: Actually start/stop the auto-refresh interval.
+      // Previously, setting autoRefresh=true only set a flag but never
+      // created an interval, making the feature non-functional.
+      const state = get();
+      // Clear any existing timer first
+      if (state._autoRefreshTimer) {
+        clearInterval(state._autoRefreshTimer);
+        set({ _autoRefreshTimer: null });
+      }
+      if (enabled) {
+        const timer = setInterval(() => {
+          get().fetchAll().catch(() => { /* fetchAll sets its own error state */ });
+        }, state.refreshInterval * 1000);
+        set({ _autoRefreshTimer: timer });
+      }
     },
 
     setRefreshInterval: (seconds) => {
       set({ refreshInterval: seconds });
+      // R44-FIX: If auto-refresh is active, restart with new interval
+      if (get().autoRefresh) {
+        get().setAutoRefresh(true);
+      }
+    },
+
+    stopAutoRefresh: () => {
+      const timer = get()._autoRefreshTimer;
+      if (timer) {
+        clearInterval(timer);
+      }
+      set({ _autoRefreshTimer: null, autoRefresh: false });
     },
   })
 );

@@ -17,14 +17,14 @@
     17→
     18→    if depth > max_depth:
     19→        frappe.log_error(
-    20→            f"BOM recursion depth exceeded max_depth={max_depth} for BOM {bom.name}",
+    20→            f"BOM recursion depth exceeded max_depth={max_depth} for BOM {bom.name}\n{frappe.get_traceback()}",
     21→            "BOM Depth Limit Warning"
     22→        )
     23→        return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
     24→
     25→    if bom.name in visited:
     26→        frappe.log_error(
-    27→            f"Circular BOM reference detected: {bom.name} already visited",
+    27→            f"Circular BOM reference detected: {bom.name} already visited\n{frappe.get_traceback()}",
     28→            "BOM Circular Reference Warning"
     29→        )
     30→        return {"bom_buying_price": bom_buying_price, "unset_bom_items": unset_bom_items}
@@ -564,110 +564,118 @@
    564→                        if attendance["Status"] == "Present":
    565→                                salary_cost_gross = flt(salary_cost_gross + attendance["Salary"], 2)
    566→
-   567→                date_str =  self.date
-   568→                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-   569→                year = date_obj.year
-   570→                month_number = date_obj.month
-   571→                days = calendar.monthrange(year, month_number)[1]
-   572→
-   573→                employee_attendance_sl_list = frappe.db.sql('''
-   574→                        SELECT
-   575→                                %(date)s AS "Date",
-   576→                                b.`name` AS "Employee",
-   577→                                b.`payment_amount` AS "Salary"
-   578→                        FROM `tabEmployee` b
-   579→                        WHERE 
-   580→                                b.`branch` = %(branch)s
-   581→                                AND b.`payment_type` = "Salary"                        
-   582→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
-   583→
-   584→                for attendance in employee_attendance_sl_list:
-   585→                        salary_cost_gross = flt(salary_cost_gross + attendance["Salary"]/days, 2)
-   586→
-   587→                if self.net_sales != 0.0:
-   588→                        salary_cost_gross_percent = flt((salary_cost_gross / self.net_sales) * 100, 3)
-   589→                else:
-   590→                        salary_cost_gross_percent = 0.0
-   591→                self.append("employee_costs_breakup", {"breakup": "Salary Cost Gross", "amount": salary_cost_gross,"percent":salary_cost_gross_percent})
-   592→                self.total_employee_costs += salary_cost_gross
-   593→
-   594→                for expense in report_settings.employee_costs:
-   595→                        if self.net_sales != 0.0:
-   596→                                expense_percent = flt((expense.amount / self.net_sales) * 100, 3)
-   597→                        else:
-   598→                                expense_percent = 0.0
-   599→                        self.append("employee_costs_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
-   600→                        self.total_employee_costs += flt(expense.amount)
-   601→                if self.net_sales != 0.0:
-   602→                        self.total_employee_costs_percent = flt((self.total_employee_costs / self.net_sales) * 100, 3)
-   603→                self.total_indirect_expenses += flt(self.total_employee_costs)
-   604→
-   605→                #INDIRECT EXPENSES
-   606→                
-   607→                # Calculate and append Electricity
-   608→                electricity_charges = flt(electricity_reading) * flt(report_settings.electricity_charges)
+   567→                # R43-FIX: Handle both string and date objects for self.date
+   568→                date_str = str(self.date) if self.date else ""
+   569→                if not date_str or date_str == "None":
+   570→                        frappe.throw(_("Date is required for P&L calculation"))
+   571→                try:
+   572→                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+   573→                except ValueError:
+   574→                        # Could already be a date object or different format
+   575→                        from frappe.utils import getdate
+   576→                        date_obj = getdate(self.date)
+   577→                year = date_obj.year
+   578→                month_number = date_obj.month
+   579→                days = calendar.monthrange(year, month_number)[1]
+   580→
+   581→                employee_attendance_sl_list = frappe.db.sql('''
+   582→                        SELECT
+   583→                                %(date)s AS "Date",
+   584→                                b.`name` AS "Employee",
+   585→                                b.`payment_amount` AS "Salary"
+   586→                        FROM `tabEmployee` b
+   587→                        WHERE 
+   588→                                b.`branch` = %(branch)s
+   589→                                AND b.`payment_type` = "Salary"                        
+   590→                ''', {"branch": self.branch, "date": self.date}, as_dict=True)
+   591→
+   592→                for attendance in employee_attendance_sl_list:
+   593→                        salary_cost_gross = flt(salary_cost_gross + attendance["Salary"]/days, 2)
+   594→
+   595→                if self.net_sales != 0.0:
+   596→                        salary_cost_gross_percent = flt((salary_cost_gross / self.net_sales) * 100, 3)
+   597→                else:
+   598→                        salary_cost_gross_percent = 0.0
+   599→                self.append("employee_costs_breakup", {"breakup": "Salary Cost Gross", "amount": salary_cost_gross,"percent":salary_cost_gross_percent})
+   600→                self.total_employee_costs += salary_cost_gross
+   601→
+   602→                for expense in report_settings.employee_costs:
+   603→                        if self.net_sales != 0.0:
+   604→                                expense_percent = flt((expense.amount / self.net_sales) * 100, 3)
+   605→                        else:
+   606→                                expense_percent = 0.0
+   607→                        self.append("employee_costs_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
+   608→                        self.total_employee_costs += flt(expense.amount)
    609→                if self.net_sales != 0.0:
-   610→                        electricity_percent = flt((electricity_charges / self.net_sales) * 100, 3)
-   611→                else:
-   612→                        electricity_percent = 0.0
-   613→                self.append("indirect_expenses_breakup", {"breakup": "Electricity", "amount": electricity_charges,"percent":electricity_percent})
-   614→                self.total_indirect_expenses += flt(electricity_charges)
-   615→
-   616→                # Append indirect fixed expenses
-   617→                for expense in report_settings.indirect_fixed_expenses:
-   618→                        if self.net_sales != 0.0:
-   619→                                expense_percent = flt((expense.amount / self.net_sales) * 100, 3)
-   620→                        else:
-   621→                                expense_percent = 0.0
-   622→                        self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
-   623→                        self.total_indirect_expenses += flt(expense.amount)
-   624→
-   625→                # Append indirect monthly fixed expenses
-   626→                for expense in report_settings.monthly_fixed_expenses:
-   627→                        expense_amount = flt(expense.amount/days, 2)
-   628→                        if self.net_sales != 0.0:
-   629→                                expense_percent = flt((expense_amount / self.net_sales) * 100, 3)
-   630→                        else:
-   631→                                expense_percent = 0.0
-   632→                        self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense_amount,"percent":expense_percent})
-   633→                        self.total_indirect_expenses += flt(expense_amount)
-   634→
-   635→                # Calculate and append percentage expenses
-   636→                for expense in report_settings.percentage_expenses:
-   637→                        if expense.percentage_type in ["Gross Sales", "Net Sales"]:
-   638→                                base_amount = self.gross_sales if expense.percentage_type == "Gross Sales" else self.net_sales
-   639→                                amount = flt(expense.percent * base_amount / 100, 2)
-   640→                                if self.net_sales != 0.0:
-   641→                                        expense_percent = flt((amount / self.net_sales) * 100, 3)
-   642→                                else:
-   643→                                        expense_percent = 0.0
-   644→                                self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": amount ,"percent":expense_percent})
-   645→                                self.total_indirect_expenses += flt(amount)
-   646→
-   647→                # OTHER EXPENSES
-   648→                self.total_other_expenses = 0.0
-   649→                for expense in self.other_expenses:
-   650→                        self.total_indirect_expenses += flt(expense.amount)
-   651→                        self.total_other_expenses += flt(expense.amount)
-   652→
-   653→                self.depreciation = report_settings.depreciation
-   654→                
-   655→                self.total_indirect_expenses = flt(self.total_indirect_expenses) + flt(self.depreciation)
-   656→
-   657→                # NET PROFIT
-   658→                self.net_profit = flt(self.gross_profit - self.total_indirect_expenses, 2)
-   659→
-   660→                if self.net_sales != 0.0:
-   661→                        self.other_expenses_percent = flt((self.total_other_expenses / self.net_sales) * 100, 3)
-   662→                        self.depreciation_percent = flt((self.depreciation / self.net_sales) * 100, 3)
-   663→                        self.total_indirect_expenses_percent = flt((self.total_indirect_expenses / self.net_sales) * 100, 2)
-   664→                        self.net_profit_percent = flt((self.net_profit / self.net_sales) * 100, 2)
-   665→        
-   666→        @frappe.whitelist()
-   667→        def get_profit_loss_details(self):
-   668→                frappe.only_for("Restaurant Manager", "Accounts Manager")
-   669→                currency = frappe.db.get_value("Company", self.company, "default_currency") or "INR"
-   670→                return frappe.render_template(
-   671→                        "ury/doctype/ury_daily_p_and_l/profit_loss_details.html",
-   672→                        {"data": self, "currency": currency},
-   673→                )
+   610→                        self.total_employee_costs_percent = flt((self.total_employee_costs / self.net_sales) * 100, 3)
+   611→                self.total_indirect_expenses += flt(self.total_employee_costs)
+   612→
+   613→                #INDIRECT EXPENSES
+   614→                
+   615→                # Calculate and append Electricity
+   616→                electricity_charges = flt(electricity_reading) * flt(report_settings.electricity_charges)
+   617→                if self.net_sales != 0.0:
+   618→                        electricity_percent = flt((electricity_charges / self.net_sales) * 100, 3)
+   619→                else:
+   620→                        electricity_percent = 0.0
+   621→                self.append("indirect_expenses_breakup", {"breakup": "Electricity", "amount": electricity_charges,"percent":electricity_percent})
+   622→                self.total_indirect_expenses += flt(electricity_charges)
+   623→
+   624→                # Append indirect fixed expenses
+   625→                for expense in report_settings.indirect_fixed_expenses:
+   626→                        if self.net_sales != 0.0:
+   627→                                expense_percent = flt((expense.amount / self.net_sales) * 100, 3)
+   628→                        else:
+   629→                                expense_percent = 0.0
+   630→                        self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
+   631→                        self.total_indirect_expenses += flt(expense.amount)
+   632→
+   633→                # Append indirect monthly fixed expenses
+   634→                for expense in report_settings.monthly_fixed_expenses:
+   635→                        expense_amount = flt(expense.amount/days, 2)
+   636→                        if self.net_sales != 0.0:
+   637→                                expense_percent = flt((expense_amount / self.net_sales) * 100, 3)
+   638→                        else:
+   639→                                expense_percent = 0.0
+   640→                        self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense_amount,"percent":expense_percent})
+   641→                        self.total_indirect_expenses += flt(expense_amount)
+   642→
+   643→                # Calculate and append percentage expenses
+   644→                for expense in report_settings.percentage_expenses:
+   645→                        if expense.percentage_type in ["Gross Sales", "Net Sales"]:
+   646→                                base_amount = self.gross_sales if expense.percentage_type == "Gross Sales" else self.net_sales
+   647→                                amount = flt(expense.percent * base_amount / 100, 2)
+   648→                                if self.net_sales != 0.0:
+   649→                                        expense_percent = flt((amount / self.net_sales) * 100, 3)
+   650→                                else:
+   651→                                        expense_percent = 0.0
+   652→                                self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": amount ,"percent":expense_percent})
+   653→                                self.total_indirect_expenses += flt(amount)
+   654→
+   655→                # OTHER EXPENSES
+   656→                self.total_other_expenses = 0.0
+   657→                for expense in self.other_expenses:
+   658→                        self.total_indirect_expenses += flt(expense.amount)
+   659→                        self.total_other_expenses += flt(expense.amount)
+   660→
+   661→                self.depreciation = report_settings.depreciation
+   662→                
+   663→                self.total_indirect_expenses = flt(self.total_indirect_expenses) + flt(self.depreciation)
+   664→
+   665→                # NET PROFIT
+   666→                self.net_profit = flt(self.gross_profit - self.total_indirect_expenses, 2)
+   667→
+   668→                if self.net_sales != 0.0:
+   669→                        self.other_expenses_percent = flt((self.total_other_expenses / self.net_sales) * 100, 3)
+   670→                        self.depreciation_percent = flt((self.depreciation / self.net_sales) * 100, 3)
+   671→                        self.total_indirect_expenses_percent = flt((self.total_indirect_expenses / self.net_sales) * 100, 2)
+   672→                        self.net_profit_percent = flt((self.net_profit / self.net_sales) * 100, 2)
+   673→        
+   674→        @frappe.whitelist()
+   675→        def get_profit_loss_details(self):
+   676→                frappe.only_for("Restaurant Manager", "Accounts Manager")
+   677→                currency = frappe.db.get_value("Company", self.company, "default_currency") or "INR"
+   678→                return frappe.render_template(
+   679→                        "ury/doctype/ury_daily_p_and_l/profit_loss_details.html",
+   680→                        {"data": self, "currency": currency},
+   681→                )
