@@ -9,24 +9,28 @@ interface AggregatorSelectProps {
 }
 
 export function AggregatorSelect({ disabled }: AggregatorSelectProps) {
-  const { selectedAggregator, setSelectedAggregator, fetchAggregatorMenu } = usePOSStore();
+  const selectedAggregator = usePOSStore((s) => s.selectedAggregator);
+  const setSelectedAggregator = usePOSStore((s) => s.setSelectedAggregator);
+  const fetchAggregatorMenu = usePOSStore((s) => s.fetchAggregatorMenu);
   const [aggregators, setAggregators] = useState<Aggregator[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchAggregatorsList = async () => {
       setLoading(true);
       try {
         const data = await getAggregators();
-        setAggregators(data);
+        if (!cancelled) setAggregators(data);
       } catch (error) {
-        if (import.meta.env.DEV) console.error('Failed to fetch aggregators:', error);
+        if (!cancelled && import.meta.env.DEV) console.error('Failed to fetch aggregators:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchAggregatorsList();
+    return () => { cancelled = true; };
   }, []);
 
   const handleAggregatorChange = async (value: string) => {

@@ -16,7 +16,8 @@ const OrderStatusSidebar = ({
   selectedStatus,
   setSelectedStatus,
 }: OrderStatusSidebarProps) => {
-  const { posProfile } = usePOSStore();
+  // R41-FIX: Use individual Zustand selector instead of usePOSStore()
+  const posProfile = usePOSStore((s) => s.posProfile);
   
   // Get the appropriate status types based on POS profile settings
   const statusTypes = getOrderStatusTypes(posProfile?.view_all_status, posProfile?.paid_limit);

@@ -26,7 +26,12 @@ function NewCustomerForm({
   prefillName?: string;
   prefillPhone?: string;
 }) {
-  const { customerGroups, territories, fetchCustomerGroups, fetchTerritories, setSelectedCustomer } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore()
+  const customerGroups = usePOSStore((s) => s.customerGroups);
+  const territories = usePOSStore((s) => s.territories);
+  const fetchCustomerGroups = usePOSStore((s) => s.fetchCustomerGroups);
+  const fetchTerritories = usePOSStore((s) => s.fetchTerritories);
+  const setSelectedCustomer = usePOSStore((s) => s.setSelectedCustomer);
   const [newCustomerName, setNewCustomerName] = React.useState('');
   const [newCustomerPhone, setNewCustomerPhone] = React.useState('');
   const [newCustomerGroup, setNewCustomerGroup] = React.useState("");
@@ -224,7 +229,11 @@ interface CustomerSelectProps {
 }
 
 export function CustomerSelect({ disabled }: CustomerSelectProps) {
-  const { selectedCustomer, setSelectedCustomer, selectedOrderType, isUpdatingOrder } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore()
+  const selectedCustomer = usePOSStore((s) => s.selectedCustomer);
+  const setSelectedCustomer = usePOSStore((s) => s.setSelectedCustomer);
+  const selectedOrderType = usePOSStore((s) => s.selectedOrderType);
+  const isUpdatingOrder = usePOSStore((s) => s.isUpdatingOrder);
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -247,18 +256,26 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
     }
     setIsSearching(true);
     setSearchError(null);
+    let cancelled = false;
     const handler = setTimeout(() => {
       searchCustomers(searchTerm)
         .then(results => {
-          setSearchResults(results);
-          setIsSearching(false);
+          if (!cancelled) {
+            setSearchResults(results);
+            setIsSearching(false);
+          }
         })
         .catch(() => {
-          setSearchError(t('customer.failed_search'));
-          setIsSearching(false);
+          if (!cancelled) {
+            setSearchError(t('customer.failed_search'));
+            setIsSearching(false);
+          }
         });
     }, 300);
-    return () => clearTimeout(handler);
+    return () => {
+      cancelled = true;
+      clearTimeout(handler);
+    };
   }, [searchTerm, isOpen]);
 
   // Handle keyboard navigation

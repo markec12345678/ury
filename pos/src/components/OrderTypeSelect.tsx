@@ -14,8 +14,13 @@ interface OrderTypeSelectProps {
 }
 
 const OrderTypeSelect = ({ disabled }: OrderTypeSelectProps) => {
-  const { selectedOrderType, setSelectedOrderType, selectedTable, posProfile, isUpdatingOrder } = usePOSStore();
-  const { user } = useRootStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore()
+  const selectedOrderType = usePOSStore((s) => s.selectedOrderType);
+  const setSelectedOrderType = usePOSStore((s) => s.setSelectedOrderType);
+  const selectedTable = usePOSStore((s) => s.selectedTable);
+  const posProfile = usePOSStore((s) => s.posProfile);
+  const isUpdatingOrder = usePOSStore((s) => s.isUpdatingOrder);
+  const user = useRootStore((s) => s.user);
   const [showTableDialog, setShowTableDialog] = useState(false);
 
   // Check if user is restricted from table orders

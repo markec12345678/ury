@@ -15,7 +15,10 @@ interface Props {
 }
 
 const TableSelectionDialog: React.FC<Props> = ({ onClose }) => {
-  const { selectedTable, setSelectedTable, posProfile } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore()
+  const selectedTable = usePOSStore((s) => s.selectedTable);
+  const setSelectedTable = usePOSStore((s) => s.setSelectedTable);
+  const posProfile = usePOSStore((s) => s.posProfile);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [tablesCache, setTablesCache] = useState<Record<string, Table[]>>({});

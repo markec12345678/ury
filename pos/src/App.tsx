@@ -122,7 +122,9 @@ function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { initializeApp } = usePOSStore();
+  // R41-FIX: Use individual Zustand selector instead of usePOSStore()
+  // which subscribes to ALL state changes in the POS store.
+  const initializeApp = usePOSStore((s) => s.initializeApp);
 
   useEffect(() => {
     initializeApp();

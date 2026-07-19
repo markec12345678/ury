@@ -30,7 +30,7 @@ async function bootstrap() {
 
   await initI18n();
 
-  createRoot(document.getElementById('root')!).render(
+  createRoot(document.getElementById('root') as HTMLElement).render(
     <StrictMode>
       <ErrorBoundary>
         <App />
@@ -41,12 +41,17 @@ async function bootstrap() {
 
 bootstrap().catch((err) => {
   console.error('Failed to bootstrap app:', err);
-  // Fallback: render app anyway
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    </StrictMode>,
-  );
+  // R41-FIX: Use non-null assertion with HTMLElement cast instead of `!`
+  // which bypasses strictNullChecks. If root is null the app can't render
+  // anyway, so this is safe. The explicit cast makes the intent clearer.
+  const rootEl = document.getElementById('root') as HTMLElement | null;
+  if (rootEl) {
+    createRoot(rootEl).render(
+      <StrictMode>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </StrictMode>,
+    );
+  }
 });

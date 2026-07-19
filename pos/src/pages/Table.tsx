@@ -21,7 +21,10 @@ const sortTables = (tables: Table[]) => [...tables].sort((a, b) => a.name.locale
 
 const TableView = () => {
   const navigate = useNavigate();
-  const { posProfile, setSelectedTable, setSelectedOrderType } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore()
+  const posProfile = usePOSStore((s) => s.posProfile);
+  const setSelectedTable = usePOSStore((s) => s.setSelectedTable);
+  const setSelectedOrderType = usePOSStore((s) => s.setSelectedOrderType);
 
   const branch = posProfile?.branch ?? null;
   const [rooms, setRooms] = useState<Room[]>([]);

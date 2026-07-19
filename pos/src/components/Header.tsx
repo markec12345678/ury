@@ -15,8 +15,10 @@ const Header = () => {
   const user = useRootStore((state: RootState) => state.user);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
-  const { searchQuery, setSearchQuery } = usePOSStore();
-  const { orderSearchQuery, setOrderSearchQuery } = useRootStore();
+  const searchQuery = usePOSStore((s) => s.searchQuery);
+  const setSearchQuery = usePOSStore((s) => s.setSearchQuery);
+  const orderSearchQuery = useRootStore((s) => s.orderSearchQuery);
+  const setOrderSearchQuery = useRootStore((s) => s.setOrderSearchQuery);
   const [orderSearchInput, setOrderSearchInput] = useState(orderSearchQuery);
 
   // Determine placeholder and handlers based on route
@@ -88,10 +90,29 @@ const Header = () => {
   };
 
   const handleClearCache = () => {
-    // Clear all local storage
-    localStorage.clear();
-    // Clear all session storage
-    sessionStorage.clear();
+    // R41-FIX: Only clear POS-specific storage keys instead of wiping ALL
+    // localStorage/sessionStorage. Previously localStorage.clear() and
+    // sessionStorage.clear() would remove data from other apps sharing the
+    // same origin (e.g. Frappe desk, other SPA installs), breaking them.
+    const POS_LS_PREFIXES = ['pos_profile', 'currency', 'currencySymbol', 'ury_'];
+    const POS_SS_PREFIXES = ['posProfile', 'menuCategories', 'customerGroups', 'territories', 'ury_rooms_', 'ury_room_counts_'];
+
+    // Clear localStorage POS keys
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && POS_LS_PREFIXES.some((p) => key.startsWith(p))) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    // Clear sessionStorage POS keys
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const key = sessionStorage.key(i);
+      if (key && POS_SS_PREFIXES.some((p) => key.startsWith(p))) {
+        sessionStorage.removeItem(key);
+      }
+    }
+
     // Reload the page
     window.location.reload();
   };

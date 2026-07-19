@@ -10,17 +10,17 @@ interface MenuListProps {
 }
 
 const MenuList: React.FC<MenuListProps> = ({ onItemClick }) => {
-  const {
-    menuItems,
-    menuLoading,
-    error,
-    selectedCategory,
-    searchQuery,
-    quickFilter,
-    fetchMenuItems,
-    isMenuInteractionDisabled,
-    isOrderInteractionDisabled
-  } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore() which
+  // subscribes to ALL state changes (cart, customer, search, etc.).
+  const menuItems = usePOSStore((s) => s.menuItems);
+  const menuLoading = usePOSStore((s) => s.menuLoading);
+  const error = usePOSStore((s) => s.error);
+  const selectedCategory = usePOSStore((s) => s.selectedCategory);
+  const searchQuery = usePOSStore((s) => s.searchQuery);
+  const quickFilter = usePOSStore((s) => s.quickFilter);
+  const fetchMenuItems = usePOSStore((s) => s.fetchMenuItems);
+  const isMenuInteractionDisabled = usePOSStore((s) => s.isMenuInteractionDisabled);
+  const isOrderInteractionDisabled = usePOSStore((s) => s.isOrderInteractionDisabled);
 
   useEffect(() => {
     fetchMenuItems();

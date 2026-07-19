@@ -16,7 +16,8 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const { posProfile } = usePOSStore();
+  // R41-FIX: Use individual Zustand selector instead of usePOSStore()
+  const posProfile = usePOSStore((s) => s.posProfile);
 
   const handleReload = () => {
     window.location.reload();

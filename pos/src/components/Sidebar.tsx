@@ -10,7 +10,11 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ disabled }: SidebarProps) => {
-  const { selectedCategory, setSelectedCategory, menuItems, categories } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore()
+  const selectedCategory = usePOSStore((s) => s.selectedCategory);
+  const setSelectedCategory = usePOSStore((s) => s.setSelectedCategory);
+  const menuItems = usePOSStore((s) => s.menuItems);
+  const categories = usePOSStore((s) => s.categories);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};

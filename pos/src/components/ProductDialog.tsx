@@ -54,15 +54,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
   initialQuantity,
   itemToReplace
 }) => {
-  const { 
-    selectedItem, 
-    addToOrder, 
-    removeFromOrder, 
-    setSelectedItem, 
-    getItemQuantityFromCart,
-    activeOrders,
-    menuItems
-  } = usePOSStore();
+  const selectedItem = usePOSStore((s) => s.selectedItem);
+  const addToOrder = usePOSStore((s) => s.addToOrder);
+  const removeFromOrder = usePOSStore((s) => s.removeFromOrder);
+  const setSelectedItem = usePOSStore((s) => s.setSelectedItem);
+  const getItemQuantityFromCart = usePOSStore((s) => s.getItemQuantityFromCart);
+  const activeOrders = usePOSStore((s) => s.activeOrders);
+  const menuItems = usePOSStore((s) => s.menuItems);
   
   // Find existing item in cart
   const existingCartItem = selectedItem ? activeOrders.find(
@@ -249,7 +247,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     }
   };
 
-  const handleAddToOrder = () => {
+  const handleAddToOrder = async () => {
+    // R41-FIX: Wrap async body in try/catch so that unhandled promise
+    // rejections from addToOrder or removeFromOrder don't crash the dialog.
+    // Previously the function was async but had no outer try/catch, so any
+    // unexpected error (e.g. network failure during cart update) would
+    // propagate as an unhandled promise rejection.
     const numericQuantity = typeof quantity === 'string' ? parseInt(quantity, 10) : quantity;
     if (isNaN(numericQuantity) || numericQuantity === 0) {
       return; // Don't add to order if quantity is 0 or invalid
@@ -288,7 +291,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     // are handled before closing the dialog. Previously addToOrder was not
     // awaited, so the dialog closed immediately even if the add operation
     // failed, losing the user's quantity/addon selections.
-    await addToOrder(orderItem);
+    try {
+      await addToOrder(orderItem);
+    } catch {
+      // addToOrder sets its own error state in the store;
+      // don't close the dialog so the user can retry or adjust.
+      return;
+    }
 
     handleClose();
   };

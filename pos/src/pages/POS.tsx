@@ -36,16 +36,15 @@ const QuickFilterButton = ({ filter, icon: Icon, label, isActive, isDisabled, on
 );
 
 export default function POS() {
-  const {
-    quickFilter,
-    setQuickFilter,
-    setSelectedItem,
-    addToOrder,
-    loading,
-    error,
-    isMenuInteractionDisabled,
-    isInitializing,
-  } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore()
+  const quickFilter = usePOSStore((s) => s.quickFilter);
+  const setQuickFilter = usePOSStore((s) => s.setQuickFilter);
+  const setSelectedItem = usePOSStore((s) => s.setSelectedItem);
+  const addToOrder = usePOSStore((s) => s.addToOrder);
+  const loading = usePOSStore((s) => s.loading);
+  const error = usePOSStore((s) => s.error);
+  const isMenuInteractionDisabled = usePOSStore((s) => s.isMenuInteractionDisabled);
+  const isInitializing = usePOSStore((s) => s.isInitializing);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);

@@ -10,17 +10,16 @@ interface Props {
 }
 
 const AuthGuard: React.FC<Props> = ({ children }) => {
-  const { 
-    checkAuth, 
-    user, 
-    authLoading, 
-    authError,
-    fetchPosProfile,
-    posProfile,
-    configLoading,
-    configError,
-    hasAccess,
-  } = useRootStore();
+  // R41-FIX: Use individual Zustand selectors instead of useRootStore()
+  const checkAuth = useRootStore((s) => s.checkAuth);
+  const user = useRootStore((s) => s.user);
+  const authLoading = useRootStore((s) => s.authLoading);
+  const authError = useRootStore((s) => s.authError);
+  const fetchPosProfile = useRootStore((s) => s.fetchPosProfile);
+  const posProfile = useRootStore((s) => s.posProfile);
+  const configLoading = useRootStore((s) => s.configLoading);
+  const configError = useRootStore((s) => s.configError);
+  const hasAccess = useRootStore((s) => s.hasAccess);
 
   // State to track if we're rechecking permissions
   const [isRechecking, setIsRechecking] = useState(false);

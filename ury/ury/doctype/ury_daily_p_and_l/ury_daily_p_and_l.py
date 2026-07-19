@@ -441,18 +441,18 @@ class URYDailyPandL(Document):
                         else:
                                 self.gross_sales = gross_sales_all["Grand Total"]
 
-                        self.cash_discount_round_off = round((gross_sales_all["Round Off"] + gross_sales_all["Cash Discounts"]),2)
+                        self.cash_discount_round_off = flt(gross_sales_all["Round Off"] + gross_sales_all["Cash Discounts"], 2)
                         self.tax = gross_sales_all["Tax"]
                         self.net_sales = self.gross_sales - self.cash_discount_round_off - self.tax
 
                 if self.net_sales == 0.0:
                         self.gross_sales_percent = self.cash_discount_round_off_percent = self.tax_percent = self.cogs_percent = self.total_direct_expenses_percent = self.gross_profit_percent = self.total_employee_costs_percent = self.other_expenses_percent = self.depreciation_percent = self.total_indirect_expenses_percent = self.net_profit_percent = 0.0
                 else:
-                        self.gross_sales_percent = round(((self.gross_sales / self.net_sales) * 100),2)
-                        self.cash_discount_round_off_percent = round(((self.cash_discount_round_off / self.net_sales) * 100),2)
-                        self.tax_percent = round(((self.tax / self.net_sales) * 100),2)
+                        self.gross_sales_percent = flt((self.gross_sales / self.net_sales) * 100, 2)
+                        self.cash_discount_round_off_percent = flt((self.cash_discount_round_off / self.net_sales) * 100, 2)
+                        self.tax_percent = flt((self.tax / self.net_sales) * 100, 2)
 
-                        self.cogs_percent = round(((self.cogs / self.net_sales) * 100),2)
+                        self.cogs_percent = flt((self.cogs / self.net_sales) * 100, 2)
 
                 self.net_sales_percent = 100.0
 
@@ -476,8 +476,8 @@ class URYDailyPandL(Document):
                 self.gross_profit = self.net_sales - self.total_direct_expenses - self.cogs
                 
                 if self.net_sales != 0.0:               
-                        self.total_direct_expenses_percent = round(((self.total_direct_expenses / self.net_sales) * 100),2)
-                        self.gross_profit_percent = round(((self.gross_profit / self.net_sales) * 100),2)
+                        self.total_direct_expenses_percent = flt((self.total_direct_expenses / self.net_sales) * 100, 2)
+                        self.gross_profit_percent = flt((self.gross_profit / self.net_sales) * 100, 2)
 
 
                 '''INDIRECT EXPENSES'''
@@ -547,9 +547,9 @@ class URYDailyPandL(Document):
 
                 for attendance in employee_attendance_dw_list:
                         if attendance["Status"] == "Half Day":
-                                salary_cost_gross = round((salary_cost_gross + 0.5 * attendance["Salary"]),2)
+                                salary_cost_gross = flt(salary_cost_gross + 0.5 * attendance["Salary"], 2)
                         if attendance["Status"] == "Present":
-                                salary_cost_gross = round((salary_cost_gross + attendance["Salary"]),2)
+                                salary_cost_gross = flt(salary_cost_gross + attendance["Salary"], 2)
 
                 date_str =  self.date
                 date_obj = datetime.strptime(date_str, '%Y-%m-%d')
@@ -569,10 +569,10 @@ class URYDailyPandL(Document):
                 ''', {"branch": self.branch, "date": self.date}, as_dict=True)
 
                 for attendance in employee_attendance_sl_list:
-                        salary_cost_gross = round((salary_cost_gross + attendance["Salary"]/days),2)
+                        salary_cost_gross = flt(salary_cost_gross + attendance["Salary"]/days, 2)
 
                 if self.net_sales != 0.0:
-                        salary_cost_gross_percent = round(((salary_cost_gross / self.net_sales) * 100),3)
+                        salary_cost_gross_percent = flt((salary_cost_gross / self.net_sales) * 100, 3)
                 else:
                         salary_cost_gross_percent = 0.0
                 self.append("employee_costs_breakup", {"breakup": "Salary Cost Gross", "amount": salary_cost_gross,"percent":salary_cost_gross_percent})
@@ -580,13 +580,13 @@ class URYDailyPandL(Document):
 
                 for expense in report_settings.employee_costs:
                         if self.net_sales != 0.0:
-                                expense_percent = round(((expense.amount / self.net_sales) * 100),3)
+                                expense_percent = flt((expense.amount / self.net_sales) * 100, 3)
                         else:
                                 expense_percent = 0.0
                         self.append("employee_costs_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
                         self.total_employee_costs += expense.amount
                 if self.net_sales != 0.0:
-                        self.total_employee_costs_percent = round(((self.total_employee_costs / self.net_sales) * 100),3)
+                        self.total_employee_costs_percent = flt((self.total_employee_costs / self.net_sales) * 100, 3)
                 self.total_indirect_expenses += self.total_employee_costs
 
                 #INDIRECT EXPENSES
@@ -594,7 +594,7 @@ class URYDailyPandL(Document):
                 # Calculate and append Electricity
                 electricity_charges = electricity_reading * report_settings.electricity_charges
                 if self.net_sales != 0.0:
-                        electricity_percent = round(((electricity_charges / self.net_sales) * 100),3)
+                        electricity_percent = flt((electricity_charges / self.net_sales) * 100, 3)
                 else:
                         electricity_percent = 0.0
                 self.append("indirect_expenses_breakup", {"breakup": "Electricity", "amount": electricity_charges,"percent":electricity_percent})
@@ -603,7 +603,7 @@ class URYDailyPandL(Document):
                 # Append indirect fixed expenses
                 for expense in report_settings.indirect_fixed_expenses:
                         if self.net_sales != 0.0:
-                                expense_percent = round(((expense.amount / self.net_sales) * 100),3)
+                                expense_percent = flt((expense.amount / self.net_sales) * 100, 3)
                         else:
                                 expense_percent = 0.0
                         self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense.amount,"percent":expense_percent})
@@ -611,9 +611,9 @@ class URYDailyPandL(Document):
 
                 # Append indirect monthly fixed expenses
                 for expense in report_settings.monthly_fixed_expenses:
-                        expense_amount = round((expense.amount/days),2)
+                        expense_amount = flt(expense.amount/days, 2)
                         if self.net_sales != 0.0:
-                                expense_percent = round(((expense_amount / self.net_sales) * 100),3)
+                                expense_percent = flt((expense_amount / self.net_sales) * 100, 3)
                         else:
                                 expense_percent = 0.0
                         self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": expense_amount,"percent":expense_percent})
@@ -623,9 +623,9 @@ class URYDailyPandL(Document):
                 for expense in report_settings.percentage_expenses:
                         if expense.percentage_type in ["Gross Sales", "Net Sales"]:
                                 base_amount = self.gross_sales if expense.percentage_type == "Gross Sales" else self.net_sales
-                                amount = round((expense.percent * base_amount) / 100, 2)
+                                amount = flt(expense.percent * base_amount / 100, 2)
                                 if self.net_sales != 0.0:
-                                        expense_percent = round(((amount / self.net_sales) * 100),3)
+                                        expense_percent = flt((amount / self.net_sales) * 100, 3)
                                 else:
                                         expense_percent = 0.0
                                 self.append("indirect_expenses_breakup", {"breakup": expense.expense, "amount": amount ,"percent":expense_percent})
@@ -645,10 +645,10 @@ class URYDailyPandL(Document):
                 self.net_profit = self.gross_profit - self.total_indirect_expenses
 
                 if self.net_sales != 0.0:
-                        self.other_expenses_percent = round(((self.total_other_expenses / self.net_sales) * 100),3)
-                        self.depreciation_percent = round(((self.depreciation / self.net_sales) * 100),3)
-                        self.total_indirect_expenses_percent = round(((self.total_indirect_expenses / self.net_sales) * 100),2)
-                        self.net_profit_percent = round(((self.net_profit / self.net_sales) * 100),2)
+                        self.other_expenses_percent = flt((self.total_other_expenses / self.net_sales) * 100, 3)
+                        self.depreciation_percent = flt((self.depreciation / self.net_sales) * 100, 3)
+                        self.total_indirect_expenses_percent = flt((self.total_indirect_expenses / self.net_sales) * 100, 2)
+                        self.net_profit_percent = flt((self.net_profit / self.net_sales) * 100, 2)
         
         @frappe.whitelist()
         def get_profit_loss_details(self):

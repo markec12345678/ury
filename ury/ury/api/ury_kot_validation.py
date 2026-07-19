@@ -56,6 +56,13 @@ def get_unprocessed_invoices(start_time, end_time):
 
 def process_invoice(invoice):
     posInvoice = frappe.get_doc("POS Invoice", invoice.name)
+    # R41-FIX: Validate invoice has a branch before creating KOTs
+    if not posInvoice.branch:
+        frappe.log_error(
+            f"POS Invoice {invoice.name} has no branch set — skipping KOT creation",
+            "URY KOT Validation Warning"
+        )
+        return
     waiter = posInvoice.waiter
     kot_naming_series = frappe.db.get_value("POS Profile", posInvoice.pos_profile, "custom_kot_naming_series")
 

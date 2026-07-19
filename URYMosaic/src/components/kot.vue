@@ -226,12 +226,16 @@ let url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
 // R37-REMOVED: module-level siteName and alertAudio — siteName was shared mutable state (race condition risk),
 // alertAudio was unused after R36 moved to instance-level this._alertAudio
 
+// R41-FIX: Add cancel() method to debounce return value so pending timers
+// can be cleaned up on component unmount, preventing post-unmount masonry calls.
 function debounce(fn, delay) {
     let timer = null;
-    return function(...args) {
+    const debounced = function(...args) {
         clearTimeout(timer);
         timer = setTimeout(() => fn.apply(this, args), delay);
     };
+    debounced.cancel = () => { clearTimeout(timer); timer = null; };
+    return debounced;
 }
 
 // R37-FIX: fetchAndSetSiteName now returns siteName instead of mutating module-level state
@@ -417,9 +421,15 @@ export default {
       kot.isRotated = !kot.isRotated;
     },
     confirmOrder(kot) {
+      // R41-FIX: Prevent duplicate concurrent requests for the same KOT.
+      // Without this, rapid clicks send multiple POST requests, the second
+      // of which may error (already processed) and misleadingly show
+      // "Action failed" even though the first succeeded.
+      if (this._inflightOps && this._inflightOps.has(kot.name)) return;
       // R40-FIX: Clear pending cancel timeout — the user has already confirmed,
       // so the scheduled re-fetch would be redundant and wasteful.
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+      this._markInflight(kot.name);
       this.call
         .post("ury.ury.api.ury_kot_display.confirm_cancel_kot", {
           name: kot.name,
@@ -437,12 +447,16 @@ export default {
         .catch((error) => {
           this.setStatusMessage("Action failed. Please try again.");
           this.hideStatusMessageAfterDelay();
-        });
+        })
+        .finally(() => { this._clearInflight(kot.name); });
     },
     serveOrder(kot) {
+      // R41-FIX: Prevent duplicate concurrent requests for the same KOT.
+      if (this._inflightOps && this._inflightOps.has(kot.name)) return;
       // R40-FIX: Clear pending cancel timeout — the user has already served,
       // so the scheduled re-fetch would be redundant and wasteful.
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+      this._markInflight(kot.name);
       this.call
         .post("ury.ury.api.ury_kot_display.serve_kot", {
           name: kot.name,
@@ -460,7 +474,8 @@ export default {
         .catch(() => {
           this.setStatusMessage("Action failed. Please try again.");
           this.hideStatusMessageAfterDelay();
-        });
+        })
+        .finally(() => { this._clearInflight(kot.name); });
     },
 
     orderDelayNotify(kot) {
@@ -651,6 +666,11 @@ export default {
     // Without this, a transient server error leaves the KDS showing stale
     // data indefinitely — the only recovery was a manual page reload.
     fetchKOTWithRetry(maxRetries = 3, initialDelay = 2000) {
+      // R41-FIX: Clear any pending retry timer before starting a new retry chain.
+      // Without this, calling fetchKOTWithRetry() while a previous retry timer is
+      // pending would leave the old timer running, potentially causing duplicate
+      // fetchKOT calls when both timers fire.
+      if (this._fetchRetryTimer) { clearTimeout(this._fetchRetryTimer); this._fetchRetryTimer = null; }
       const attempt = (retriesLeft, delay) => {
         return this.fetchKOT().catch(err => {
           if (retriesLeft <= 0 || !this._isMounted) throw err;
@@ -707,8 +727,25 @@ export default {
         this._masonry.layout();
       });
     },
+    // R41-FIX: In-flight operation tracking for serveOrder/confirmOrder.
+    // Prevents duplicate POST requests when the user clicks rapidly.
+    _markInflight(kotName) {
+      if (!this._inflightOps) this._inflightOps = new Set();
+      this._inflightOps.add(kotName);
+    },
+    _clearInflight(kotName) {
+      if (this._inflightOps) this._inflightOps.delete(kotName);
+    },
     hideAudioAlertMessage() {
       this.showAudioAlertMessage = false;
+      // R41-FIX: Re-attempt audio playback on user click.
+      // Browser autoplay policy blocks audio until a user gesture.
+      // The alert message says "Click anywhere to enable" — this click
+      // IS that gesture. Attempt to replay the last alert sound so the
+      // user gets immediate feedback that audio is now working.
+      if (this._alertAudio && this._alertAudio.paused) {
+        this._alertAudio.play().catch(() => {});
+      }
     },
     handleOnline() {
       // R37-FIX: Guard against post-unmount execution
@@ -769,6 +806,8 @@ export default {
     this._debouncedMasonryLayout = debounce(() => { this.masonryLoading(); }, 100);
     // R40-FIX: Recursion guard for errorCaptured
     this._errorCapturedRecovering = false;
+    // R41-FIX: In-flight operation set for serveOrder/confirmOrder dedup
+    this._inflightOps = new Set();
   },
   mounted() {
     this._isMounted = true;
@@ -885,46 +924,57 @@ export default {
             // localStorage value as a signal to do a full refresh.
             let kottime = localStorage.getItem("kot_time_" + this.production);
             if (doc.last_kot_time !== kottime || kottime === null) {
-              // Full refresh needed — skip intermediate mutations
-              this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
-            } else {
-              // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
-              if (!doc.kot) {
-                this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
-                return;
-              }
-              // Incremental update — deduplicate to avoid duplicate cards
-              const existingIndex = this.kot.findIndex(k => k.name === doc.kot.name);
-              if (existingIndex !== -1) {
-                // R36-FIX: Preserve strikethrough state before Object.assign overwrites kot_items
-                const strikeMap = new Map(
-                  (this.kot[existingIndex].kot_items || []).map(i => [i.name, i.striked])
-                );
-                Object.assign(this.kot[existingIndex], { timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot });
-                // Restore strikethrough state after Object.assign
-                if (this.kot[existingIndex].kot_items) {
-                  this.kot[existingIndex].kot_items.forEach(i => {
-                    if (strikeMap.has(i.name)) i.striked = strikeMap.get(i.name);
-                  });
+              // R41-FIX: Full refresh needed — use return to prevent fall-through to
+              // the incremental-path logic below (cancel timeout + localStorage write).
+              // Previously, lines 922-941 ran after BOTH branches, causing:
+              // 1. A redundant re-fetch 1.5s after the full refresh (via _cancelTimeout)
+              // 2. Potentially storing null-ish doc.kot.time into localStorage
+              // Update localStorage sentinel if doc.kot.time is valid, then return.
+              if (doc.kot && doc.kot.time != null) {
+                try {
+                  localStorage.setItem("kot_time_" + this.production, doc.kot.time);
+                } catch (e) {
+                  if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
                 }
-                // R37-FIX: Invalidate sorted cache for this KOT since items may have changed
-                this._sortedItemsCache.delete(doc.kot.name);
-              } else {
-                // R39-FIX: Removed showDiv: false — dead code
-                const newKot = { isRotated: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
-                this.kot.unshift(newKot);
               }
-              this.updateQtyColorTable();
-              this.updateTimeRemaining();
-              // R40-FIX: Use debounced masonry layout for rapid socket events
-              this._debouncedMasonryLayout();
+              this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
+              return;
             }
+            // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
+            if (!doc.kot) {
+              this.fetchKOT().then(() => { this.masonryLoading(); }).catch((e) => { console.error("KOT fetch failed:", e); });
+              return;
+            }
+            // Incremental update — deduplicate to avoid duplicate cards
+            const existingIndex = this.kot.findIndex(k => k.name === doc.kot.name);
+            if (existingIndex !== -1) {
+              // R36-FIX: Preserve strikethrough state before Object.assign overwrites kot_items
+              const strikeMap = new Map(
+                (this.kot[existingIndex].kot_items || []).map(i => [i.name, i.striked])
+              );
+              Object.assign(this.kot[existingIndex], { timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot });
+              // Restore strikethrough state after Object.assign
+              if (this.kot[existingIndex].kot_items) {
+                this.kot[existingIndex].kot_items.forEach(i => {
+                  if (strikeMap.has(i.name)) i.striked = strikeMap.get(i.name);
+                });
+              }
+              // R37-FIX: Invalidate sorted cache for this KOT since items may have changed
+              this._sortedItemsCache.delete(doc.kot.name);
+            } else {
+              // R39-FIX: Removed showDiv: false — dead code
+              const newKot = { isRotated: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
+              this.kot.unshift(newKot);
+            }
+            this.updateQtyColorTable();
+            this.updateTimeRemaining();
+            // R40-FIX: Use debounced masonry layout for rapid socket events
+            this._debouncedMasonryLayout();
+            // R41-FIX: Cancel timeout and localStorage write are now ONLY in the incremental path.
+            // Previously these ran after both full-refresh and incremental branches.
             if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
             // R39-FIX: Only schedule cancel re-fetch if the KOT is actually a cancellation.
-            // Previously, _cancelTimeout was set for ALL socket events, causing an
-            // unnecessary re-fetch 1.5s after every non-cancel update. Now we only
-            // set the timeout when doc.kot.type is "Cancelled", matching the check inside.
-            if (doc.kot && doc.kot.type === "Cancelled") {
+            if (doc.kot.type === "Cancelled") {
               this._cancelTimeout = setTimeout(() => {
                 if (!this._isMounted) return;
                 this.fetchKOT().then(() => {
@@ -932,7 +982,10 @@ export default {
                 }).catch((e) => { console.error("KOT fetch failed:", e); });
               }, 1500);
             }
-            if (doc.kot) {
+            // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
+            // in localStorage. These corrupted sentinel values would cause the
+            // next socket event to always take the full-refresh path.
+            if (doc.kot.time != null) {
               try {
                 localStorage.setItem("kot_time_" + this.production, doc.kot.time);
               } catch (e) {
@@ -974,6 +1027,11 @@ export default {
     if (this._statusTimeout) clearTimeout(this._statusTimeout);
     if (this._socketRetryTimer) clearTimeout(this._socketRetryTimer);
     if (this._fetchRetryTimer) clearTimeout(this._fetchRetryTimer);
+    // R41-FIX: Cancel pending debounced masonry calls on unmount.
+    // Without this, a debounced masonryLayout could fire after unmount,
+    // attempting DOM operations on a detached element tree.
+    if (this._debouncedMasonryLayout) this._debouncedMasonryLayout.cancel();
+    if (this._resizeHandler) this._resizeHandler.cancel?.();
     if (this.timer) clearInterval(this.timer);
     if (this._alertAudio) { this._alertAudio.pause(); this._alertAudio = null; }
     // R39-FIX: Destroy non-reactive masonry instance on unmount

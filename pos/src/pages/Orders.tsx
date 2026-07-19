@@ -18,25 +18,24 @@ import { call } from '../lib/frappe-sdk-retry';
 import { t } from '../i18n';
 
 export default function Orders() {
-  const { 
-    orders,
-    orderLoading,
-    error,
-    selectedStatus,
-    pagination,
-    selectedOrder,
-    selectedOrderItems,
-    selectedOrderTaxes,
-    selectedOrderLoading,
-    selectedOrderError,
-    fetchOrders,
-    setSelectedStatus,
-    goToNextPage,
-    goToPreviousPage,
-    selectOrder,
-    clearSelectedOrder,
-    orderSearchQuery
-  } = useRootStore();
+  // R41-FIX: Use individual Zustand selectors instead of useRootStore()
+  const orders = useRootStore((s) => s.orders);
+  const orderLoading = useRootStore((s) => s.orderLoading);
+  const error = useRootStore((s) => s.error);
+  const selectedStatus = useRootStore((s) => s.selectedStatus);
+  const pagination = useRootStore((s) => s.pagination);
+  const selectedOrder = useRootStore((s) => s.selectedOrder);
+  const selectedOrderItems = useRootStore((s) => s.selectedOrderItems);
+  const selectedOrderTaxes = useRootStore((s) => s.selectedOrderTaxes);
+  const selectedOrderLoading = useRootStore((s) => s.selectedOrderLoading);
+  const selectedOrderError = useRootStore((s) => s.selectedOrderError);
+  const fetchOrders = useRootStore((s) => s.fetchOrders);
+  const setSelectedStatus = useRootStore((s) => s.setSelectedStatus);
+  const goToNextPage = useRootStore((s) => s.goToNextPage);
+  const goToPreviousPage = useRootStore((s) => s.goToPreviousPage);
+  const selectOrder = useRootStore((s) => s.selectOrder);
+  const clearSelectedOrder = useRootStore((s) => s.clearSelectedOrder);
+  const orderSearchQuery = useRootStore((s) => s.orderSearchQuery);
 
   // R40-FIX: Use individual Zustand selectors instead of usePOSStore() which
   // subscribes to ALL state changes in the POS store (menu items, cart, search,

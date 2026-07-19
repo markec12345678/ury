@@ -43,7 +43,7 @@ def serve_kot(name):
 def confirm_cancel_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
     # R39-FIX: Validate KOT exists and belongs to user's branch
-    kot_data = frappe.db.get_value("URY KOT", name, "branch", as_dict=True)
+    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "type"], as_dict=True)
     if not kot_data:
         frappe.throw(_("KOT {0} not found").format(name))
     kot_branch = kot_data.branch
@@ -57,6 +57,9 @@ def confirm_cancel_kot(name):
         frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(name), frappe.PermissionError)
     if kot_branch != user_branch:
         frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
+    # R41-FIX: Only allow verification on Cancelled or Partially cancelled KOTs
+    if kot_data.type not in ("Cancelled", "Partially cancelled"):
+        frappe.throw(_("Only cancelled KOTs can be verified"), frappe.ValidationError)
     # Use server-side identity instead of client-supplied user parameter
     verified_by = frappe.session.user
     frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by})

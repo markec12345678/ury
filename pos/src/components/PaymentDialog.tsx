@@ -37,7 +37,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   fetchOrders,
   clearSelectedOrder
 }) => {
-  const { paymentModes, fetchPaymentModes, posProfile: storePosProfile } = usePOSStore();
+  const paymentModes = usePOSStore((s) => s.paymentModes);
+  const fetchPaymentModes = usePOSStore((s) => s.fetchPaymentModes);
+  const storePosProfile = usePOSStore((s) => s.posProfile);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [discountValue, setDiscountValue] = useState<string>('');

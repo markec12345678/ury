@@ -98,15 +98,21 @@ def _get_production_item_groups(productions):
     return groups
 
 
-def _get_existing_kots_with_items(invoice_id):
-    """Fetch all submitted KOTs for an invoice and their items in one query."""
+def _get_existing_kots_with_items(invoice_id, branch=None):
+    """Fetch all submitted KOTs for an invoice and their items in one query.
+    R41-FIX: Added optional branch filter for defense-in-depth."""
+    branch_filter = "AND k.branch = %s" if branch else ""
+    params = [invoice_id]
+    if branch:
+        params.append(branch)
     rows = frappe.db.sql(
         """SELECT ki.parent as kot_name, ki.item
            FROM `tabURY KOT Item` ki
            INNER JOIN `tabURY KOT` k ON ki.parent = k.name
            WHERE k.invoice = %s AND k.docstatus = 1
-               AND k.type IN ('New Order', 'Order Modified')""",
-        (invoice_id,),
+               AND k.type IN ('New Order', 'Order Modified')
+               """ + branch_filter,
+        tuple(params),
         as_dict=True,
     )
     # Build {item_code: [kot_name, ...]}
@@ -279,7 +285,8 @@ def process_items_for_cancel_kot(
     prod_groups = _get_production_item_groups(productions)
 
     # Batch-fetch existing KOT items for this invoice
-    kot_item_map = _get_existing_kots_with_items(invoice_id)
+    # R41-FIX: Pass branch for defense-in-depth filtering
+    kot_item_map = _get_existing_kots_with_items(invoice_id, branch=branch)
 
     # Fetch menu once
     menu = _get_menu_for_invoice(restaurant_table, branch)

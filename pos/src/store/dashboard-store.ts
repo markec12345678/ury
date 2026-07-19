@@ -91,7 +91,11 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         const summary = await getDashboardSummary(p);
         set({ summary });
       } catch (error) {
+        // R41-FIX: Set error state so the UI can display the failure.
+        // Previously errors were only logged, leaving the UI showing stale
+        // or null data with no indication something went wrong.
         logger.error('Failed to fetch dashboard summary:', error);
+        set({ error: 'Failed to load dashboard summary' });
       }
     },
 

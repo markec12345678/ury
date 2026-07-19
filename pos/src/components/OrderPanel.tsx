@@ -49,28 +49,30 @@ const LoadingOrderUI = () => (
 );
 
 const OrderPanel = () => {
-  const { 
-    activeOrders, 
-    removeFromOrder, 
-    updateQuantity, 
-    clearOrder, 
-    setSelectedItem,
-    orderLoading,
-    isOrderInteractionDisabled,
-    isUpdatingOrder,
-    posProfile,
-    selectedOrderType,
-    selectedTable,
-    selectedRoom,
-    selectedCustomer,
-    selectedAggregator,
-    resetOrderState,
-    paymentModes,
-    orderId,
-    orderComment,
-    setOrderComment,
-    getCartTotals,
-  } = usePOSStore();
+  // R41-FIX: Use individual Zustand selectors instead of usePOSStore() which
+  // subscribes to ALL state changes. Previously, any POS store change (search,
+  // menu, categories, etc.) would re-render this entire component unnecessarily.
+  const activeOrders = usePOSStore((s) => s.activeOrders);
+  const removeFromOrder = usePOSStore((s) => s.removeFromOrder);
+  const updateQuantity = usePOSStore((s) => s.updateQuantity);
+  const clearOrder = usePOSStore((s) => s.clearOrder);
+  const setSelectedItem = usePOSStore((s) => s.setSelectedItem);
+  const orderLoading = usePOSStore((s) => s.orderLoading);
+  const isOrderInteractionDisabled = usePOSStore((s) => s.isOrderInteractionDisabled);
+  const isUpdatingOrder = usePOSStore((s) => s.isUpdatingOrder);
+  const posProfile = usePOSStore((s) => s.posProfile);
+  const selectedOrderType = usePOSStore((s) => s.selectedOrderType);
+  const selectedTable = usePOSStore((s) => s.selectedTable);
+  const selectedRoom = usePOSStore((s) => s.selectedRoom);
+  const selectedCustomer = usePOSStore((s) => s.selectedCustomer);
+  const selectedAggregator = usePOSStore((s) => s.selectedAggregator);
+  const resetOrderState = usePOSStore((s) => s.resetOrderState);
+  const paymentModes = usePOSStore((s) => s.paymentModes);
+  const orderId = usePOSStore((s) => s.orderId);
+  const orderComment = usePOSStore((s) => s.orderComment);
+  const setOrderComment = usePOSStore((s) => s.setOrderComment);
+  const getCartTotals = usePOSStore((s) => s.getCartTotals);
+  const isMenuInteractionDisabled = usePOSStore((s) => s.isMenuInteractionDisabled);
   const user = useRootStore((state: RootState) => state.user);
   const [editingItem, setEditingItem] = useState<typeof activeOrders[0] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

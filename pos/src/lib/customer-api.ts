@@ -110,7 +110,8 @@ export async function addCustomer(
   }
 }
 
-function getscramblePattern(text: string) {
+// R41-FIX: Renamed from getscramblePattern (camelCase violation) to getScramblePattern
+function getScramblePattern(text: string) {
   const escaped = text.replace(/[%_\\]/g, '\\$&');
   return `%${escaped.split("").join("%")}%`;
 }
@@ -118,7 +119,7 @@ function getscramblePattern(text: string) {
 export async function searchCustomers(search: string, limit = 5) {
   if (!search.trim()) return [];
 
-  const pattern = getscramblePattern(search);
+  const pattern = getScramblePattern(search);
 
   try {
     const res = await db.getDocList(DOCTYPES.CUSTOMER, {

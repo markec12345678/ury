@@ -18,35 +18,35 @@ def _get_users_with_role(role_name):
 
 
 @frappe.whitelist()
-def order_delay_notification(id):
+def order_delay_notification(kot_id):
     frappe.only_for("Restaurant Manager")
     # Single query to fetch all needed fields (include branch for validation)
     kot = frappe.db.get_value(
-        "URY KOT", id,
+        "URY KOT", kot_id,
         ["restaurant_table", "order_status", "invoice", "type", "pos_profile", "branch"],
         as_dict=True,
     )
 
     if not kot:
-        frappe.throw(_("KOT {0} not found").format(id))
+        frappe.throw(_("KOT {0} not found").format(kot_id))
 
     # R39-FIX: Validate KOT belongs to user's branch — reject missing branch
     user_branch = _get_user_branch()
     if not kot.branch:
         frappe.log_error(
-            f"KOT {id} has no branch set — possible legacy record",
+            f"KOT {kot_id} has no branch set — possible legacy record",
             "URY Branch Validation Warning"
         )
-        frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(id), frappe.PermissionError)
+        frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(kot_id), frappe.PermissionError)
     if kot.branch != user_branch:
         frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
 
     table = kot.restaurant_table or _("Take Away")
-    order_id = kot.invoice[-5:] if kot.invoice else id
+    order_id = kot.invoice[-5:] if kot.invoice else kot_id
     items = frappe.get_all(
         "URY KOT Items",
         fields=["item_name", "quantity"],
-        filters={"parent": id},
+        filters={"parent": kot_id},
         order_by="idx",
     )
 

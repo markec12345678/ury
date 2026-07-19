@@ -36,7 +36,11 @@ export function registerServiceWorker(): void {
         });
 
         // Clean up the update interval if the page is unloaded
-        window.addEventListener('unload', () => {
+        // R41-FIX: Use 'pagehide' instead of 'unload'. The 'unload' event is
+        // unreliable in modern browsers (not fired for bfcache restores) and
+        // prevents the page from being eligible for back/forward cache.
+        // 'pagehide' fires reliably and doesn't block bfcache.
+        window.addEventListener('pagehide', () => {
           clearInterval(updateIntervalId);
         }, { once: true });
       } catch (error) {

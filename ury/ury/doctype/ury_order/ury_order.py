@@ -15,11 +15,9 @@ class URYOrder(Document):
     pass
 
 
-@frappe.whitelist()
-def get_order_invoice(table=None, invoiceNo=None, order_type=None, is_payment=None):
-    """returns the active invoice linked to the given table"""
-    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-
+def _get_order_invoice_doc(table=None, invoiceNo=None, order_type=None, is_payment=None):
+    """Internal: returns POS Invoice document object for server-side manipulation.
+    Used by sync_order and make_invoice which need the doc, not a dict."""
     # Verify user has access to the table's room (BE-R36-017)
     if table:
         from ury.ury_pos.api import _get_user_branch_rooms
@@ -111,8 +109,16 @@ def get_order_invoice(table=None, invoiceNo=None, order_type=None, is_payment=No
         invoice.selling_price_list = frappe.db.get_value(
             "Price List", dict(restaurant_menu=menu, enabled=1)
         )
-        
-        
+
+    return invoice
+
+
+@frappe.whitelist()
+def get_order_invoice(table=None, invoiceNo=None, order_type=None, is_payment=None):
+    """returns the active invoice linked to the given table (as a dict for the frontend)"""
+    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+
+    invoice = _get_order_invoice_doc(table, invoiceNo, order_type, is_payment)
 
     # Return only the fields the frontend needs — prevent full document leakage (BE-R36-003)
     if invoice.name:
@@ -197,7 +203,16 @@ def sync_order(
         )
         return {"status": "Failure"}
 
-    invoice = get_order_invoice(table, invoice,order_type)
+    # R41-FIX: Use _get_order_invoice_doc to get the document object, not a dict.
+    # The public get_order_invoice returns a dict for frontend safety (BE-R36-003),
+    # but sync_order needs the document to call .save() etc.
+    invoice = _get_order_invoice_doc(table, invoice, order_type)
+
+    # R41-FIX: Validate last_invoice belongs to user's branch
+    if last_invoice:
+        last_inv_branch = frappe.db.get_value("POS Invoice", last_invoice, "branch")
+        if last_inv_branch and last_inv_branch != user_branch:
+            frappe.throw(_("Invoice does not belong to your branch"), frappe.PermissionError)
 
     if last_invoice and last_modified_time:
         lastModifiedTime = invoice.modified
@@ -719,7 +734,9 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
             frappe.throw(_("Payment amount cannot be negative"))
 
     order_type = frappe.get_value("POS Invoice", invoice, "order_type")
-    invoice = get_order_invoice(table, invoice, order_type, "Payments")
+    # R41-FIX: Use _get_order_invoice_doc to get the document object, not a dict.
+    # make_invoice needs to call .save() and .submit() on the document.
+    invoice = _get_order_invoice_doc(table, invoice, order_type, "Payments")
 
     if table:
         _, _, restaurant = get_restaurant_and_menu_name(table)
