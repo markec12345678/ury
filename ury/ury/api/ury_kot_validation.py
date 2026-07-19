@@ -34,7 +34,7 @@ def kotValidationThread():
             try:
                 process_invoice(invoice)
             except Exception:
-                frappe.log_error("URY KOT Validation Error", f"Failed to process invoice {invoice.name}")
+                frappe.log_error(f"Failed to process invoice {invoice.name}: {frappe.get_traceback()}", "URY KOT Validation Error")
     finally:
         # Only delete our own lock token to avoid releasing another worker's lock
         if frappe.cache().get_value(lock_key) == lock_token:

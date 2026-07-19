@@ -382,6 +382,19 @@ class URYDailyPandL(Document):
                         self.remarks = ""
 
         
+        def validate(self):
+                # R42-FIX: Prevent duplicate P&L entries for the same branch + date
+                if self.branch and self.date:
+                        existing = frappe.db.exists(
+                                "URY Daily P&L",
+                                {"branch": self.branch, "date": self.date, "name": ["!=", self.name]},
+                        )
+                        if existing:
+                                frappe.throw(
+                                        _("A URY Daily P&L entry already exists for branch {0} on {1}").format(self.branch, self.date),
+                                        frappe.DuplicateEntryError,
+                                )
+
         def before_save(self):
                 self.cogs_sold()
                 if self.remarks != "":

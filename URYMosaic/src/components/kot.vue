@@ -45,7 +45,7 @@
       <div v-for="kot in visibleKots" :key="kot.name">
         <div
           :class="[kot.color]"
-          class="inline-block shadow-lg gap-4 p-3 rounded-2xl w-80 h-auto masonry-item"
+          class="shadow-lg gap-4 p-3 rounded-2xl max-w-80 w-full h-auto masonry-item"
           style="margin-top: 28px"
           role="button"
           tabindex="0"
@@ -86,7 +86,8 @@
                   </span>
                   <span class="text-gray-900 font-semibold">
                     {{ kot.tableortakeaway }}
-                    <span class="text-sm font-medium text-[#6B7280]"
+                    <!-- R42-FIX: Guard against null/undefined user — prevents "( )" display -->
+                    <span v-if="kot.user" class="text-sm font-medium text-[#6B7280]"
                       >( {{ kot.user }} )</span
                     ></span
                   ><br />
@@ -499,16 +500,21 @@ export default {
         .finally(() => { this._clearInflight(kot.name); });
     },
 
+    // R42-FIX: Return the promise so callers can chain on success/failure.
+    // Previously, the .catch() swallowed the error and returned undefined,
+    // making it impossible for callers to know whether the notification succeeded.
     orderDelayNotify(kot) {
-
-      this.call
+      return this.call
         .post(
           "ury.ury.api.ury_kot_notification.order_delay_notification",
           {
             id: kot.name,
           }
         )
-        .catch((error) => { if (import.meta.env?.DEV) console.error(error); });
+        .catch((error) => {
+          if (import.meta.env?.DEV) console.error(error);
+          throw error; // Re-throw so caller knows it failed
+        });
     },
     toggleItemStrikeThrough(kotitem, kot) {
       // R41-FIX: Guard against null/undefined names — if kot.name or
@@ -650,8 +656,19 @@ export default {
           kot.type !== "Partially cancelled" &&
           !this.notifiedKots.has(kot.name)
         ) {
-          this.notifiedKots.add(kot.name);
-          this.orderDelayNotify(kot);
+          // R42-FIX: Mark as notified AFTER the API call succeeds, not before.
+          // Previously, notifiedKots.add() ran before orderDelayNotify(), so if
+          // the HTTP request failed (transient network error), the notification
+          // was permanently suppressed for that KOT — kitchen staff would never
+          // be alerted about the delay. Now we only add to notifiedKots on
+          // success; on failure, the next timer tick will retry.
+          const kotName = kot.name;
+          this.orderDelayNotify(kot).then(() => {
+            this.notifiedKots.add(kotName);
+          }).catch(() => {
+            // Notification failed — don't add to notifiedKots so it retries
+            if (import.meta.env?.DEV) console.warn('orderDelayNotify failed, will retry on next tick:', kotName);
+          });
         }
         // R38-FIX: Guard against empty/falsy kot_alert_time. An empty string
         // coerces to 0 in >= comparison, making ALL KOTs show red time.
@@ -702,13 +719,22 @@ export default {
       // pending would leave the old timer running, potentially causing duplicate
       // fetchKOT calls when both timers fire.
       if (this._fetchRetryTimer) { clearTimeout(this._fetchRetryTimer); this._fetchRetryTimer = null; }
+      // R42-FIX: Bump generation counter so any still-running retry chain from
+      // a previous fetchKOTWithRetry call knows it's been superseded. Without
+      // this, clearing the timer orphans the old promise — its resolve/reject
+      // callbacks are never called, leaking the promise and its closures.
+      const generation = ++this._fetchGeneration;
       const attempt = (retriesLeft, delay) => {
+        // If a newer fetchKOTWithRetry has started, abort this chain
+        if (generation !== this._fetchGeneration) {
+          return Promise.reject(new Error('Superseded by newer fetchKOTWithRetry call'));
+        }
         return this.fetchKOT().catch(err => {
-          if (retriesLeft <= 0 || !this._isMounted) throw err;
+          if (retriesLeft <= 0 || !this._isMounted || generation !== this._fetchGeneration) throw err;
           if (import.meta.env?.DEV) console.warn(`fetchKOT failed, retrying in ${delay}ms...`, err);
           return new Promise((resolve, reject) => {
             this._fetchRetryTimer = setTimeout(() => {
-              if (!this._isMounted) { reject(err); return; }
+              if (!this._isMounted || generation !== this._fetchGeneration) { reject(err); return; }
               attempt(retriesLeft - 1, Math.min(delay * 2, 30000)).then(resolve).catch(reject);
             }, delay);
           });
@@ -847,6 +873,9 @@ export default {
     this._errorCapturedRecovering = false;
     // R41-FIX: In-flight operation set for serveOrder/confirmOrder dedup
     this._inflightOps = new Set();
+    // R42-FIX: Generation counter for fetchKOTWithRetry — prevents orphaned
+    // promise chains when concurrent calls cancel each other's retry timers.
+    this._fetchGeneration = 0;
   },
   mounted() {
     this._isMounted = true;
@@ -855,7 +884,16 @@ export default {
     document.addEventListener("click", this.hideAudioAlertMessage);
     // R36-FIX: Use route params instead of fragile URL parsing
     const production = this.$route?.params?.production || '';
-    const decodedProduction = decodeURIComponent(production);
+    // R42-FIX: decodeURIComponent can throw URIError on malformed input
+    // (e.g., '%E0%A4%E' — incomplete UTF-8 sequence). Wrap in try-catch
+    // to prevent the entire component from failing to mount.
+    let decodedProduction;
+    try {
+      decodedProduction = decodeURIComponent(production);
+    } catch (e) {
+      if (import.meta.env?.DEV) console.warn('Failed to decode production param:', production, e);
+      decodedProduction = production; // Use raw value as fallback
+    }
     this.production = decodedProduction;
 
     const debouncedMasonry = debounce(() => { this.masonryLoading(); }, 150);
@@ -921,13 +959,24 @@ export default {
         if (!this._isMounted || !this._socket) return;
         this._socket.on('connect_error', (err) => {
           if (!this._isMounted) return;
-          console.error("Socket connection error:", err);
-          this.setStatusMessage("Connection error. Retrying...");
+          // R42-FIX: Only update status message if it's different from current.
+          // During extended outages, socket.io retries every 1-5 seconds, and
+          // each failed attempt triggered setStatusMessage, causing a Vue
+          // re-render each time. Since the message text is identical, skip
+          // the reactive assignment to avoid unnecessary re-renders.
+          if (this.statusMessage !== "Connection error. Retrying...") {
+            console.error("Socket connection error:", err);
+            this.setStatusMessage("Connection error. Retrying...");
+          }
         });
         this._socket.on('disconnect', (reason) => {
           if (!this._isMounted) return;
           console.warn("Socket disconnected:", reason);
-          this.setStatusMessage("Connection lost. Reconnecting...");
+          // R42-FIX: Skip reactive assignment if message is already showing
+          // the same text — avoids unnecessary Vue re-renders during flapping.
+          if (this.statusMessage !== "Connection lost. Reconnecting...") {
+            this.setStatusMessage("Connection lost. Reconnecting...");
+          }
         });
         this._socket.on('connect', () => {
           if (!this._isMounted) return;
@@ -1089,7 +1138,15 @@ export default {
     if (this._debouncedMasonryLayout) this._debouncedMasonryLayout.cancel();
     if (this._resizeHandler) this._resizeHandler.cancel?.();
     if (this.timer) clearInterval(this.timer);
-    if (this._alertAudio) { this._alertAudio.pause(); this._alertAudio = null; }
+    // R42-FIX: Clear src and call load() after pause() to release the audio
+    // resource. Without this, some browsers keep the network connection open
+    // even after pause(), leaking the audio file's network resources.
+    if (this._alertAudio) {
+      this._alertAudio.pause();
+      this._alertAudio.src = '';
+      this._alertAudio.load();
+      this._alertAudio = null;
+    }
     // R39-FIX: Destroy non-reactive masonry instance on unmount
     if (this._masonry) {
       this._masonry.destroy();
@@ -1121,7 +1178,14 @@ export default {
     // component, so this.production would still be "kitchen" and the KDS
     // would filter for the wrong station.
     '$route.params.production'(newVal) {
-      const decoded = decodeURIComponent(newVal || '');
+      // R42-FIX: decodeURIComponent can throw URIError on malformed input
+      let decoded;
+      try {
+        decoded = decodeURIComponent(newVal || '');
+      } catch (e) {
+        if (import.meta.env?.DEV) console.warn('Failed to decode production param:', newVal, e);
+        decoded = newVal || '';
+      }
       if (decoded === this.production) return;
       this.production = decoded;
       // Re-register socket handler on the new channel

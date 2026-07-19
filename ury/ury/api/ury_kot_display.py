@@ -1,6 +1,5 @@
 import frappe
 from frappe import _
-from ury.ury_pos.api import getBranch
 from frappe.utils import get_datetime
 from ury.ury.api.utils import _get_user_branch
 
@@ -249,12 +248,12 @@ def _build_kot_response(branch, status_filter):
 @frappe.whitelist()
 def kot_list():
     frappe.only_for("Restaurant Manager", "Restaurant User")
-    branch = getBranch()
+    branch = _get_user_branch()
     return _build_kot_response(branch, "Ready For Prepare")
 
 
 @frappe.whitelist()
 def served_kot_list():
     frappe.only_for("Restaurant Manager", "Restaurant User")
-    branch = getBranch()
+    branch = _get_user_branch()
     return _build_kot_response(branch, "Served")

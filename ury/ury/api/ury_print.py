@@ -234,5 +234,5 @@ def sign_message(message):
         )
         return base64.b64encode(signature).decode()
     except Exception as e:
-        frappe.log_error(f"QZ signing failed: {e}")
+        frappe.log_error(f"QZ signing failed: {e}\n{frappe.get_traceback()}", "QZ Signing Error")
         frappe.throw(_("Failed to sign message"), frappe.ValidationError)

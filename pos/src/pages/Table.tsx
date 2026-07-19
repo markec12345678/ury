@@ -249,7 +249,7 @@ const TableView = () => {
                 {!loadingRooms && !hasRooms && (
                   <div className="flex items-center gap-2 text-gray-500 text-sm">
                     <AlertTriangle className="w-4 h-4" />
-                    No rooms found for this branch
+                    {t('errors.no_rooms_for_branch')}
                   </div>
                 )}
 
@@ -340,7 +340,7 @@ const TableView = () => {
                         </div>
                         {isOccupied && (
                           <div className="flex items-center justify-between">
-                            <span className="font-medium">Started at</span>
+                            <span className="font-medium">{t('tables.started_at')}</span>
                             <span>{formatInvoiceTime(table.latest_invoice_time)}</span>
                           </div>
                         )}
@@ -368,7 +368,7 @@ const TableView = () => {
                           className="flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded bg-white hover:bg-amber-100 transition"
                         >
                           <Eye className="w-3 h-3" />
-                          Preview
+                          {t('tables.preview')}
                         </button>
                         <button
                           onClick={(event) => handlePrintTable(table, event)}
@@ -378,12 +378,12 @@ const TableView = () => {
                           {printingTable === table.name ? (
                             <>
                               <Loader2 className="w-3 h-3 animate-spin" />
-                              Printing...
+                              {t('tables.printing')}
                             </>
                           ) : (
                             <>
                               <Printer className="w-3 h-3" />
-                              Print
+                              {t('common.print')}
                             </>
                           )}
                         </button>

@@ -168,7 +168,8 @@
     "failed_load_pos": "Failed to load POS",
     "failed_fetch_item_details": "Failed to fetch item details",
     "failed_fetch_addons": "Failed to fetch add-ons",
-    "no_rooms_for_branch": "No rooms found for this branch"
+    "no_rooms_for_branch": "No rooms found for this branch",
+    "no_payment_modes": "No payment modes available"
   },
   "success": {
     "order_cancelled": "Order cancelled successfully",
@@ -218,6 +219,8 @@
     "last_updated": "Last Updated",
     "order_items": "Order Items",
     "started_at": "Started at:",
+    "preview": "Preview",
+    "printing": "Printing...",
     "no_active_order": "No active order found",
     "loading_table_order": "Loading table order...",
     "table_name_title": "Table names are managed in backend",

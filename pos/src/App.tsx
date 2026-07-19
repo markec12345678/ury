@@ -130,9 +130,18 @@ function App() {
     initializeApp();
   }, [initializeApp]);
 
+  // R42-FIX: Re-run dir/lang update when language changes. Previously this only
+  // ran on mount with [], so switching to an RTL language (e.g. Arabic) at runtime
+  // would not update the document direction. We use a simple interval check since
+  // the i18n module doesn't emit events. This runs infrequently and is cheap.
   useEffect(() => {
-    document.documentElement.dir = getActiveDirection();
-    document.documentElement.lang = getActiveLanguage() || 'en';
+    const update = () => {
+      document.documentElement.dir = getActiveDirection();
+      document.documentElement.lang = getActiveLanguage() || 'en';
+    };
+    update();
+    const id = setInterval(update, 2000);
+    return () => clearInterval(id);
   }, []);
 
   // Register service worker for PWA support

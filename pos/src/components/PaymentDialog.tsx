@@ -52,6 +52,14 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [appliedDiscountPercent, setAppliedDiscountPercent] = useState<number>(0);
   const [paymentInputs, setPaymentInputs] = useState<{ [mode: string]: string }>({});
   const userEditedRef = useRef(false);
+  // R42-FIX: Keep a ref to paymentInputs so the autofill effect can read the
+  // current value without depending on it in the dependency array. Previously
+  // the effect read paymentInputs via Object.keys(paymentInputs).length but
+  // excluded it from deps to avoid infinite re-triggers, causing a stale
+  // closure bug: after a user manually entered a payment, the effect could
+  // still see the old (shorter) paymentInputs and incorrectly autofill.
+  const paymentInputsRef = useRef(paymentInputs);
+  paymentInputsRef.current = paymentInputs;
 
   useEffect(() => {
     userEditedRef.current = false;
@@ -103,8 +111,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   useEffect(()=>{
     if (userEditedRef.current) return;
     const defaultPaymentModePresent=paymentModes.find((mode)=>mode===DEFAULT_PAYMENT_MODE)
-    //only one payment mode should be present, then autofill the final amount, if not do not fill
-    const otherPaymentModesNotEntered=Object.keys(paymentInputs).length<=1;
+    // R42-FIX: Read from ref instead of stale closure. Previously Object.keys(paymentInputs)
+    // could read a stale snapshot because paymentInputs was intentionally excluded from
+    // the dependency array. Now we read from paymentInputsRef.current which always has
+    // the latest value.
+    const currentInputs = paymentInputsRef.current;
+    const otherPaymentModesNotEntered=Object.keys(currentInputs).length<=1;
     if(finalTotal && paymentModes && DEFAULT_PAYMENT_MODE && defaultPaymentModePresent && otherPaymentModesNotEntered){
       //check if default payment mode is present in paymentModes (POS-R36-016: prevent infinite re-trigger)
       setPaymentInputs((prev)=>{
@@ -113,7 +125,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         return { ...prev, [DEFAULT_PAYMENT_MODE]: newValue };
       })
     }
-  },[finalTotal,paymentModes]) // removed paymentInputs from deps
+  },[finalTotal,paymentModes]) // R42-FIX: paymentInputs intentionally excluded; read via ref
 
   // Helper to calculate remaining balance
   const getRemainingBalance = (currentId: string) => {

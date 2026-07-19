@@ -3,7 +3,7 @@ import json
 import frappe
 from frappe import _
 from frappe.utils import flt
-from ury.ury_pos.api import getBranch
+from ury.ury.api.utils import _get_user_branch
 
 
 def load_json(data):
@@ -428,7 +428,7 @@ def kot_execute(
               "Ensure it is configured in the POS Profile: {0}").format(pos_profile_id)
         )
 
-    branch = getBranch()
+    branch = _get_user_branch()
 
     positive_qty_items = [item for item in final_array if flt(item["qty"]) > 0]
     negative_qty_items = [item for item in final_array if flt(item["qty"]) <= 0]

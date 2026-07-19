@@ -228,6 +228,13 @@ export class ApiRateLimiter {
     };
   }
 
+  // R42-FIX: Track recovery timers per priority so that multiple backoff()
+  // calls for the same priority cancel the previous timer instead of stacking.
+  // Previously, calling backoff('normal') twice within 30s would create two
+  // recovery timeouts — the first would prematurely restore the rate before
+  // the second's backoff period elapsed.
+  private recoveryTimers = new Map<RequestPriority, ReturnType<typeof setTimeout>>();
+
   backoff(priority: RequestPriority, factor: number = 0.5): void {
     const bucket = this.buckets.get(priority);
     if (bucket) {
@@ -236,10 +243,16 @@ export class ApiRateLimiter {
       bucket.updateRate(newRate);
       logger.warn(`[Rate Limiter] Backed off ${priority} rate: ${currentRate}/s → ${newRate}/s`);
 
-      setTimeout(() => {
+      // Cancel any previous recovery timer for this priority
+      const existingTimer = this.recoveryTimers.get(priority);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
         bucket.updateRate(currentRate);
+        this.recoveryTimers.delete(priority);
         logger.info(`[Rate Limiter] Recovered ${priority} rate to ${currentRate}/s`);
       }, 30_000);
+      this.recoveryTimers.set(priority, timer);
     }
   }
 
@@ -254,6 +267,11 @@ export class ApiRateLimiter {
       clearInterval(this.processTimer);
       this.processTimer = null;
     }
+    // R42-FIX: Clear all recovery timers on stop
+    for (const timer of this.recoveryTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.recoveryTimers.clear();
     this.started = false;
     this.clear();
   }

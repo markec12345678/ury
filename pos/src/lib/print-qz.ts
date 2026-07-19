@@ -10,6 +10,11 @@ let privateKey: string | undefined;
 let privateKeyExpiry: number = 0;
 const KEY_TTL = 5 * 60 * 1000; // 5 minutes (POS-R36-007)
 let certLoaded = false;
+// R42-FIX: Track in-flight cert loading to prevent concurrent double-setup.
+// Previously, two concurrent loadQzPrinter() calls could both see certLoaded=false
+// and both execute setCertificatePromise, causing the second to overwrite the
+// first — leading to QZ Tray signature validation failures.
+let certLoadPromise: Promise<void> | null = null;
 
 async function loadPrivateKey(): Promise<string> {
   if (privateKey !== undefined && Date.now() < privateKeyExpiry) return privateKey;
@@ -27,18 +32,28 @@ async function loadPrivateKey(): Promise<string> {
 }
 
 export async function loadQzPrinter(host: string): Promise<void> {
-  if (!certLoaded) {
-    const cert = await call.get('ury.ury.api.ury_print.qz_certificate');
-    const certPem = cert.message;
-    if (!certPem) {
-      throw new Error('QZ certificate not configured in site_config (qz_cert)');
-    }
-    qz.security.setCertificatePromise(
-      (resolve: (data: string) => void, _reject: (err?: string) => void) => {
-        resolve(certPem);
+  // R42-FIX: Deduplicate concurrent cert loading. If a cert load is already
+  // in-flight, await the same promise instead of starting a second one.
+  if (!certLoaded && !certLoadPromise) {
+    certLoadPromise = (async () => {
+      const cert = await call.get('ury.ury.api.ury_print.qz_certificate');
+      const certPem = cert.message;
+      if (!certPem) {
+        throw new Error('QZ certificate not configured in site_config (qz_cert)');
       }
-    );
-    certLoaded = true;
+      qz.security.setCertificatePromise(
+        (resolve: (data: string) => void, _reject: (err?: string) => void) => {
+          resolve(certPem);
+        }
+      );
+      certLoaded = true;
+    })();
+  }
+  if (certLoadPromise) {
+    await certLoadPromise;
+    // Clear the promise after successful resolution so future calls don't
+    // await a stale promise if certLoaded was reset by a disconnect.
+    certLoadPromise = null;
   }
 
   if (!qz.websocket.isActive()) {
@@ -51,7 +66,8 @@ export async function loadQzPrinter(host: string): Promise<void> {
     // R39-FIX: Reset certLoaded on WebSocket disconnect so the next print
     // attempt will re-establish the certificate promise. Without this, a
     // disconnect-then-reconnect cycle skips cert setup, causing silent failures.
-    qz.websocket.connectionPromise?.catch?.(() => { certLoaded = false; });
+    // R42-FIX: Also clear certLoadPromise so the next call can start a fresh load.
+    qz.websocket.connectionPromise?.catch?.(() => { certLoaded = false; certLoadPromise = null; });
   }
 }
 

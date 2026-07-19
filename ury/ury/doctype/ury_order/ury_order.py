@@ -364,8 +364,8 @@ def sync_order(
 
     except Exception as e:
         # Log the KOT error but also notify the user — kitchen won't see this order
-        error_msg = f"KOT Creation Failed: {str(e)}"            
-        frappe.log_error(error_msg, "KOT Error")
+        error_msg = f"KOT Creation Failed: {str(e)}"
+        frappe.log_error(f"{error_msg}\n{frappe.get_traceback()}", "KOT Error")
         frappe.msgprint(
             title=_("KOT Creation Failed"),
             indicator="orange",
@@ -645,7 +645,7 @@ def customer_favourite_item(customer_name):
 
     item_qty = {}
     for row in invoice_items:
-        item_qty[row.item_name] = item_qty.get(row.item_name, 0) + row.qty
+        item_qty[row.item_name] = item_qty.get(row.item_name, 0) + flt(row.qty)
 
     result = [
         {"item_name": item_name, "qty": qty}

@@ -60,11 +60,15 @@ function NewCustomerForm({
   React.useEffect(() => {
     if (!customerGroups.length) {
       setLoadingGroups(true);
-      fetchCustomerGroups().finally(() => setLoadingGroups(false));
+      // R42-FIX: Add explicit .catch() so unhandled rejections are caught even if
+      // fetchCustomerGroups's internal error handling changes. Previously .finally()
+      // without .catch() was fragile — if the internal catch was removed, errors
+      // would become unhandled promise rejections.
+      fetchCustomerGroups().catch(() => { /* error already set in slice */ }).finally(() => setLoadingGroups(false));
     }
     if (!territories.length) {
       setLoadingTerritories(true);
-      fetchTerritories().finally(() => setLoadingTerritories(false));
+      fetchTerritories().catch(() => { /* error already set in slice */ }).finally(() => setLoadingTerritories(false));
     }
   }, [customerGroups, territories, fetchCustomerGroups, fetchTerritories]);
 
