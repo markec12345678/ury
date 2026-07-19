@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 import html as _html
+from ury.ury.api.utils import _get_user_branch
 
 
 def get_users_with_role(role_name):
@@ -19,15 +20,26 @@ def get_users_with_role(role_name):
 @frappe.whitelist()
 def order_delay_notification(id):
     frappe.only_for("Restaurant Manager")
-    # Single query to fetch all needed fields
+    # Single query to fetch all needed fields (include branch for validation)
     kot = frappe.db.get_value(
         "URY KOT", id,
-        ["restaurant_table", "order_status", "invoice", "type", "pos_profile"],
+        ["restaurant_table", "order_status", "invoice", "type", "pos_profile", "branch"],
         as_dict=True,
     )
 
     if not kot:
         frappe.throw(_("KOT {0} not found").format(id))
+
+    # R39-FIX: Validate KOT belongs to user's branch — reject missing branch
+    user_branch = _get_user_branch()
+    if not kot.branch:
+        frappe.log_error(
+            f"KOT {id} has no branch set — possible legacy record",
+            "URY Branch Validation Warning"
+        )
+        frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(id), frappe.PermissionError)
+    if kot.branch != user_branch:
+        frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
 
     table = kot.restaurant_table or _("Take Away")
     order_id = kot.invoice[-5:] if kot.invoice else id

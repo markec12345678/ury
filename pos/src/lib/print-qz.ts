@@ -42,14 +42,25 @@ export async function loadQzPrinter(host: string): Promise<void> {
   }
 
   if (!qz.websocket.isActive()) {
-    // Default to secure WebSocket; only disable if explicitly configured (POS-R36-004)
-    const usingSecure = (window as any).__QZ_INSECURE__ !== true;
+    // R39-FIX: Use env variable instead of insecure window global.
+    // VITE_QZ_INSECURE can be set to "true" in .env for development only.
+    // Previously used `(window as any).__QZ_INSECURE__` which any script could set.
+    const usingSecure = import.meta.env.VITE_QZ_INSECURE !== 'true';
     await qz.websocket.connect({ host, usingSecure });
+
+    // R39-FIX: Reset certLoaded on WebSocket disconnect so the next print
+    // attempt will re-establish the certificate promise. Without this, a
+    // disconnect-then-reconnect cycle skips cert setup, causing silent failures.
+    qz.websocket.connectionPromise?.catch?.(() => { certLoaded = false; });
   }
 }
 
 export function disconnectQzPrinter(): void {
-  if (qz.websocket.isActive()) qz.websocket.disconnect();
+  if (qz.websocket.isActive()) {
+    qz.websocket.disconnect();
+    // R39-FIX: Reset certLoaded on explicit disconnect too
+    certLoaded = false;
+  }
 }
 
 export async function printWithQz(host: string, htmlToPrint: string): Promise<void> {

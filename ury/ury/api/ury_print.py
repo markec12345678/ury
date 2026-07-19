@@ -22,6 +22,14 @@ def network_printing(
     no_letterhead=0,
 ):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    # R39-FIX: Validate invoice belongs to user's branch
+    if doctype == "POS Invoice":
+        inv_branch = frappe.db.get_value("POS Invoice", name, "branch")
+        if not inv_branch:
+            frappe.throw(_("POS Invoice {0} not found").format(name))
+        user_branch = _get_user_branch()
+        if inv_branch != user_branch:
+            frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     # file_path is always server-generated to prevent path traversal
     file_path = None
     try:

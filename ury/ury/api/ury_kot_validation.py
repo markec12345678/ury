@@ -129,6 +129,7 @@ def create_kot(
             "customer_name": posInvoice.customer,
             "production": production_name,
             "order_no": getattr(posInvoice, "custom_ury_order_number", None),
+            "branch": posInvoice.branch,
         }
     )
 

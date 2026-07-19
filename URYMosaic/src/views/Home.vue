@@ -17,8 +17,10 @@ export default {
   },
   methods: {
     handleRefresh() {
-      if (this.$refs.kotRef && typeof this.$refs.kotRef.fetchKOT === 'function') {
-        this.$refs.kotRef.fetchKOT().catch(() => {});
+      // R39-FIX: Use fetchKOTWithRetry for manual refresh — gives the user
+      // automatic retries instead of silently failing on transient errors.
+      if (this.$refs.kotRef && typeof this.$refs.kotRef.fetchKOTWithRetry === 'function') {
+        this.$refs.kotRef.fetchKOTWithRetry().catch(() => {});
       }
     },
   },

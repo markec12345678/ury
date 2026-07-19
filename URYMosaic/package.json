@@ -10,17 +10,19 @@
     "copy-html-entry": "cp ../ury/public/URYMosaic/index.html ../ury/www/URYMosaic.html"
   },
   "dependencies": {
+    "frappe-js-sdk": "^1.3.6",
+    "masonry-layout": "^4.2.2",
     "socket.io-client": "^4.5.1",
     "vue": "^3.3.4",
-    "vue-router": "^4",
-    "frappe-js-sdk": "^1.3.6",
-    "masonry-layout": "^4.2.2"
+    "vue-router": "^4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.30",
     "tailwindcss": "^3.3.3",
-    "vite": "^4.4.5"
+    "typescript": "^5.9.3",
+    "vite": "^4.4.5",
+    "vue-tsc": "^2.2.12"
   }
 }

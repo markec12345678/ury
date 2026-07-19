@@ -15,6 +15,7 @@ import type { RootState } from '../store/root-store';
 import { showToast } from './ui/toast';
 import { DINE_IN } from '../data/order-types';
 import { t } from '../i18n';
+import { calculateItemPrice } from '../store/slices/helpers';
 
 const EmptyCartUI = () => (
   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
@@ -67,26 +68,25 @@ const OrderPanel = () => {
     paymentModes,
     orderId,
     orderComment,
-    setOrderComment
+    setOrderComment,
+    getCartTotals,
   } = usePOSStore();
   const user = useRootStore((state: RootState) => state.user);
   const [editingItem, setEditingItem] = useState<typeof activeOrders[0] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCommentDialog, setShowCommentDialog] = useState(false);
 
-  const calculateItemTotal = (item: typeof activeOrders[0]) => {
-    // R37-FIX: Use roundMoney to prevent floating-point errors in displayed totals
-    const basePrice = item.selectedVariant?.price || item.price;
-    const addonsTotal = item.selectedAddons?.reduce((sum, addon) => sum + addon.price, 0) || 0;
-    return roundMoney((basePrice + addonsTotal) * item.quantity);
-  };
+  // R39-FIX: Delegate to store's getCartTotals() instead of duplicating the
+  // accumulation logic here. Previously OrderPanel computed its own total with
+  // roundMoney(sum + roundMoney(calculateItemPrice * qty)), while the store's
+  // getCartTotals() computed roundMoney(sum + (calculateItemPrice * qty)) —
+  // different rounding order could produce totals off by 0.01.
+  // Now both use the single source of truth: getCartTotals().
+  const cartTotals = getCartTotals();
 
-  // R38-FIX: Use roundMoney at each accumulation step to prevent floating-point
-  // precision drift when summing many item totals (e.g. 0.1+0.2+0.3 !== 0.6)
-  const total = activeOrders.reduce(
-    (sum, item) => roundMoney(sum + calculateItemTotal(item)),
-    0
-  );
+  const calculateItemTotal = (item: typeof activeOrders[0]) => {
+    return roundMoney(calculateItemPrice(item) * item.quantity);
+  };
 
   const handleEdit = (item: typeof activeOrders[0]) => {
     const menuItem = {
@@ -137,14 +137,35 @@ const OrderPanel = () => {
 
       setIsSubmitting(true);
       
+      // R39-FIX: Expand selectedAddons into separate API line items so the backend
+      // receives each add-on as its own row (matching the ERPNext invoice schema).
+      // The main item uses its base price; add-on items use their own price.
+      const orderItems = activeOrders.flatMap(item => {
+        const baseRate = item.selectedVariant?.price || item.price;
+        const lines: Array<{ item: string; item_name: string; rate: number; qty: number; comment?: string }> = [
+          {
+            item: item.id,
+            item_name: item.name,
+            rate: baseRate,
+            qty: item.quantity,
+            comment: item.comment || undefined,
+          },
+        ];
+        if (item.selectedAddons && item.selectedAddons.length > 0) {
+          for (const addon of item.selectedAddons) {
+            lines.push({
+              item: addon.id,
+              item_name: addon.name,
+              rate: addon.price,
+              qty: item.quantity,
+            });
+          }
+        }
+        return lines;
+      });
+
       const orderData = {
-        items: activeOrders.map(item => ({
-          item: item.id,
-          item_name: item.name,
-          rate: item.selectedVariant?.price || item.price,
-          qty: item.quantity,
-          comment: item.comment || undefined
-        })),
+        items: orderItems,
         no_of_pax: 1,
         pos_profile: posProfile.name,
         order_type: selectedOrderType,
@@ -300,7 +321,7 @@ const OrderPanel = () => {
                 </Button>
                 <span className="text-lg font-semibold">{t('cart.subtotal')}</span>
               </div>
-              <span className="text-lg font-semibold">{formatCurrency(total)}</span>
+              <span className="text-lg font-semibold">{formatCurrency(cartTotals.subtotal)}</span>
             </div>
             <Button
               onClick={handleSubmit}

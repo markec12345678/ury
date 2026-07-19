@@ -17,8 +17,9 @@ export function registerServiceWorker(): void {
 
         logger.info('Service Worker registered successfully');
 
-        // Check for updates periodically (every 30 minutes)
-        setInterval(() => {
+        // R39-FIX: Store interval ID so it can be cleaned up if needed.
+        // Previously the interval was never cleared, leaking a timer reference.
+        const updateIntervalId = setInterval(() => {
           registration.update();
         }, 30 * 60 * 1000);
 
@@ -33,6 +34,11 @@ export function registerServiceWorker(): void {
             }
           });
         });
+
+        // Clean up the update interval if the page is unloaded
+        window.addEventListener('unload', () => {
+          clearInterval(updateIntervalId);
+        }, { once: true });
       } catch (error) {
         logger.warn('Service Worker registration failed:', error);
       }

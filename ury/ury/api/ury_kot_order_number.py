@@ -15,7 +15,7 @@ def set_order_number(doc, event):
         # Atomic set-if-not-exists: returns True if we acquired the lock
         existing = frappe.cache().get_value(lock_key)
         if not existing:
-            frappe.cache().set_value(lock_key, lock_token, expires_in_sec=10)
+            frappe.cache().set_value(lock_key, lock_token, expires_in_sec=30)
             # Double-check we actually got it (handles race with another worker)
             if frappe.cache().get_value(lock_key) == lock_token:
                 lock_acquired = True

@@ -75,9 +75,14 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
   },
 
   fetchAggregatorMenu: async (aggregator: string) => {
+    // R39-FIX: Add sequence counter to discard stale responses,
+    // matching the pattern used in fetchMenuItems.
+    const seq = get()._fetchMenuSeq + 1;
+    set({ _fetchMenuSeq: seq, menuLoading: true, error: null });
     try {
-      set({ menuLoading: true, error: null });
       const items = await getAggregatorMenu(aggregator);
+      // Discard stale response if a newer fetch was started
+      if (get()._fetchMenuSeq !== seq) return;
 
       const menuItems: MenuItem[] = items.map(item => ({
         ...item,
@@ -89,6 +94,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
 
       set({ menuItems, menuLoading: false });
     } catch (error) {
+      if (get()._fetchMenuSeq !== seq) return;
       set({ error: 'Failed to load aggregator menu', menuLoading: false });
       if (import.meta.env.DEV) console.error('Error loading aggregator menu:', error);
     }

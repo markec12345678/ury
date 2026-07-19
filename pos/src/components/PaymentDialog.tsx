@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Percent, Coins } from 'lucide-react';
 import { usePOSStore } from '../store/pos-store';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, roundMoney } from '../lib/utils';
 import { Button, Input, Dialog, DialogContent } from './ui';
 import { call } from '../lib/frappe-sdk-retry';
 import { DEFAULT_PAYMENT_MODE } from '../data/order-types';
@@ -42,6 +42,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [discountValue, setDiscountValue] = useState<string>('');
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
+  // R39-FIX: Store the original user-entered percentage to avoid floating-point
+  // precision loss when re-converting absolute discount back to percentage.
+  // Previously: (appliedDiscount / grandTotal * 100) could differ from the
+  // original discountValue due to floating-point arithmetic, causing the backend
+  // to apply a slightly different discount than what the user intended.
+  const [appliedDiscountPercent, setAppliedDiscountPercent] = useState<number>(0);
   const [paymentInputs, setPaymentInputs] = useState<{ [mode: string]: string }>({});
   const userEditedRef = useRef(false);
 
@@ -60,7 +66,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
       return amount > 0 ? { mode_of_payment: mode, amount } : null;
     })
     .filter(Boolean) as Array<{ mode_of_payment: string; amount: number }>;
-  const paymentsTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+  // R39-FIX: Use roundMoney at each accumulation step to prevent floating-point
+  // drift when summing multiple payment amounts (e.g. 10.10 + 20.20 !== 30.30)
+  const paymentsTotal = payments.reduce((sum, p) => roundMoney(sum + p.amount), 0);
 
   const handleApplyDiscount = () => {
     const value = parseFloat(discountValue);
@@ -72,8 +80,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
       setError(t('errors.discount_exceeds_max'));
       return;
     }
-    const calculatedDiscount = (grandTotal * value) / 100;
+    const calculatedDiscount = roundMoney((grandTotal * value) / 100);
     setAppliedDiscount(calculatedDiscount);
+    setAppliedDiscountPercent(value);
     setError(null);
   };
 
@@ -129,7 +138,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     setError(null);
     try {
       await call.post('ury.ury.doctype.ury_order.ury_order.make_invoice', {
-        additionalDiscount: appliedDiscount > 0 ? (appliedDiscount / grandTotal * 100) : null,
+        // R39-FIX: Send the original user-entered percentage instead of re-converting
+        // the absolute discount back to a percentage, which loses floating-point precision.
+        additionalDiscount: appliedDiscountPercent > 0 ? appliedDiscountPercent : null,
         cashier,
         customer,
         invoice,

@@ -106,6 +106,21 @@ function GlobalShortcuts() {
   return null;
 }
 
+/** R39-FIX: Wrap each route with its own ErrorBoundary so that a render crash
+ *  in one page doesn't take down the entire app (navigation, header, etc.).
+ *  Previously a single ErrorBoundary wrapped all routes, meaning any unhandled
+ *  error in a page component would blank the whole screen including the footer
+ *  navigation — users had no way to navigate away. Now each page isolates its
+ *  errors and the user can still navigate to other pages.
+ */
+function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 function App() {
   const { initializeApp } = usePOSStore();
 
@@ -154,12 +169,12 @@ function App() {
                       }
                     >
                       <Routes>
-                        <Route path="/" element={<POS />} />
-                        <Route path="/orders" element={<Orders />} />
-                        <Route path="/table" element={<Table />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/menu-management" element={<MenuManagement />} />
-                        <Route path="/reports" element={<Reports />} />
+                        <Route path="/" element={<RouteErrorBoundary><POS /></RouteErrorBoundary>} />
+                        <Route path="/orders" element={<RouteErrorBoundary><Orders /></RouteErrorBoundary>} />
+                        <Route path="/table" element={<RouteErrorBoundary><Table /></RouteErrorBoundary>} />
+                        <Route path="/dashboard" element={<RouteErrorBoundary><Dashboard /></RouteErrorBoundary>} />
+                        <Route path="/menu-management" element={<RouteErrorBoundary><MenuManagement /></RouteErrorBoundary>} />
+                        <Route path="/reports" element={<RouteErrorBoundary><Reports /></RouteErrorBoundary>} />
                       </Routes>
                     </Suspense>
                   </div>

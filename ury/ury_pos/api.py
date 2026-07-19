@@ -291,8 +291,10 @@ def get_select_field_options():
 @frappe.whitelist()
 def fav_items(customer):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    # R39-FIX: Scope invoices to user's branch to prevent cross-branch data access
+    branch = getBranch()
     invoice_names = frappe.get_all(
-        "POS Invoice", filters={"customer": customer, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]}, fields=["name"], pluck="name"
+        "POS Invoice", filters={"customer": customer, "branch": branch, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]}, fields=["name"], pluck="name"
     )
     if not invoice_names:
         return []
@@ -431,6 +433,13 @@ def getPosProfile():
 @frappe.whitelist()
 def getPosInvoiceItems(invoice):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    # R39-FIX: Validate invoice belongs to user's branch
+    inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} not found").format(invoice))
+    user_branch = getBranch()
+    if inv_branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     items = frappe.get_all(
         "POS Invoice Item",
         filters={"parent": invoice},
@@ -563,7 +572,8 @@ def create_customer(customer_name, mobile_number=None, customer_group="Individua
         raise  # Let frappe.throw() validation errors propagate to the client
     except Exception as e:
         frappe.log_error(message=frappe.get_traceback(), title="Customer Creation Failed")
-        frappe.throw(_("Failed to create customer: {0}").format(str(e)))
+        # R39-FIX: Do not expose internal error details to the client
+        frappe.throw(_("Failed to create customer. Please check the error log."))
 
 @frappe.whitelist()
 def validate_pos_close(pos_profile): 

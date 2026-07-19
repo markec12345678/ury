@@ -9,18 +9,25 @@ from ury.ury.api.utils import _get_user_branch
 @frappe.whitelist()
 def serve_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
-    # R38-FIX: Validate KOT belongs to user's branch
-    kot_branch = frappe.db.get_value("URY KOT", name, "branch")
-    if not kot_branch:
+    # R39-FIX: Combine two get_value calls into one for efficiency
+    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "creation"], as_dict=True)
+    if not kot_data:
         frappe.throw(_("KOT {0} not found").format(name))
     user_branch = _get_user_branch()
-    if kot_branch != user_branch:
+    # R39-FIX: Reject KOTs with missing branch — they must have been created
+    # with the branch field set (fixed in kot_generate.py / kot_validation.py).
+    # Legacy KOTs without branch should be backfilled via migration.
+    if not kot_data.branch:
+        frappe.log_error(
+            f"KOT {name} has no branch set — possible legacy record",
+            "URY Branch Validation Warning"
+        )
+        frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(name), frappe.PermissionError)
+    if kot_data.branch != user_branch:
         frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
 
     current_time = get_datetime()
-    creation_time = frappe.db.get_value("URY KOT", name, "creation")
-    if not creation_time:
-        frappe.throw(_("KOT {0} not found").format(name))
+    creation_time = kot_data.creation
 
     production_time = current_time - creation_time
     production_time_minutes = production_time.total_seconds() / 60
@@ -35,11 +42,19 @@ def serve_kot(name):
 @frappe.whitelist()
 def confirm_cancel_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
-    # R38-FIX: Validate KOT belongs to user's branch
-    kot_branch = frappe.db.get_value("URY KOT", name, "branch")
-    if not kot_branch:
+    # R39-FIX: Validate KOT exists and belongs to user's branch
+    kot_data = frappe.db.get_value("URY KOT", name, "branch", as_dict=True)
+    if not kot_data:
         frappe.throw(_("KOT {0} not found").format(name))
+    kot_branch = kot_data.branch
     user_branch = _get_user_branch()
+    # R39-FIX: Reject KOTs with missing branch
+    if not kot_branch:
+        frappe.log_error(
+            f"KOT {name} has no branch set — possible legacy record",
+            "URY Branch Validation Warning"
+        )
+        frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(name), frappe.PermissionError)
     if kot_branch != user_branch:
         frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
     # Use server-side identity instead of client-supplied user parameter

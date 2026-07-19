@@ -210,9 +210,17 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
   // Always get price from menuItems for the main item
   const basePrice = selectedItem?.price ? Number(selectedItem.price) : 0;
   const numericQuantity = quantity === '' ? 0 : parseInt(quantity, 10);
-  const addonsTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
-  // R38-FIX: Use roundMoney to prevent floating-point errors in displayed total
-  const total = roundMoney((basePrice + addonsTotal) * numericQuantity);
+  // R39-FIX: Use roundMoney on addon accumulation to prevent floating-point drift
+  // (e.g. 0.1 + 0.2 = 0.30000000000000004)
+  const addonsTotal = roundMoney(selectedAddons.reduce((sum, addon) => sum + addon.price, 0));
+  // R39-FIX: Match the cart's calculation exactly — round the unit price first,
+  // then multiply by quantity, then round the line total. This ensures the price
+  // shown in the dialog matches what appears in OrderPanel after adding to cart.
+  // Previously: roundMoney((basePrice + addonsTotal) * numericQuantity) which could
+  // differ from the cart's roundMoney(roundMoney(basePrice + addonsTotal) * quantity)
+  // by up to 0.01 per line due to rounding at different stages.
+  const unitPrice = roundMoney(basePrice + addonsTotal);
+  const total = roundMoney(unitPrice * numericQuantity);
 
   const handleQuantityChange = (value: string) => {
     // Allow empty string or numbers
@@ -248,44 +256,35 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     }
 
     if (editMode && itemToReplace?.uniqueId) {
-      // Remove the old item first
-      removeFromOrder(itemToReplace.uniqueId);
+      // R39-FIX: Await removeFromOrder before adding the replacement.
+      // Previously this was not awaited, which meant addToOrder could execute
+      // before the old item was removed from activeOrders. While Zustand's set()
+      // is synchronous, the async wrapper's catch block could set an error state
+      // after addToOrder already ran, causing inconsistent state. Awaiting ensures
+      // the removal completes (or fails) before we proceed.
+      try {
+        await removeFromOrder(itemToReplace.uniqueId);
+      } catch {
+        // If removal fails, still allow adding the new item
+      }
     }
 
-    // Add main item as a cart line
+    // R39-FIX: Include selectedAddons on the main item so that:
+    // 1. generateUniqueId produces distinct IDs for same-item-different-addons
+    // 2. OrderPanel displays add-ons under the parent item
+    // 3. Editing preserves add-on selection
+    // 4. Order submission includes add-on data
+    // Previously add-ons were added as separate cart lines, which caused uniqueId
+    // collisions (same item + variant but different add-ons got merged) and lost
+    // the parent-child relationship.
     const orderItem: OrderItem = {
       ...selectedItem,
       quantity: numericQuantity,
       price: basePrice,
+      selectedAddons: selectedAddons.length > 0 ? selectedAddons : undefined,
       comment: comments || undefined
     };
     addToOrder(orderItem);
-
-    // Add each selected add-on as a separate cart line
-    selectedAddons.forEach(addon => {
-      // Find the full menu item details for the add-on
-      const menuAddon = menuItems.find(item => item.item === addon.id);
-      const addonOrderItem: OrderItem = menuAddon
-        ? {
-            ...menuAddon,
-            quantity: numericQuantity,
-            price: addon.price
-          }
-        : {
-            id: addon.id,
-            name: addon.name,
-            price: addon.price,
-            quantity: numericQuantity,
-            image: null,
-            item: addon.id,
-            item_name: addon.name,
-            course: '',
-            description: '',
-            special_dish: 0 as 0 | 1,
-            tax_rate: 0
-          } as OrderItem;
-      addToOrder(addonOrderItem);
-    });
 
     handleClose();
   };

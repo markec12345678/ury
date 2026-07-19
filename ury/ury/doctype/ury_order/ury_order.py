@@ -509,6 +509,13 @@ def table_transfer(table, newTable, invoice):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not frappe.has_permission("POS Invoice", "write", invoice):
         frappe.throw(_("Not permitted to transfer tables"), frappe.PermissionError)
+    # R39-FIX: Validate invoice belongs to user's branch
+    inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} not found").format(invoice))
+    user_branch = getBranch()
+    if inv_branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     # Lock both source and destination tables to prevent race conditions (BE-R36-007)
     table_data = frappe.db.sql(
         """SELECT name, restaurant_room, occupied FROM `tabURY Table`
@@ -564,6 +571,13 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not frappe.has_permission("POS Invoice", "write", invoice):
         frappe.throw(_("Not permitted to transfer captain"), frappe.PermissionError)
+    # R39-FIX: Validate invoice belongs to user's branch
+    inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} not found").format(invoice))
+    user_branch = getBranch()
+    if inv_branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     # Validate newCaptain user exists and has restaurant role (BE-R36-009)
     if not frappe.db.exists("User", newCaptain):
         frappe.throw(_("User {0} does not exist").format(newCaptain))
@@ -595,10 +609,12 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
 @frappe.whitelist()
 def customer_favourite_item(customer_name):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    # Get invoice names for this customer
+    # R39-FIX: Scope invoices to user's branch to prevent cross-branch data access
+    branch = getBranch()
+    # Get invoice names for this customer within the user's branch
     invoice_names = frappe.db.get_list(
         "POS Invoice",
-        filters={"customer": customer_name, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]},
+        filters={"customer": customer_name, "branch": branch, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]},
         fields=["name"],
         pluck="name",
     )
@@ -631,6 +647,13 @@ def cancel_order(invoice_id, reason):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not frappe.has_permission("POS Invoice", "cancel", invoice_id):
         frappe.throw(_("Not permitted to cancel orders"), frappe.PermissionError)
+    # R39-FIX: Validate invoice belongs to user's branch
+    inv_branch = frappe.db.get_value("POS Invoice", invoice_id, "branch")
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} not found").format(invoice_id))
+    user_branch = getBranch()
+    if inv_branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
 
     frappe.db.savepoint("before_cancel")
@@ -666,6 +689,12 @@ def cancel_order(invoice_id, reason):
 @frappe.whitelist()
 def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=None, table=None, invoice=None):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+
+    # R39-FIX: Validate POS Profile belongs to user's branch
+    pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
+    user_branch = getBranch()
+    if pos_profile_branch != user_branch:
+        frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
 
     # Validate additional discount
     if additionalDiscount is not None:

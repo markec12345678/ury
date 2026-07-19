@@ -264,9 +264,12 @@ def get_live_metrics():
     today_orders = int(today_data[0].orders) if today_data else 0
 
     # Active KOTs
+    active_kot_filters = {"order_status": "Ready For Prepare", "date": today}
+    if branch:
+        active_kot_filters["branch"] = branch
     active_kots = frappe.get_all(
         "URY KOT",
-        filters={"order_status": "Ready For Prepare", "date": today},
+        filters=active_kot_filters,
         fields=["count(*) as count"]
     )
     pending_kots = int(active_kots[0].count) if active_kots else 0

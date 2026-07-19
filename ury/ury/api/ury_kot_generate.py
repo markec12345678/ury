@@ -129,6 +129,7 @@ def create_kot_doc(
     production,
     pos_invoice,  # passed in to avoid re-fetching
     item_courses,  # pre-fetched {item_code: course}
+    branch,  # R39-FIX: branch is required for KOT creation and branch-scoped validation
 ):
     order_number = pos_invoice.custom_ury_order_number
     is_aggregator = 1 if pos_invoice.order_type == "Aggregators" else 0
@@ -151,6 +152,7 @@ def create_kot_doc(
             "aggregator_id": pos_invoice.custom_aggregator_id,
             "is_aggregator": is_aggregator,
             "order_no": order_number,
+            "branch": branch,
         }
     )
 
@@ -244,6 +246,7 @@ def process_items_for_kot(
             production.name,
             pos_invoice,
             item_courses,
+            branch,
         )
 
 
@@ -313,6 +316,7 @@ def process_items_for_cancel_kot(
             pos_invoice,
             original_kots,
             item_courses,
+            branch,
         )
 
 
@@ -330,6 +334,7 @@ def create_cancel_kot_doc(
     pos_invoice,  # passed in
     original_kots,  # set of KOT names
     item_courses,  # pre-fetched
+    branch,  # R39-FIX: branch is required for KOT creation and branch-scoped validation
 ):
     order_number = pos_invoice.custom_ury_order_number
     is_aggregator = 1 if pos_invoice.order_type == "Aggregators" else 0
@@ -348,6 +353,7 @@ def create_cancel_kot_doc(
             "production": production,
             "is_aggregator": is_aggregator,
             "order_no": order_number,
+            "branch": branch,
         }
     )
 
