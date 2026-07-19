@@ -23,7 +23,7 @@ def set_order_number(doc, event):
         time.sleep(0.3)
     if not lock_acquired:
         frappe.log_error(f"Order number lock timeout for {pos_profile}", "URY Order Number")
-        return
+        frappe.throw(_("Could not acquire order number lock for POS Profile {0}. Please try again.").format(pos_profile))
 
     try:
         _do_set_order_number(doc, pos_profile)

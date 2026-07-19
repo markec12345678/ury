@@ -284,7 +284,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
       selectedAddons: selectedAddons.length > 0 ? selectedAddons : undefined,
       comment: comments || undefined
     };
-    addToOrder(orderItem);
+    // R40-FIX: Await addToOrder so that errors (e.g. quantity exceeds max)
+    // are handled before closing the dialog. Previously addToOrder was not
+    // awaited, so the dialog closed immediately even if the add operation
+    // failed, losing the user's quantity/addon selections.
+    await addToOrder(orderItem);
 
     handleClose();
   };

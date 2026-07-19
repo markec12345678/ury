@@ -24,6 +24,9 @@ def create_order_items(items):
         item_name = item.get("item_name")
         if qty is None or item_name is None:
             frappe.throw(_("Item data is missing required fields (qty, item_name)"))
+        qty = flt(qty)
+        if qty <= 0:
+            frappe.throw(_("Item '{0}' has invalid quantity ({1}). Quantity must be positive.").format(item_name, qty))
         order_item = {
             "item_code": item.get("item", item.get("item_code")),
             "qty": qty,

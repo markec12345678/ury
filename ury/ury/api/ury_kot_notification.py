@@ -4,7 +4,7 @@ import html as _html
 from ury.ury.api.utils import _get_user_branch
 
 
-def get_users_with_role(role_name):
+def _get_users_with_role(role_name):
     """Get user details for all users having a given role."""
     rows = frappe.db.sql(
         """SELECT u.name, u.full_name, u.email
@@ -73,7 +73,7 @@ def order_delay_notification(id):
 
     if kot.order_status == "Ready For Prepare":
         for recipient in recipients:
-            users = get_users_with_role(recipient.receiver_by_role)
+            users = _get_users_with_role(recipient.receiver_by_role)
             for user in users:
                 frappe.get_doc(
                     {

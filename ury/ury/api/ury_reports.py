@@ -334,13 +334,13 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
 
     # Save the HTML as a temporary file
     import os
-    import time
+    import time as _time
     temp_dir = frappe.get_site_path("private", "reports")
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir, exist_ok=True)
 
     # Cleanup: delete HTML files older than 1 hour
-    now = time.time()
+    now = _time.time()
     for old_file in os.listdir(temp_dir):
         old_filepath = os.path.join(temp_dir, old_file)
         if old_file.endswith('.html') and os.path.isfile(old_filepath):
@@ -384,11 +384,10 @@ def _get_report_dates(period, from_date=None, to_date=None):
         last_month = add_months(today, -1)
         return get_first_day(last_month), get_last_day(last_month)
     else:
-        frappe.log_error(
-            f"Unknown period '{period}' passed to _get_report_dates, defaulting to today",
-            "URY Reports Warning"
+        frappe.throw(
+            _("Unknown period '{0}'. Valid periods: daily, weekly, monthly, yesterday, last_7_days, last_30_days, last_month").format(period),
+            frappe.ValidationError
         )
-        return today, today
 
 
 

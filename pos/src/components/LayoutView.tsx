@@ -264,6 +264,10 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
     setSelectedTable(table.name);
 
     if (table.occupied) {
+      // R40-FIX: Use requestIdRef to discard stale getTableOrder responses
+      // if the user clicks a different table before the promise resolves.
+      // Previously the .then() callback ran unconditionally, potentially
+      // setting selectedTableOrder for a table the user is no longer viewing.
       const myId = ++requestIdRef.current;
       getTableOrder(table.name).then(res => {
         if (requestIdRef.current === myId) setSelectedTableOrder(res.message);

@@ -39,7 +39,13 @@ export interface CreateCustomerData {
 }
 
 export interface CreateCustomerResponse {
-  data: CreateCustomerData;
+  data: {
+    name: string;
+    customer_name: string;
+    mobile_number: string;
+    customer_group?: string;
+    territory?: string;
+  };
   _server_messages?: string;
 }
 
@@ -85,8 +91,13 @@ export async function addCustomer(
     if (!msg || msg.status !== "success") {
       throw new Error("Failed to create Customer. API response error");
     }
+    // R40-FIX: Include `name` (the customer ID) in the response so that
+    // CustomerSelect can set the correct customer ID. Previously, the response
+    // type was CreateCustomerData which lacks a `name` field, causing
+    // `created.name` to be undefined when setting the selected customer.
     return {
       data: {
+        name: msg.name,
         customer_name: msg.customer_name,
         mobile_number: msg.mobile_number,
         customer_group: msg.customer_group,

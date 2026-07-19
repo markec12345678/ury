@@ -296,12 +296,20 @@ export default {
   // R39-FIX: Error boundary — catches rendering errors from child components
   // or template expressions, logs them, and shows a user-friendly message
   // instead of crashing the entire KDS display.
+  // R40-FIX: Added recursion guard — if fetchKOTWithRetry itself causes a
+  // rendering error (unlikely but possible), we'd re-enter errorCaptured
+  // and trigger another fetchKOTWithRetry, potentially infinitely.
   errorCaptured(err, instance, info) {
     console.error('KDS rendering error:', err, info);
-    this.setStatusMessage('Display error — refreshing...');
-    this.hideStatusMessageAfterDelay();
-    // Attempt recovery by re-fetching KOT data (with retry for transient errors)
-    this.fetchKOTWithRetry().then(() => { this.masonryLoading(); }).catch(() => {});
+    if (!this._errorCapturedRecovering) {
+      this._errorCapturedRecovering = true;
+      this.setStatusMessage('Display error — refreshing...');
+      this.hideStatusMessageAfterDelay();
+      // Attempt recovery by re-fetching KOT data (with retry for transient errors)
+      this.fetchKOTWithRetry().then(() => { this.masonryLoading(); }).catch(() => {}).finally(() => {
+        this._errorCapturedRecovering = false;
+      });
+    }
     // Return false to prevent the error from propagating further up
     return false;
   },
@@ -322,24 +330,22 @@ export default {
         this.showAudioAlertMessage = true;
       });
     },
+    // R40-FIX: Removed unnecessary new Promise() wrapper — frappe.auth().getLoggedInUser()
+    // already returns a Promise. The old pattern was an anti-pattern that added nesting
+    // and lost stack traces on rejection.
     auth() {
-      return new Promise((resolve, reject) => {
-        const authApi = frappe.auth();
-        authApi
-          .getLoggedInUser()
-          .then((user) => {
-            this.loggeduser = user;
-            // Update shared auth state so route guard works
-            if (this.authState) {
-              this.authState.isLoggedIn = true;
-            }
-            resolve();
-          })
-          .catch((error) => {
-            if (import.meta.env?.DEV) console.error(error);
-            reject(error);
-          });
-      });
+      return frappe.auth().getLoggedInUser()
+        .then((user) => {
+          this.loggeduser = user;
+          // Update shared auth state so route guard works
+          if (this.authState) {
+            this.authState.isLoggedIn = true;
+          }
+        })
+        .catch((error) => {
+          if (import.meta.env?.DEV) console.error(error);
+          throw error; // Re-throw so callers can catch
+        });
     },
     fetchKOT() {
       // Deduplicate concurrent fetchKOT calls to prevent state corruption
@@ -411,6 +417,9 @@ export default {
       kot.isRotated = !kot.isRotated;
     },
     confirmOrder(kot) {
+      // R40-FIX: Clear pending cancel timeout — the user has already confirmed,
+      // so the scheduled re-fetch would be redundant and wasteful.
+      if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       this.call
         .post("ury.ury.api.ury_kot_display.confirm_cancel_kot", {
           name: kot.name,
@@ -431,6 +440,9 @@ export default {
         });
     },
     serveOrder(kot) {
+      // R40-FIX: Clear pending cancel timeout — the user has already served,
+      // so the scheduled re-fetch would be redundant and wasteful.
+      if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       this.call
         .post("ury.ury.api.ury_kot_display.serve_kot", {
           name: kot.name,
@@ -653,10 +665,12 @@ export default {
       };
       return attempt(maxRetries, initialDelay);
     },
+    // R40-FIX: Removed redundant masonryLoading() call — fetchKOT() already
+    // calls masonryLoading(true) at the end of its .then() handler, so the
+    // extra call here caused a double layout calculation.
     fetchkotwithmasonry() {
-      return this.fetchKOTWithRetry().then(() => {
-        this.masonryLoading();
-      }).catch((e) => { console.error("KOT fetch failed:", e); });
+      return this.fetchKOTWithRetry()
+        .catch((e) => { console.error("KOT fetch failed:", e); });
     },
     redirectToLogin() {
       // R38-FIX: Use Vue Router instead of window.location.href to avoid full page reload
@@ -665,6 +679,9 @@ export default {
       this.$router.push({ name: 'Login', query: { route: this.$route.path } });
     },
     masonryLoading(forceRecreate = false) {
+      // R40-FIX: Early return if unmounted — prevents post-unmount masonry
+      // operations from debounced callbacks, $nextTick, and delayed socket events.
+      if (!this._isMounted) return;
       // R39-FIX: Use non-reactive _masonry instead of reactive masonry from data()
       if (this._masonry && !forceRecreate) {
         this.$nextTick(() => {
@@ -747,6 +764,11 @@ export default {
     this._masonry = null;
     // R39-FIX: Track socket init retry timer for cleanup
     this._socketRetryTimer = null;
+    // R40-FIX: Debounced masonry layout for socket events — prevents layout
+    // thrashing when multiple socket events arrive in rapid succession.
+    this._debouncedMasonryLayout = debounce(() => { this.masonryLoading(); }, 100);
+    // R40-FIX: Recursion guard for errorCaptured
+    this._errorCapturedRecovering = false;
   },
   mounted() {
     this._isMounted = true;
@@ -796,31 +818,40 @@ export default {
         });
       });
     };
+    // R40-FIX: Run socket init and auth in parallel, but store the socket
+    // in this._socket as soon as it resolves — even before auth completes.
+    // Previously, Promise.all meant the socket was only stored after BOTH
+    // socket init AND auth succeeded. If auth() rejected, the socket was
+    // orphaned (never stored in this._socket) and thus never disconnected
+    // in beforeUnmount, causing a connection leak.
+    const authPromise = this.auth();
     this._socketInitPromise = initSocketWithRetry();
 
-    // Wait for both socket init and auth before attaching listeners
-    Promise.all([this._socketInitPromise, this.auth()])
-      .then(([sock]) => {
-        // R39-FIX: If component unmounted during init, disconnect the orphaned
-        // socket to prevent a connection leak. Previously, the socket created by
-        // initializeSocket() was never stored in this._socket and thus never
-        // disconnected in beforeUnmount.
+    this._socketInitPromise
+      .then((sock) => {
+        // R40-FIX: If component unmounted during socket init, disconnect immediately
         if (!this._isMounted) {
           if (sock) sock.disconnect();
-          return;
+          return null;
         }
+        // R40-FIX: Store socket early so beforeUnmount can always clean it up
         this._socket = sock;
-        if (this._socket) this._socket.on('connect_error', (err) => {
+        // Now wait for auth to complete
+        return authPromise;
+      })
+      .then(() => {
+        if (!this._isMounted || !this._socket) return;
+        this._socket.on('connect_error', (err) => {
           if (!this._isMounted) return;
           console.error("Socket connection error:", err);
           this.setStatusMessage("Connection error. Retrying...");
         });
-        if (this._socket) this._socket.on('disconnect', (reason) => {
+        this._socket.on('disconnect', (reason) => {
           if (!this._isMounted) return;
           console.warn("Socket disconnected:", reason);
           this.setStatusMessage("Connection lost. Reconnecting...");
         });
-        if (this._socket) this._socket.on('connect', () => {
+        this._socket.on('connect', () => {
           if (!this._isMounted) return;
           this.setStatusMessage("Reconnected");
           this.hideStatusMessageAfterDelay();
@@ -835,7 +866,7 @@ export default {
         return this.fetchKOTWithRetry();
       })
       .then(() => {
-        if (!this._isMounted) return;
+        if (!this._isMounted || !this._socket) return;
         if (this.audio_alert === 1) {
           this.showAudioAlertMessage = true;
         }
@@ -885,7 +916,8 @@ export default {
               }
               this.updateQtyColorTable();
               this.updateTimeRemaining();
-              this.masonryLoading();
+              // R40-FIX: Use debounced masonry layout for rapid socket events
+              this._debouncedMasonryLayout();
             }
             if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
             // R39-FIX: Only schedule cancel re-fetch if the KOT is actually a cancellation.
@@ -915,6 +947,8 @@ export default {
       })
       .catch((error) => {
         console.error("Initialization or authentication error:", error);
+        // R40-FIX: this._socket is now stored early, so beforeUnmount will
+        // disconnect it. No need for manual cleanup here.
         if (this._isMounted) this.showModal = true;
       });
     this.timer = setInterval(this.updateTimeRemaining, 60000);

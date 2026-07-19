@@ -12,7 +12,11 @@ def kotValidationThread():
     existing = frappe.cache().get_value(lock_key)
     if existing:
         return  # Previous run still in progress
-    frappe.cache().set_value(lock_key, lock_token, expires_in_sec=120)
+    # R40-FIX: Reduced TTL from 120s to 60s — each run processes invoices from
+    # the last 5 minutes only, so 60s is generous. If a run takes longer,
+    # the lock expires and the next worker can proceed rather than blocking
+    # indefinitely.
+    frappe.cache().set_value(lock_key, lock_token, expires_in_sec=60)
     # Double-check: only proceed if our token is still the current value
     if frappe.cache().get_value(lock_key) != lock_token:
         return  # Another worker won the race

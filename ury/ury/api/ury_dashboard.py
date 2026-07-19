@@ -325,11 +325,10 @@ def _get_period_dates(period):
     elif period == "last_90_days":
         return add_days(today, -89), today
     else:
-        frappe.log_error(
-            f"Unknown period '{period}' passed to _get_period_dates, defaulting to today",
-            "URY Dashboard Warning"
+        frappe.throw(
+            _("Unknown period '{0}'. Valid periods: today, yesterday, this_week, last_week, this_month, last_month, last_7_days, last_30_days, last_90_days").format(period),
+            frappe.ValidationError
         )
-        return today, today
 
 
 

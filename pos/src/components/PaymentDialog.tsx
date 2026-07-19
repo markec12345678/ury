@@ -115,10 +115,14 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   // Helper to calculate remaining balance
   const getRemainingBalance = (currentId: string) => {
+    // R40-FIX: Use roundMoney at each accumulation step to prevent
+    // floating-point drift when summing multiple payment amounts.
+    // Previously: reduce((sum, [_key, val]) => sum + (parseFloat(val) || 0), 0)
+    // could produce values like 30.000000000000004 instead of 30.
     const totalEntered = Object.entries(paymentInputs)
       .filter(([id]) => id !== currentId)
-      .reduce((sum, [_key, val]) => sum + (parseFloat(val) || 0), 0);
-    return Math.max(0, finalTotal - totalEntered);
+      .reduce((sum, [_key, val]) => roundMoney(sum + (parseFloat(val) || 0)), 0);
+    return Math.max(0, roundMoney(finalTotal - totalEntered));
   };
 
   // Handler for input focus to auto-fill remaining balance

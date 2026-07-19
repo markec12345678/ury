@@ -5,6 +5,7 @@ import { useMenuManagementStore } from '../../store/menu-management-store';
 import { URYMenuItem } from '../../lib/menu-management-api';
 import { formatCurrency } from '../../lib/utils';
 import { t } from '../../i18n';
+import { showToast } from '../ui/toast';
 
 interface BatchPriceUpdateDialogProps {
   items: URYMenuItem[];
@@ -71,6 +72,11 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
     try {
       await batchUpdateItemPrices(menuName, updates);
       onClose();
+    } catch (error) {
+      // R40-FIX: Show error toast to user instead of silently swallowing the error.
+      // Previously the catch block was missing, so a failed batch update would
+      // leave the user with no feedback about why prices weren't updated.
+      showToast.error(t('menu_management.failed_update_prices') || 'Failed to update prices');
     } finally {
       setApplying(false);
     }

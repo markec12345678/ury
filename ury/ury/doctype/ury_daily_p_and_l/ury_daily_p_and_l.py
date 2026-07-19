@@ -41,7 +41,7 @@ def _inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=No
             inner_bom_data = _inner_bom_process(buying_price_list, inner_bom, depth=depth+1, max_depth=max_depth, visited=visited)
             inner_bom_buying_price = inner_bom_data['bom_buying_price']
             inner_unset_bom_items = inner_bom_data['unset_bom_items']
-            bom_buying_price += float(inner_bom_buying_price) * bom_item_qty
+            bom_buying_price += flt(inner_bom_buying_price) * bom_item_qty
 
             for item in inner_unset_bom_items:
                 if item not in unset_bom_items:
@@ -53,7 +53,7 @@ def _inner_bom_process(buying_price_list, bom, depth=0, max_depth=10, visited=No
                 if bom_item_name not in unset_bom_items:
                     unset_bom_items.append(bom_item_name)
             else:
-                bom_buying_price += float(bom_items_price[0].price_list_rate) * bom_item_qty
+                bom_buying_price += flt(bom_items_price[0].price_list_rate) * bom_item_qty
 
     if not bom.quantity:
         return {"bom_buying_price": 0, "unset_bom_items": unset_bom_items}
@@ -244,12 +244,12 @@ class URYDailyPandL(Document):
                         bom_data = _inner_bom_process(buying_price_list,bom)
                         bom_buying_price = bom_data['bom_buying_price']
                         unset_bom_items = bom_data['unset_bom_items']
-                        buying_price += float(bom_buying_price)
+                        buying_price += flt(bom_buying_price)
                         for unset_item in unset_bom_items:
                                 if unset_item not in unset_bom_item_prices:
                                         unset_bom_item_prices.append(unset_item)
                         if buying_price > 0:
-                                qty = float(item['Qty'])
+                                qty = flt(item['Qty'])
                                 self.append("cost_of_goods" ,{
                                         "item_code":item['Item Code'],
                                         "item_name":item['Item Name'],
@@ -342,7 +342,7 @@ class URYDailyPandL(Document):
                                                 bom_data = _inner_bom_process(buying_price_list, bom)
                                                 bom_buying_price = bom_data['bom_buying_price']
                                                 unset_bom_items = bom_data['unset_bom_items']
-                                                buying_price += float(bom_buying_price) * item_qty
+                                                buying_price += flt(bom_buying_price) * item_qty
                                                 for unset_item in unset_bom_items:
                                                         if unset_item not in unset_bom_item_prices:
                                                                 unset_bom_item_prices.append(unset_item)
@@ -353,10 +353,10 @@ class URYDailyPandL(Document):
                                                 if item_name not in unset_pb_item_prices:
                                                         unset_pb_item_prices.append(item_name)
                                         else:
-                                                buying_price += float(items_price_rate) * item_qty
+                                                buying_price += flt(items_price_rate) * item_qty
                         
                         if buying_price > 0:
-                                qty = float(item['Qty'])
+                                qty = flt(item['Qty'])
                                 self.append("cost_of_goods" ,{
                                         "item_code":item['Item Code'],
                                         "item_name":item['Item Name'],

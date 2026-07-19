@@ -6,6 +6,7 @@ CRUD operations for menu items, categories (courses), and prices.
 import frappe
 import json
 from frappe import _
+from frappe.utils import flt
 from ury.ury.api.utils import _get_user_branch
 
 
@@ -59,7 +60,7 @@ def get_menu_detail(menu_name):
                 "name": item.name,
                 "item": item.item,
                 "item_name": item.item_name,
-                "rate": item.rate,
+                "rate": flt(item.rate),
                 "special_dish": item.special_dish,
                 "disabled": item.disabled,
                 "course": item.course,
@@ -109,7 +110,7 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
     """Add an item to a URY Menu."""
     frappe.only_for("Restaurant Manager")
     try:
-        rate = float(rate)
+        rate = flt(rate)
     except (ValueError, TypeError):
         frappe.throw(_("Invalid rate value"))
     if rate < 0:
@@ -135,7 +136,7 @@ def add_menu_item(menu_name, item, rate, course=None, special_dish=0):
         "course": course,
     })
     menu.save(ignore_permissions=True)
-    return {"success": True, "item": item, "item_name": item_name}
+    return {"success": True, "item": item, "item_name": item_name, "rate": flt(rate)}
 
 
 @frappe.whitelist()
@@ -149,10 +150,10 @@ def update_menu_item(menu_name, item_row_name, rate=None, special_dish=None, dis
     for item in menu.items:
         if item.name == item_row_name:
             if rate is not None:
-                try:
-                    item.rate = float(rate)
-                except (ValueError, TypeError):
-                    frappe.throw(_("Invalid rate value"))
+                rate = flt(rate)
+                if rate < 0:
+                    frappe.throw(_("Rate cannot be negative"))
+                item.rate = rate
             if special_dish is not None:
                 item.special_dish = int(special_dish)
             if disabled is not None:
@@ -201,20 +202,24 @@ def batch_update_prices(menu_name, updates):
     user_branch = _get_user_branch()
     if menu.branch != user_branch:
         frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
+
+    # Build a lookup dict for O(1) access instead of O(n×m) nested loop
+    item_by_name = {item.name: item for item in menu.items}
     updated = 0
 
     for update in updates:
-        for item in menu.items:
-            if item.name == update.get("item_row_name"):
-                try:
-                    rate = float(update.get("rate", item.rate))
-                except (ValueError, TypeError):
-                    frappe.throw(_("Invalid rate value for item {0}").format(item.item_name))
-                if rate < 0:
-                    frappe.throw(_("Rate cannot be negative"))
-                item.rate = rate
-                updated += 1
-                break
+        row_name = update.get("item_row_name")
+        item = item_by_name.get(row_name)
+        if not item:
+            continue
+        try:
+            rate = flt(update.get("rate", item.rate))
+        except (ValueError, TypeError):
+            frappe.throw(_("Invalid rate value for item {0}").format(item.item_name))
+        if rate < 0:
+            frappe.throw(_("Rate cannot be negative"))
+        item.rate = rate
+        updated += 1
 
     menu.save(ignore_permissions=True)
     return {"success": True, "updated_count": updated}
@@ -286,8 +291,48 @@ def delete_menu_course(course_name):
 
 @frappe.whitelist()
 def get_available_items():
-    """Get all Items that can be added to a menu (food/beverage items)."""
+    """Get all Items that can be added to a menu (food/beverage items), scoped to branch."""
     frappe.only_for("Restaurant Manager", "Restaurant User")
+    branch = _get_user_branch()
+    # Get the menu for this branch to find which items are already in the menu
+    menu_name = frappe.db.get_value("URY Menu", {"branch": branch}, "name")
+
+    # Get items from the active price list of this branch's menu
+    if menu_name:
+        price_list = frappe.db.get_value("URY Menu", menu_name, "price_list")
+        if price_list:
+            items = frappe.get_all(
+                "Item Price",
+                filters={"price_list": price_list, "selling": 1},
+                fields=["item_code as name", "item_name", "price_list_rate as standard_rate"],
+                order_by="item_name",
+                limit_page_length=500,
+            )
+            # Batch-fetch item_group and image
+            item_codes = [i.name for i in items]
+            item_info = {}
+            if item_codes:
+                rows = frappe.db.get_all(
+                    "Item",
+                    filters={"name": ("in", item_codes), "disabled": 0, "is_sales_item": 1},
+                    fields=["name", "item_group", "image"],
+                )
+                item_info = {r.name: r for r in rows}
+            # Filter to only enabled sales items and enrich with group/image
+            result = []
+            for i in items:
+                info = item_info.get(i.name)
+                if info:
+                    result.append({
+                        "name": i.name,
+                        "item_name": i.item_name,
+                        "item_group": info.item_group,
+                        "standard_rate": i.standard_rate,
+                        "image": info.image,
+                    })
+            return result
+
+    # Fallback: return all active sales items if no menu/price_list configured
     items = frappe.get_all(
         "Item",
         filters={

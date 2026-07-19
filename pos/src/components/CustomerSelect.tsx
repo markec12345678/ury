@@ -280,12 +280,15 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
           setShowNewCustomerForm(true);
           setIsOpen(false);
         } else if (searchResults[highlightedIndex]) {
-          // The API returns { name, content, ... }
+          // R40-FIX: Use typed API fields (customer_name, mobile_number) instead of
+          // fragile regex parsing of the `content` string. The old regex
+          // `match(/Customer Name : ([^|]+)/)` would truncate names containing `|`
+          // and would break silently if the content format ever changed.
           const customer = searchResults[highlightedIndex];
           setSelectedCustomer({
             id: customer.name,
-            name: customer.content?.match(/Customer Name : ([^|]+)/)?.[1]?.trim() || customer.name,
-            phone: customer.content?.match(/Mobile Number : ([^|]+)/)?.[1]?.trim() || '',
+            name: customer.customer_name || customer.name,
+            phone: customer.mobile_number || '',
           });
           setSearchTerm('');
           setIsOpen(false);
@@ -358,8 +361,9 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
                 <div className="p-4 text-center text-red-500 text-sm select-none">{searchError}</div>
               )}
               {!isSearching && !searchError && searchResults.length > 0 && searchResults.map((customer, idx) => {
-                const name = customer.content?.match(/Customer Name : ([^|]+)/)?.[1]?.trim() || customer.name;
-                const phone = customer.content?.match(/Mobile Number : ([^|]+)/)?.[1]?.trim() || '';
+                // R40-FIX: Use typed API fields instead of regex parsing
+                const name = customer.customer_name || customer.name;
+                const phone = customer.mobile_number || '';
                 return (
                   <button
                     key={customer.name}

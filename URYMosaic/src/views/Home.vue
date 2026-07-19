@@ -19,8 +19,16 @@ export default {
     handleRefresh() {
       // R39-FIX: Use fetchKOTWithRetry for manual refresh — gives the user
       // automatic retries instead of silently failing on transient errors.
+      // R40-FIX: Show status message on failure instead of swallowing silently.
       if (this.$refs.kotRef && typeof this.$refs.kotRef.fetchKOTWithRetry === 'function') {
-        this.$refs.kotRef.fetchKOTWithRetry().catch(() => {});
+        this.$refs.kotRef.fetchKOTWithRetry().catch(() => {
+          if (this.$refs.kotRef && typeof this.$refs.kotRef.setStatusMessage === 'function') {
+            this.$refs.kotRef.setStatusMessage("Refresh failed. Please try again.");
+            if (typeof this.$refs.kotRef.hideStatusMessageAfterDelay === 'function') {
+              this.$refs.kotRef.hideStatusMessageAfterDelay();
+            }
+          }
+        });
       }
     },
   },

@@ -38,7 +38,18 @@ export default function Orders() {
     orderSearchQuery
   } = useRootStore();
 
-  const posStore = usePOSStore();
+  // R40-FIX: Use individual Zustand selectors instead of usePOSStore() which
+  // subscribes to ALL state changes in the POS store (menu items, cart, search,
+  // etc.). Previously, any state change in the POS store (even adding a cart item
+  // on the POS page) would re-render the entire Orders page unnecessarily.
+  // Now only posProfile changes trigger a re-render here.
+  const posProfile = usePOSStore((s) => s.posProfile);
+  const resetOrderState = usePOSStore((s) => s.resetOrderState);
+  const setSelectedOrderType = usePOSStore((s) => s.setSelectedOrderType);
+  const setOrderForUpdate = usePOSStore((s) => s.setOrderForUpdate);
+  const setSelectedTable = usePOSStore((s) => s.setSelectedTable);
+  const setSelectedCustomer = usePOSStore((s) => s.setSelectedCustomer);
+  const addToOrder = usePOSStore((s) => s.addToOrder);
   const navigate = useNavigate();
   const prevSearchRef = useRef(orderSearchQuery);
   const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
@@ -123,13 +134,13 @@ export default function Orders() {
     try {
       const order = await db.getDoc('POS Invoice', selectedOrder.name);
       // Fill POS store
-      posStore.resetOrderState();
-      posStore.setSelectedOrderType(order.order_type);
-      posStore.setOrderForUpdate(order.name);
+      resetOrderState();
+      setSelectedOrderType(order.order_type);
+      setOrderForUpdate(order.name);
       if (order.restaurant_table) {
-        posStore.setSelectedTable(order.restaurant_table, order.custom_restaurant_room || null,true);
+        setSelectedTable(order.restaurant_table, order.custom_restaurant_room || null,true);
       }
-      posStore.setSelectedCustomer({ id: order.customer, name: order.customer_name, phone: order.mobile_number });
+      setSelectedCustomer({ id: order.customer, name: order.customer_name, phone: order.mobile_number });
       // Fill cart
       const items = (order.items || []).map((item: { item_code: string; item_name: string; rate: number; qty: number; amount: number; image?: string; description?: string; comment?: string; name?: string }) => ({
         id: item.item_code,
@@ -148,7 +159,7 @@ export default function Orders() {
         tax_rate: 0,
       }));
       for (const cartItem of items) {
-        await posStore.addToOrder(cartItem);
+        await addToOrder(cartItem);
       }
       // Redirect to POS page
       navigate('/');
@@ -160,12 +171,12 @@ export default function Orders() {
   }
 
   async function handlePrintOrder() {
-    if (!selectedOrder || !posStore.posProfile) return;
+    if (!selectedOrder || !posProfile) return;
     setIsPrinting(true);
     try {
       await printOrder({
         orderId: selectedOrder.name,
-        posProfile: posStore.posProfile
+        posProfile: posProfile
       });
       showToast.success(t('success.printed'));
       // Locally update selectedOrder.invoice_printed to 1
@@ -492,10 +503,10 @@ export default function Orders() {
           roundedTotal={selectedOrder.rounded_total}
           invoice={selectedOrder.name}
           customer={selectedOrder.customer}
-          posProfile={posStore.posProfile?.name || ''}
+          posProfile={posProfile?.name || ''}
           table={selectedOrder.restaurant_table || null}
-          cashier={posStore.posProfile?.cashier || ''}
-          owner={posStore.posProfile?.owner || ''}
+          cashier={posProfile?.cashier || ''}
+          owner={posProfile?.owner || ''}
           fetchOrders={fetchOrders}
           clearSelectedOrder={clearSelectedOrder}
         />

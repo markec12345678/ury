@@ -1,6 +1,5 @@
 import frappe
 from frappe import _
-
 import os
 
 from pypdf import PdfWriter
@@ -30,6 +29,8 @@ def network_printing(
         user_branch = _get_user_branch()
         if inv_branch != user_branch:
             frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+    elif doctype not in ALLOWED_PRINT_DOCTYPES:
+        frappe.throw(_("Invalid doctype for printing"), frappe.ValidationError)
     # file_path is always server-generated to prevent path traversal
     file_path = None
     try:
@@ -159,8 +160,10 @@ def qz_print_update(invoice):
 
         return {"status": "Success"}
 
+    except frappe.ValidationError:
+        raise
     except Exception as e:
-        frappe.log_error(message=e, title="Print Fail")
+        frappe.log_error(message=frappe.get_traceback(), title="Print Fail")
         frappe.throw(_("An error occurred. Please check the error log."))
 
 
@@ -180,6 +183,8 @@ def print_pos_page(doctype, name, print_format):
     if not result:
         frappe.throw(_("POS Invoice {0} not found").format(name))
     restaurant_table, branch, invoice_name = result
+    if not branch:
+        frappe.throw(_("POS Invoice {0} has no branch assigned").format(name), frappe.PermissionError)
     # R38-FIX: Validate invoice belongs to user's branch
     user_branch = _get_user_branch()
     if branch != user_branch:
