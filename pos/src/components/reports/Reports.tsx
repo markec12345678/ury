@@ -149,7 +149,7 @@ const Reports = () => {
             className="flex items-center gap-2"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            {t('reports.exportCsv') || 'Export CSV'}
+            {t('reports.export_csv')}
           </Button>
 
           {/* PDF Export Button */}
@@ -160,7 +160,7 @@ const Reports = () => {
             className="flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
-            {exporting ? (t('reports.generating') || 'Generating...') : (t('reports.exportPdf') || 'Export PDF')}
+            {exporting ? t('reports.generating') : t('reports.export_pdf')}
           </Button>
         </div>
       </div>

@@ -63,7 +63,14 @@
     "default_user": "Uporabnik"
   },
   "menu": {
-    "special_items": "Posebne jedi"
+    "special_items": "Posebne jedi",
+    "errors": {
+      "failed_load_items": "Neuspešno nalaganje jedi",
+      "failed_load_aggregator": "Neuspešno nalaganje jedilnika agregatorja",
+      "failed_load_categories": "Neuspešno nalaganje kategorij jedilnika",
+      "failed_load_customer_groups": "Neuspešno nalaganje skupin strank",
+      "failed_load_territories": "Neuspešno nalaganje teritorijev"
+    }
   },
   "pos_sidebar": {
     "categories": "Kategorije",
@@ -83,7 +90,13 @@
     "loading_order": "Nalaganje podrobnosti naročila...",
     "edit_item": "Uredi artikel",
     "add_comment": "Dodaj komentar",
-    "edit_comment": "Uredi komentar"
+    "edit_comment": "Uredi komentar",
+    "errors": {
+      "failed_add": "Neuspešno dodajanje artikla v košarico",
+      "failed_remove": "Neuspešna odstranitev artikla iz košarice",
+      "failed_update_quantity": "Neuspešna posodobitev količine",
+      "failed_clear": "Neuspešno čiščenje košarice"
+    }
   },
   "order": {
     "select_to_view": "Izberite naročilo za ogled podrobnosti",
@@ -135,7 +148,8 @@
     "select_territory": "Izberite teritorij",
     "adding": "Dodajanje stranke...",
     "add_button": "Dodaj stranko",
-    "failed_create": "Neuspešno dodajanje stranke. Poskusite znova."
+    "failed_create": "Neuspešno dodajanje stranke. Poskusite znova.",
+    "search_results": "Rezultati iskanja"
   },
   "comment": {
     "title": "Komentarji naročila",
@@ -172,7 +186,10 @@
     "failed_load_pos": "Neuspešno nalaganje POS",
     "failed_fetch_item_details": "Neuspešno pridobivanje podrobnosti artikla",
     "failed_fetch_addons": "Neuspešno pridobivanje dodatkov",
-    "no_rooms_for_branch": "Ni najdenih prostorov za to podružnico"
+    "no_rooms_for_branch": "Ni najdenih prostorov za to podružnico",
+    "no_payment_modes": "Ni razpoložljivih načinov plačila",
+    "failed_save_layout": "Neuspešno shranjevanje postavitve miz",
+    "failed_update_table": "Neuspešna posodobitev podatkov o mizi"
   },
   "success": {
     "order_cancelled": "Naročilo uspešno preklicano",
@@ -188,10 +205,16 @@
     "status_title": "Status naročila",
     "table_label": "Miza {{name}}",
     "qty": "Količina: {{qty}}",
+    "aria_edit_order": "Uredi naročilo",
+    "aria_cancel_order": "Prekliči naročilo",
+    "aria_print": "Natisni",
     "pagination": {
       "previous": "Prejšnja",
       "next": "Naslednja",
       "page": "Stran {{number}}"
+    },
+    "errors": {
+      "failed_load_table_order": "Neuspešno nalaganje naročila mize"
     }
   },
   "tables": {
@@ -232,7 +255,11 @@
     "editing_layout_hint_title": "Urejanje postavitve",
     "drag_tables_hint": "• Povlecite mize za premeščanje",
     "autosave_hint": "• Spremembe se samodejno shranijo",
-    "zoom_pan_hint": "Uporabite drsenje za povečavo • Povlecite ozadje za premik"
+    "zoom_pan_hint": "Uporabite drsenje za povečavo • Povlecite ozadje za premik",
+    "zoom_in": "Povečaj",
+    "zoom_out": "Pomanjšaj",
+    "reset_zoom": "Ponastavi povečavo",
+    "no_bill_activity": "Ni aktivnosti na računu"
   },
   "footer": {
     "pos": "POS",
@@ -328,7 +355,10 @@
     "course_updated": "Kategorija posodobljena",
     "failed_update_course": "Neuspešna posodobitev kategorije",
     "course_deleted": "Kategorija izbrisana",
-    "failed_delete_course": "Neuspešno brisanje kategorije"
+    "failed_delete_course": "Neuspešno brisanje kategorije",
+    "items_count": "{{count}} elementov",
+    "active_count": "{{count}} aktivnih",
+    "branch": "Podružnica"
   },
   "dashboard": {
     "title": "Nadzorna plošča",
@@ -455,6 +485,23 @@
       "show": "Prikaži primerjavo",
       "hide": "Skrij primerjavo"
     },
+    "comparison": {
+      "noData": "Najprej ustvarite poročilo o prodaji za omogočanje primerjave obdobij",
+      "noPreviousData": "Ni podatkov o prejšnjem obdobju za primerjavo",
+      "hint": "Podatki o prejšnjem obdobju se bodo samodejno naložili ob ogledu poročila o prodaji",
+      "currentPeriod": "Trenutno obdobje",
+      "revenue": "Prihodki",
+      "orders": "Naročila",
+      "avgOrder": "Povpr. vrednost naročila",
+      "customers": "Stranke",
+      "tax": "Davek",
+      "netRevenue": "Neto prihodek",
+      "previousPeriod": "Prejšnje obdobje",
+      "change": "Sprememba",
+      "overallUp": "Skupni trend je pozitiven v primerjavi s prejšnjim obdobjem",
+      "overallDown": "Skupni trend kaže upad v primerjavi s prejšnjim obdobjem",
+      "overallNeutral": "Ustvarjanje je podobno prejšnjemu obdobju"
+    },
     "loading": "Nalaganje poročila...",
     "dateFrom": "Od",
     "dateTo": "Do",
@@ -481,7 +528,50 @@
     "no_profit_loss_data_export": "Ni podatkov o dobičku in izgubi za izvoz",
     "no_inventory_data_export": "Ni podatkov o zalogi za izvoz",
     "csv_exported": "CSV uspešno izvožen",
-    "failed_export_csv": "Neuspešen izvoz CSV"
+    "failed_export_csv": "Neuspešen izvoz CSV",
+    "sales": {
+      "noData": "Izberite obdobje za generiranje poročila o prodaji",
+      "totalRevenue": "Skupni prihodek",
+      "totalOrders": "Skupna naročila",
+      "avgOrderValue": "Povprečna vrednost naročila",
+      "netRevenue": "Neto prihodek",
+      "totalTax": "Skupaj davki",
+      "uniqueCustomers": "Edinstvene stranke",
+      "cancelledOrders": "preklicana naročila",
+      "cancelledAmount": "Preklicani znesek",
+      "hourlyDistribution": "Urna distribucija prodaje",
+      "orderTypeBreakdown": "Razčlenitev po vrsti naročila",
+      "itemWiseSales": "Prodaja po jedeh",
+      "topCustomers": "Najboljše stranke",
+      "type": "Vrsta",
+      "orders": "Naročila",
+      "revenue": "Prihodki",
+      "item": "Artikel",
+      "qty": "Kol.",
+      "avgRate": "Povpr. cena",
+      "total": "Skupaj",
+      "vsPrevious": "vs prejš.",
+      "noChange": "Brez spremembe"
+    },
+    "inventory": {
+      "noData": "Ni podatkov o zalogi",
+      "noDataHint": "Izberite obdobje za generiranje poročila o zalogi",
+      "totalItems": "Skupaj artiklov",
+      "lowStock": "Artikli z nizko zalogo",
+      "outOfStock": "Ni na zalogi",
+      "totalValue": "Skupna vrednost zaloge",
+      "outOfStockAlert": "artiklov ni na zalogi",
+      "lowStockAlert": "artiklov z nizko zalogo",
+      "reorderNote": "Razmislite o ponovnem naročanju za vzdrževanje ustreznih zalog",
+      "stockLevels": "Trenutne ravni zaloge",
+      "item": "Artikel",
+      "currentStock": "Trenutna zaloga",
+      "reorderLevel": "Raven ponovnega naročila",
+      "status": "Status",
+      "unit": "Enota",
+      "value": "Vrednost",
+      "coming_soon": "Kmalu na voljo — poročilo o zalogi še ni na voljo"
+    }
   },
   "product_dialog": {
     "special_instructions": "Posebna navodila",
@@ -525,7 +615,9 @@
     "mobile_hint": "Podpora za mobilne naprave bo na voljo v prihodnji različici.",
     "current_width": "Trenutna širina zaslona:",
     "required": "Zahtevano:",
-    "switch_v1": "Preklopi na različico 1"
+    "switch_v1": "Preklopi na različico 1",
+    "min_width": "Najmanjša širina:",
+    "mobile_version_hint": "Mobilna različica"
   },
   "error_boundary": {
     "title": "Nekaj je šlo narobe",
@@ -551,7 +643,10 @@
   },
   "aggregator": {
     "loading": "Nalaganje agregatorjev...",
-    "select_placeholder": "Izberite agregatorja"
+    "select_placeholder": "Izberite agregatorja",
+    "failed_load": "Neuspešno nalaganje agregatorjev",
+    "failed_load_menu": "Neuspešno nalaganje jedilnika agregatorja",
+    "retry_placeholder": "Nalaganje ni uspelo — tapnite za ponovni poskus"
   },
   "accessibility": {
     "loading_content": "Nalaganje vsebine...",
@@ -577,6 +672,21 @@
     "disclaimer": "AI vpogledi so predlogi — vedno preverite z dejanskimi podatki",
     "default_question_top_items": "Kateri artikli se prodajajo najbolje?",
     "default_question_trends": "Kakšne trende opažate?",
-    "not_configured": "AI Vpogledi zahtevajo konfiguracijo. Nastavite VITE_AI_BASE_URL in VITE_AI_API_KEY okoljske spremenljivke."
+    "not_configured": "AI Vpogledi zahtevajo konfiguracijo. Nastavite VITE_AI_BASE_URL in VITE_AI_API_KEY okoljske spremenljivke.",
+    "errors": {
+      "request_failed": "Neuspešna zahteva AI",
+      "generate_failed": "Neuspešno generiranje analize"
+    }
+  },
+  "app": {
+    "errors": {
+      "failed_initialize": "Neuspešna inicializacija aplikacije. Prosimo, osvežite stran.",
+      "failed_fetch_profile": "Neuspešno nalaganje POS profila"
+    }
+  },
+  "performance": {
+    "criticalLatency": "Zaznana kritična latenco",
+    "degradedLatency": "Zaznana povišana latenco",
+    "reconnected": "Povezava ponovno vzpostavljena"
   }
 }

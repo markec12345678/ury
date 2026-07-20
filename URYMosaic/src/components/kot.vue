@@ -396,7 +396,12 @@ export default {
         if (err && err.name === 'AbortError') return;
         // R36-FIX: Show UI fallback when audio fails — kitchen staff need to know
         if (!this._isMounted) return; // R37-FIX: Guard against post-unmount
-        this.showAudioAlertMessage = true;
+        if (err && err.name === 'NotAllowedError') {
+          this.showAudioAlertMessage = true;
+        } else {
+          this.setStatusMessage("Audio alert unavailable. Check sound settings.");
+          this.hideStatusMessageAfterDelay();
+        }
       });
     },
     // R40-FIX: Removed unnecessary new Promise() wrapper — frappe.auth().getLoggedInUser()
@@ -459,7 +464,9 @@ export default {
           })
             .then(response => {
               if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+                err.httpStatus = response.status;
+                throw err;
               }
               return response.json();
             })
@@ -473,6 +480,11 @@ export default {
               // R37-FIX: Null-check result.message to prevent TypeError crash
               const msg = result?.message;
               if (!msg) { resolve(); return; }
+              if (!Array.isArray(msg.KOT)) {
+                if (import.meta.env?.DEV) console.error('Unexpected kot_list response:', msg);
+                resolve();
+                return;
+              }
               this.branch = msg.Branch;
               this.kot_alert_time = msg.kot_alert_time;
               this.audio_alert = msg.audio_alert;
@@ -593,25 +605,27 @@ export default {
       // so the scheduled re-fetch would be redundant and wasteful.
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       this._markInflight(kot.name);
-      this.call
+      const confirmPromise = this.call
         .post("ury.ury.api.ury_kot_display.confirm_cancel_kot", {
           name: kot.name,
-        })
+        });
+      const timeoutPromise = new Promise((_, reject) => {
+        this._confirmTimeout = setTimeout(() => reject(new Error('Request timed out')), 15000);
+      });
+      Promise.race([confirmPromise, timeoutPromise])
         .then((result) => {
           if (!this._isMounted) return;
           const idx = this.kot.findIndex(k => k.name === kot.name);
           if (idx !== -1) this.kot.splice(idx, 1);
           this.removeAllItemsFromLocalStorage(kot);
-          // R37-FIX: Clean up notifiedKots entry and sorted cache for removed KOT
           this.notifiedKots.delete(kot.name);
           this._sortedItemsCache.delete(kot.name);
           this.masonryLoading();
         })
         .catch((error) => {
-          // R48-FIX (M4): Use _handleFetchError to detect auth expiry
           this._handleFetchError(error, "Action failed. Please try again.");
         })
-        .finally(() => { this._clearInflight(kot.name); });
+        .finally(() => { clearTimeout(this._confirmTimeout); this._clearInflight(kot.name); });
     },
     serveOrder(kot) {
       // R41-FIX: Prevent duplicate concurrent requests for the same KOT.
@@ -620,25 +634,27 @@ export default {
       // so the scheduled re-fetch would be redundant and wasteful.
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       this._markInflight(kot.name);
-      this.call
+      const servePromise = this.call
         .post("ury.ury.api.ury_kot_display.serve_kot", {
           name: kot.name,
-        })
+        });
+      const serveTimeoutPromise = new Promise((_, reject) => {
+        this._serveTimeout = setTimeout(() => reject(new Error('Request timed out')), 15000);
+      });
+      Promise.race([servePromise, serveTimeoutPromise])
         .then((result) => {
           if (!this._isMounted) return;
           const idx = this.kot.findIndex(k => k.name === kot.name);
           if (idx !== -1) this.kot.splice(idx, 1);
           this.removeAllItemsFromLocalStorage(kot);
-          // R37-FIX: Clean up notifiedKots entry and sorted cache for removed KOT
           this.notifiedKots.delete(kot.name);
           this._sortedItemsCache.delete(kot.name);
           this.masonryLoading();
         })
         .catch((error) => {
-          // R48-FIX (M4): Use _handleFetchError to detect auth expiry
           this._handleFetchError(error, "Action failed. Please try again.");
         })
-        .finally(() => { this._clearInflight(kot.name); });
+        .finally(() => { clearTimeout(this._serveTimeout); this._clearInflight(kot.name); });
     },
 
     // R42-FIX: Return the promise so callers can chain on success/failure.
@@ -775,7 +791,7 @@ export default {
     },
 
     updateTimeRemaining() {
-      this.kot.forEach((kot) => {
+      this.visibleKots.forEach((kot) => {
         this._updateSingleKotTimeRemaining(kot);
       });
     },
@@ -894,13 +910,6 @@ export default {
       };
       return attempt(maxRetries, initialDelay);
     },
-    // R40-FIX: Removed redundant masonryLoading() call — fetchKOT() already
-    // calls masonryLoading(true) at the end of its .then() handler, so the
-    // extra call here caused a double layout calculation.
-    fetchkotwithmasonry() {
-      return this.fetchKOTWithRetry()
-        .catch((e) => { console.error("KOT fetch failed:", e); });
-    },
     redirectToLogin() {
       // R38-FIX: Use Vue Router instead of window.location.href to avoid full page reload
       // and preserve app state. The previous approach caused a hard navigation that
@@ -991,7 +1000,7 @@ export default {
           this.fetchKOTWithRetry().then(() => {
             if (doc.kot && doc.kot.time != null) {
               try {
-                localStorage.setItem("kot_time_" + this.production, doc.kot.time);
+                localStorage.setItem("kot_time_" + this.production, doc.last_kot_time);
               } catch (e) {
                 if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
               }
@@ -1001,7 +1010,7 @@ export default {
         }
         // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
         // R44-FIX: Also guard against non-object doc.kot (e.g., array, string).
-        if (!doc.kot || typeof doc.kot !== 'object' || Array.isArray(doc.kot)) {
+        if (!doc.kot || typeof doc.kot !== 'object' || Array.isArray(doc.kot) || !doc.kot.name) {
           this.fetchKOTWithRetry().catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
           return;
         }
@@ -1048,7 +1057,7 @@ export default {
         // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
         if (doc.kot.time != null) {
           try {
-            localStorage.setItem("kot_time_" + this.production, doc.kot.time);
+            localStorage.setItem("kot_time_" + this.production, doc.last_kot_time);
           } catch (e) {
             if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
           }
@@ -1285,14 +1294,15 @@ export default {
         if (!this._isMounted || !this._socket) return;
         this._socket.on('connect_error', (err) => {
           if (!this._isMounted) return;
-          // R42-FIX: Only update status message if it's different from current.
-          // During extended outages, socket.io retries every 1-5 seconds, and
-          // each failed attempt triggered setStatusMessage, causing a Vue
-          // re-render each time. Since the message text is identical, skip
-          // the reactive assignment to avoid unnecessary re-renders.
-          if (this.statusMessage !== "Connection error. Retrying...") {
-            console.error("Socket connection error:", err);
-            this.setStatusMessage("Connection error. Retrying...");
+          // R49-FIX: Escalate message after prolonged disconnection
+          if (!this._disconnectedSince) this._disconnectedSince = Date.now();
+          const elapsed = Date.now() - this._disconnectedSince;
+          const msg = elapsed > 300000
+            ? "Offline for 5+ minutes. Check network connection."
+            : "Connection error. Retrying...";
+          if (this.statusMessage !== msg) {
+            if (import.meta.env?.DEV) console.error("Socket connection error:", err);
+            this.setStatusMessage(msg);
           }
         });
         this._socket.on('disconnect', (reason) => {
@@ -1306,6 +1316,7 @@ export default {
         });
         this._socket.on('connect', () => {
           if (!this._isMounted) return;
+          this._disconnectedSince = null;
           this.setStatusMessage("Reconnected");
           this.hideStatusMessageAfterDelay();
           // R38-FIX: Re-fetch KOT data after reconnect to sync any missed updates
@@ -1460,9 +1471,9 @@ export default {
         });
       } else {
         // R48-FIX (M3): Restore focus to the element that was active before modal opened
-        if (this._preModalFocus && typeof this._preModalFocus.focus === 'function') {
+        if (this._preModalFocus && typeof this._preModalFocus.focus === 'function' && document.contains(this._preModalFocus)) {
           this.$nextTick(() => {
-            this._preModalFocus.focus();
+            if (this._preModalFocus) this._preModalFocus.focus();
             this._preModalFocus = null;
           });
         }

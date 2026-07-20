@@ -67,7 +67,14 @@
     "default_user": "مستخدم"
   },
   "menu": {
-    "special_items": "أصناف مميزة"
+    "special_items": "أصناف مميزة",
+    "errors": {
+      "failed_load_items": "فشل في تحميل عناصر القائمة",
+      "failed_load_aggregator": "فشل في تحميل قائمة المنصة",
+      "failed_load_categories": "فشل في تحميل فئات القائمة",
+      "failed_load_customer_groups": "فشل في تحميل مجموعات العملاء",
+      "failed_load_territories": "فشل في تحميل المناطق"
+    }
   },
   "pos_sidebar": {
     "categories": "فئات",
@@ -79,7 +86,7 @@
     "click_to_add": "انقر على العناصر لإضافتها",
     "double_click_hint": "انقر مرتين لخيارات التخصيص",
     "clear_cart": "إفراغ العربة",
-    "total": "الإجمالي",
+    "subtotal": "المجموع الفرعي",
     "add_new_order": "إضافة طلب جديد",
     "update_order": "تحديث الطلب",
     "updating_order": "جاري تحديث الطلب...",
@@ -87,7 +94,13 @@
     "loading_order": "جاري تحميل تفاصيل الطلب...",
     "edit_item": "تعديل العنصر",
     "add_comment": "إضافة تعليق",
-    "edit_comment": "تعديل التعليق"
+    "edit_comment": "تعديل التعليق",
+    "errors": {
+      "failed_add": "فشل في إضافة العنصر إلى العربة",
+      "failed_remove": "فشل في إزالة العنصر من العربة",
+      "failed_update_quantity": "فشل في تحديث الكمية",
+      "failed_clear": "فشل في إفراغ العربة"
+    }
   },
   "order": {
     "select_to_view": "حدد طلبًا لعرض التفاصيل",
@@ -139,7 +152,8 @@
     "select_territory": "حدد المنطقة",
     "adding": "جاري إضافة العميل...",
     "add_button": "إضافة العميل",
-    "failed_create": "فشل في إنشاء العميل. يرجى المحاولة مرة أخرى."
+    "failed_create": "فشل في إنشاء العميل. يرجى المحاولة مرة أخرى.",
+    "search_results": "نتائج البحث"
   },
   "comment": {
     "title": "تعليقات الطلب",
@@ -176,7 +190,10 @@
     "failed_load_pos": "فشل في تحميل نقطة البيع",
     "failed_fetch_item_details": "فشل في جلب تفاصيل العنصر",
     "failed_fetch_addons": "فشل في جلب الإضافات",
-    "no_rooms_for_branch": "لم يتم العثور على قاعات لهذا الفرع"
+    "no_rooms_for_branch": "لم يتم العثور على قاعات لهذا الفرع",
+    "no_payment_modes": "لا توجد أنماط دفع متاحة",
+    "failed_save_layout": "فشل في حفظ تخطيط الطاولات",
+    "failed_update_table": "فشل في تحديث بيانات الطاولة"
   },
   "success": {
     "order_cancelled": "تم إلغاء الطلب بنجاح",
@@ -192,10 +209,16 @@
     "status_title": "حالة الطلب",
     "table_label": "طاولة {{name}}",
     "qty": "الكمية: {{qty}}",
+    "aria_edit_order": "تعديل الطلب",
+    "aria_cancel_order": "إلغاء الطلب",
+    "aria_print": "طباعة",
     "pagination": {
       "previous": "السابق",
       "next": "التالي",
       "page": "صفحة {{number}}"
+    },
+    "errors": {
+      "failed_load_table_order": "فشل في تحميل طلب الطاولة"
     }
   },
   "tables": {
@@ -236,7 +259,11 @@
     "editing_layout_hint_title": "تعديل المخطط",
     "drag_tables_hint": "• اسحب الطاولات لتغيير موضعها",
     "autosave_hint": "• يتم حفظ التغييرات تلقائيًا",
-    "zoom_pan_hint": "استخدم التمرير للتكبير • اسحب الخلفية للتحريك"
+    "zoom_pan_hint": "استخدم التمرير للتكبير • اسحب الخلفية للتحريك",
+    "zoom_in": "تكبير",
+    "zoom_out": "تصغير",
+    "reset_zoom": "إعادة تعيين التكبير",
+    "no_bill_activity": "لا يوجد نشاط على الفاتورة بعد"
   },
   "footer": {
     "pos": "نقطة البيع",
@@ -332,7 +359,10 @@
     "course_updated": "تم تحديث الفئة",
     "failed_update_course": "فشل في تحديث الفئة",
     "course_deleted": "تم حذف الفئة",
-    "failed_delete_course": "فشل في حذف الفئة"
+    "failed_delete_course": "فشل في حذف الفئة",
+    "items_count": "{{count}} عناصر",
+    "active_count": "{{count}} نشط",
+    "branch": "الفرع"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -459,6 +489,23 @@
       "show": "عرض المقارنة",
       "hide": "إخفاء المقارنة"
     },
+    "comparison": {
+      "noData": "قم بإنشاء تقرير مبيعات أولاً لتمكين مقارنة الفترات",
+      "noPreviousData": "لا توجد بيانات للفترة السابقة متاحة للمقارنة",
+      "hint": "سيتم تحميل بيانات الفترة السابقة تلقائيًا عند عرض تقرير المبيعات",
+      "currentPeriod": "الفترة الحالية",
+      "revenue": "الإيرادات",
+      "orders": "الطلبات",
+      "avgOrder": "متوسط قيمة الطلب",
+      "customers": "العملاء",
+      "tax": "الضريبة",
+      "netRevenue": "صافي الإيرادات",
+      "previousPeriod": "الفترة السابقة",
+      "change": "التغيير",
+      "overallUp": "الاتجاه العام إيجابي مقارنة بالفترة السابقة",
+      "overallDown": "الاتجاه العام يظهر تراجعًا مقارنة بالفترة السابقة",
+      "overallNeutral": "الأداء مشابه للفترة السابقة"
+    },
     "loading": "جاري تحميل التقرير...",
     "dateFrom": "من",
     "dateTo": "إلى",
@@ -485,7 +532,50 @@
     "no_profit_loss_data_export": "لا توجد بيانات أرباح وخسائر للتصدير",
     "no_inventory_data_export": "لا توجد بيانات مخزون للتصدير",
     "csv_exported": "تم تصدير CSV بنجاح",
-    "failed_export_csv": "فشل تصدير CSV"
+    "failed_export_csv": "فشل تصدير CSV",
+    "sales": {
+      "noData": "حدد فترة لإنشاء تقرير المبيعات",
+      "totalRevenue": "إجمالي الإيرادات",
+      "totalOrders": "إجمالي الطلبات",
+      "avgOrderValue": "متوسط قيمة الطلب",
+      "netRevenue": "صافي الإيرادات",
+      "totalTax": "إجمالي الضرائب",
+      "uniqueCustomers": "عملاء فريدون",
+      "cancelledOrders": "طلبات ملغاة",
+      "cancelledAmount": "المبلغ الملغى",
+      "hourlyDistribution": "توزيع المبيعات بالساعة",
+      "orderTypeBreakdown": "تفصيل حسب نوع الطلب",
+      "itemWiseSales": "المبيعات حسب الصنف",
+      "topCustomers": "أفضل العملاء",
+      "type": "النوع",
+      "orders": "الطلبات",
+      "revenue": "الإيرادات",
+      "item": "الصنف",
+      "qty": "الكمية",
+      "avgRate": "متوسط السعر",
+      "total": "الإجمالي",
+      "vsPrevious": "مقارنة بالسابق",
+      "noChange": "لا تغيير"
+    },
+    "inventory": {
+      "noData": "لا توجد بيانات مخزون",
+      "noDataHint": "حدد فترة لإنشاء تقرير المخزون",
+      "totalItems": "إجمالي العناصر",
+      "lowStock": "عناصر منخفضة المخزون",
+      "outOfStock": "نفذ من المخزون",
+      "totalValue": "إجمالي قيمة المخزون",
+      "outOfStockAlert": "عناصر نفدت من المخزون",
+      "lowStockAlert": "عناصر منخفضة المخزون",
+      "reorderNote": "فكر في إعادة الطلب للحفاظ على مستويات مخزون كافية",
+      "stockLevels": "مستويات المخزون الحالية",
+      "item": "العنصر",
+      "currentStock": "المخزون الحالي",
+      "reorderLevel": "مستوى إعادة الطلب",
+      "status": "الحالة",
+      "unit": "الوحدة",
+      "value": "القيمة",
+      "coming_soon": "قريبًا — تقرير المخزون غير متاح بعد"
+    }
   },
   "product_dialog": {
     "special_instructions": "تعليمات خاصة",
@@ -529,7 +619,9 @@
     "mobile_hint": "ستتوفر دعم الأجهزة المحمولة في إصدار مستقبلي.",
     "required": "المطلوب:",
     "switch_v1": "التبديل إلى الإصدار 1",
-    "title": "سطح المكتب فقط"
+    "title": "سطح المكتب فقط",
+    "min_width": "الحد الأدنى للعرض:",
+    "mobile_version_hint": "إصدار الهاتف المحمول"
   },
   "error_boundary": {
     "message": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
@@ -555,7 +647,10 @@
   },
   "aggregator": {
     "loading": "جاري تحميل منصات التجميع...",
-    "select_placeholder": "اختر منصة تجميع"
+    "select_placeholder": "اختر منصة تجميع",
+    "failed_load": "فشل في تحميل منصات التجميع",
+    "failed_load_menu": "فشل في تحميل قائمة المنصة",
+    "retry_placeholder": "فشل التحميل — اضغط لإعادة المحاولة"
   },
   "accessibility": {
     "loading_content": "جاري تحميل المحتوى...",
@@ -581,6 +676,21 @@
     "disclaimer": "رؤى الذكاء الاصطناعي هي اقتراحات — تحقق دائمًا من البيانات الفعلية",
     "default_question_top_items": "ما هي الأصناف الأكثر مبيعًا؟",
     "default_question_trends": "ما الاتجاهات التي تلاحظها؟",
-    "not_configured": "تتطلب رؤى الذكاء الاصطناعي تكوينًا. قم بتعيين متغيرات البيئة VITE_AI_BASE_URL و VITE_AI_API_KEY."
+    "not_configured": "تتطلب رؤى الذكاء الاصطناعي تكوينًا. قم بتعيين متغيرات البيئة VITE_AI_BASE_URL و VITE_AI_API_KEY.",
+    "errors": {
+      "request_failed": "فشل طلب الذكاء الاصطناعي",
+      "generate_failed": "فشل في إنشاء تحليل"
+    }
+  },
+  "app": {
+    "errors": {
+      "failed_initialize": "فشل في تهيئة التطبيق. يرجى تحديث الصفحة.",
+      "failed_fetch_profile": "فشل في جلب ملف تعريف نقطة البيع"
+    }
+  },
+  "performance": {
+    "criticalLatency": "تم اكتشاف زمن استجابة حرج",
+    "degradedLatency": "تم اكتشاف زمن استجابة مرتفع",
+    "reconnected": "تم استعادة الاتصال"
   }
 }

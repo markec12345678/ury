@@ -23,6 +23,10 @@ def getRestaurantMenu(pos_profile, room=None, order_type=None):
     cashier = bool(user_roles.intersection(billing_roles))
 
     branch_name = _get_user_branch()
+    # R49-FIX: Validate POS Profile belongs to user's branch
+    pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
+    if pos_profile_branch and pos_profile_branch != branch_name:
+        frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
     restaurant = frappe.db.get_value("URY Restaurant", {"branch": branch_name}, "name")
 
     if not restaurant:
@@ -502,6 +506,7 @@ def getAggregatorItem(aggregator):
         "Item Price",
         fields=["item_code", "item_name", "price_list_rate"],
         filters={"selling": 1, "price_list": priceList},
+        limit_page_length=500,
     )
 
     # Batch-fetch image and disabled status in a single query
@@ -542,13 +547,16 @@ def getAggregatorMOP(aggregator):
         frappe.throw(_("No mode of payment configured for aggregator {0}").format(aggregator))
     return [{"mode_of_payment": modeOfPayment, "opening_amount": 0.0}]
 @frappe.whitelist()
-def create_customer(customer_name, mobile_number=None, customer_group="Individual", territory="India"):
+def create_customer(customer_name, mobile_number=None, customer_group="Individual", territory=None):
     frappe.only_for("Restaurant Manager", "Cashier")
     if not customer_name:
         frappe.throw(_("Customer name is required"))
     # R49-FIX: Sanitize customer_name length to prevent excessively long names
     if len(customer_name) > 200:
         frappe.throw(_("Customer name is too long (max 200 characters)"))
+    # R49-FIX: Use system default territory instead of hardcoded "India"
+    if not territory:
+        territory = frappe.db.get_single_value("Global Defaults", "default_country") or "All Territories"
     if not mobile_number:
         frappe.throw(_("Mobile Number is required"))
     # R44-FIX: Narrow exception catch — only catch the specific validation
@@ -593,6 +601,11 @@ def create_customer(customer_name, mobile_number=None, customer_group="Individua
 @frappe.whitelist()
 def validate_pos_close(pos_profile): 
     frappe.only_for("Restaurant Manager", "Cashier")
+    # R49-FIX: Validate POS Profile belongs to user's branch
+    branch_name = _get_user_branch()
+    pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
+    if pos_profile_branch and pos_profile_branch != branch_name:
+        frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
     enable_unclosed_pos_check = frappe.db.get_value("POS Profile", pos_profile, "custom_daily_pos_close")
     
     if enable_unclosed_pos_check:

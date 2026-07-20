@@ -712,6 +712,14 @@ def cancel_order(invoice_id, reason):
     user_branch = _get_user_branch()
     if inv_branch != user_branch:
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+    # R49-FIX: Dedup lock to prevent duplicate cancellation KOTs from concurrent requests
+    dedup_key = f"ury_cancel_order_lock:{invoice_id}"
+    lock_token = frappe.generate_hash(length=12)
+    if frappe.cache().get_value(dedup_key):
+        frappe.throw(_("Cancellation already in progress for {0}").format(invoice_id))
+    frappe.cache().set_value(dedup_key, lock_token, expires_in_sec=30)
+    if frappe.cache().get_value(dedup_key) != lock_token:
+        frappe.throw(_("Cancellation already in progress for {0}").format(invoice_id))
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
 
     frappe.db.savepoint("before_cancel")
@@ -734,7 +742,11 @@ def cancel_order(invoice_id, reason):
             frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason, update_modified=False)
     except Exception:
         frappe.db.rollback(savepoint="before_cancel")
+        frappe.cache().delete_value(dedup_key)  # R49-FIX: Release lock on failure
         raise
+
+    # R49-FIX: Release dedup lock after cancellation completes
+    frappe.cache().delete_value(dedup_key)
 
     # Update table status
     if pos_invoice.restaurant_table:

@@ -103,6 +103,10 @@ def get_pos_invoices(start, end, pos_profile, user):
         frappe.throw(_("You can only view your own POS invoices"), frappe.PermissionError)
     # Get branch from pos_profile for filtering
     branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
+    # R49-FIX: Validate POS Profile branch matches user's branch
+    user_branch = _get_user_branch()
+    if branch != user_branch:
+        frappe.throw(_("You can only view invoices from your branch"), frappe.PermissionError)
     # Filter by date range in SQL instead of Python (M9)
     data = frappe.db.sql(
         """

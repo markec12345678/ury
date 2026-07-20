@@ -487,6 +487,23 @@
       "show": "Show Comparison",
       "hide": "Hide Comparison"
     },
+    "comparison": {
+      "noData": "Generate a sales report first to enable period comparison",
+      "noPreviousData": "No previous period data available for comparison",
+      "hint": "Previous period data will be loaded automatically when you view a sales report",
+      "currentPeriod": "Current Period",
+      "revenue": "Revenue",
+      "orders": "Orders",
+      "avgOrder": "Avg Order Value",
+      "customers": "Customers",
+      "tax": "Tax",
+      "netRevenue": "Net Revenue",
+      "previousPeriod": "Previous Period",
+      "change": "Change",
+      "overallUp": "Overall trend is positive compared to the previous period",
+      "overallDown": "Overall trend shows decline compared to the previous period",
+      "overallNeutral": "Performance is similar to the previous period"
+    },
     "loading": "Loading report...",
     "dateFrom": "From",
     "dateTo": "To",

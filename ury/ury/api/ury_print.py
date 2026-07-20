@@ -122,6 +122,10 @@ def select_network_printer(pos_profile, invoice_id):
     user_branch = _get_user_branch()
     if inv_branch != user_branch:
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+    # R49-FIX: Validate POS Profile belongs to user's branch
+    pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
+    if pos_profile_branch and pos_profile_branch != user_branch:
+        frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
 
     table = frappe.db.get_value("POS Invoice", invoice_id, "restaurant_table")
     print_format = frappe.db.get_value("POS Profile", pos_profile, "print_format")
@@ -189,6 +193,11 @@ def print_pos_page(doctype, name, print_format):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if doctype not in ALLOWED_PRINT_DOCTYPES:
         frappe.throw(_("Invalid doctype for printing"), frappe.ValidationError)
+    # R49-FIX: Validate print_format belongs to the correct doctype
+    if print_format:
+        pf_doctype = frappe.db.get_value("Print Format", print_format, "doc_type")
+        if pf_doctype and pf_doctype != doctype:
+            frappe.throw(_("Print Format '{0}' is not valid for {1}").format(print_format, doctype))
     data = {"name": name, "doctype": doctype, "print_format": print_format}
 
     result = frappe.db.get_value(

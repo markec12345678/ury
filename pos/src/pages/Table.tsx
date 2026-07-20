@@ -356,7 +356,7 @@ const TableView = () => {
                         )}
                         {table.is_take_away === 1 && (
                           <Badge variant="pending" className="mt-2">
-                            {t('tables.take_away')}
+                            {t('order_types.take_away')}
                           </Badge>
                         )}
                       </div>

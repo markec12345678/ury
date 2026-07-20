@@ -60,7 +60,14 @@
     "default_user": "Utilisateur"
   },
   "menu": {
-    "special_items": "Plats spéciaux"
+    "special_items": "Plats spéciaux",
+    "errors": {
+      "failed_load_items": "Échec du chargement des articles du menu",
+      "failed_load_aggregator": "Échec du chargement du menu agrégateur",
+      "failed_load_categories": "Échec du chargement des catégories du menu",
+      "failed_load_customer_groups": "Échec du chargement des groupes de clients",
+      "failed_load_territories": "Échec du chargement des territoires"
+    }
   },
   "pos_sidebar": {
     "categories": "Catégories",
@@ -72,7 +79,7 @@
     "click_to_add": "Cliquez sur les articles pour les ajouter",
     "double_click_hint": "Double-cliquez pour les options de personnalisation",
     "clear_cart": "Vider le panier",
-    "total": "Total",
+    "subtotal": "Sous-total",
     "add_new_order": "Nouvelle commande",
     "update_order": "Mettre à jour la commande",
     "updating_order": "Mise à jour...",
@@ -80,7 +87,13 @@
     "loading_order": "Chargement des détails de la commande...",
     "edit_item": "Modifier l'article",
     "add_comment": "Ajouter un commentaire",
-    "edit_comment": "Modifier le commentaire"
+    "edit_comment": "Modifier le commentaire",
+    "errors": {
+      "failed_add": "Échec de l'ajout de l'article au panier",
+      "failed_remove": "Échec du retrait de l'article du panier",
+      "failed_update_quantity": "Échec de la mise à jour de la quantité",
+      "failed_clear": "Échec du vidage du panier"
+    }
   },
   "order": {
     "select_to_view": "Sélectionnez une commande pour voir les détails",
@@ -132,7 +145,8 @@
     "select_territory": "Sélectionner un territoire",
     "adding": "Ajout du client...",
     "add_button": "Ajouter le client",
-    "failed_create": "Échec de la création du client. Veuillez réessayer."
+    "failed_create": "Échec de la création du client. Veuillez réessayer.",
+    "search_results": "Résultats de recherche"
   },
   "comment": {
     "title": "Commentaires de la commande",
@@ -169,7 +183,10 @@
     "failed_load_pos": "Échec du chargement du PDV",
     "failed_fetch_item_details": "Échec du chargement des détails de l'article",
     "failed_fetch_addons": "Échec du chargement des suppléments",
-    "no_rooms_for_branch": "Aucune salle trouvée pour cet établissement"
+    "no_rooms_for_branch": "Aucune salle trouvée pour cet établissement",
+    "no_payment_modes": "Aucun mode de paiement disponible",
+    "failed_save_layout": "Échec de la sauvegarde de la disposition des tables",
+    "failed_update_table": "Échec de la mise à jour des données de la table"
   },
   "success": {
     "order_cancelled": "Commande annulée avec succès",
@@ -185,10 +202,16 @@
     "status_title": "Statut de la commande",
     "table_label": "Table {{name}}",
     "qty": "Qté : {{qty}}",
+    "aria_edit_order": "Modifier la commande",
+    "aria_cancel_order": "Annuler la commande",
+    "aria_print": "Imprimer",
     "pagination": {
       "previous": "Précédent",
       "next": "Suivant",
       "page": "Page {{number}}"
+    },
+    "errors": {
+      "failed_load_table_order": "Échec du chargement de la commande de la table"
     }
   },
   "tables": {
@@ -229,7 +252,11 @@
     "editing_layout_hint_title": "Modification du plan",
     "drag_tables_hint": "• Faites glisser les tables pour les repositionner",
     "autosave_hint": "• Les modifications sont enregistrées automatiquement",
-    "zoom_pan_hint": "Utilisez le défilement pour zoomer • Faites glisser l'arrière-plan pour déplacer"
+    "zoom_pan_hint": "Utilisez le défilement pour zoomer • Faites glisser l'arrière-plan pour déplacer",
+    "zoom_in": "Zoom avant",
+    "zoom_out": "Zoom arrière",
+    "reset_zoom": "Réinitialiser le zoom",
+    "no_bill_activity": "Aucune activité de facturation pour le moment"
   },
   "footer": {
     "pos": "PDV",
@@ -325,7 +352,10 @@
     "course_updated": "Catégorie mise à jour",
     "failed_update_course": "Échec de la mise à jour de la catégorie",
     "course_deleted": "Catégorie supprimée",
-    "failed_delete_course": "Échec de la suppression de la catégorie"
+    "failed_delete_course": "Échec de la suppression de la catégorie",
+    "items_count": "{{count}} articles",
+    "active_count": "{{count}} actifs",
+    "branch": "Établissement"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -452,6 +482,23 @@
       "show": "Afficher la comparaison",
       "hide": "Masquer la comparaison"
     },
+    "comparison": {
+      "noData": "Générez d'abord un rapport de ventes pour activer la comparaison de périodes",
+      "noPreviousData": "Aucune donnée de période précédente disponible pour la comparaison",
+      "hint": "Les données de la période précédente seront chargées automatiquement lorsque vous consultez un rapport de ventes",
+      "currentPeriod": "Période actuelle",
+      "revenue": "Revenus",
+      "orders": "Commandes",
+      "avgOrder": "Valeur moyenne des commandes",
+      "customers": "Clients",
+      "tax": "Taxe",
+      "netRevenue": "Revenu net",
+      "previousPeriod": "Période précédente",
+      "change": "Variation",
+      "overallUp": "La tendance globale est positive par rapport à la période précédente",
+      "overallDown": "La tendance globale montre un déclin par rapport à la période précédente",
+      "overallNeutral": "Les performances sont similaires à la période précédente"
+    },
     "loading": "Chargement du rapport...",
     "dateFrom": "De",
     "dateTo": "À",
@@ -478,7 +525,50 @@
     "no_profit_loss_data_export": "Aucune donnée de profit et perte à exporter",
     "no_inventory_data_export": "Aucune donnée d'inventaire à exporter",
     "csv_exported": "CSV exporté avec succès",
-    "failed_export_csv": "Échec de l'exportation CSV"
+    "failed_export_csv": "Échec de l'exportation CSV",
+    "sales": {
+      "noData": "Sélectionnez une période pour générer un rapport des ventes",
+      "totalRevenue": "Chiffre d'affaires total",
+      "totalOrders": "Total des commandes",
+      "avgOrderValue": "Valeur moyenne des commandes",
+      "netRevenue": "Revenu net",
+      "totalTax": "Total des taxes",
+      "uniqueCustomers": "Clients uniques",
+      "cancelledOrders": "commandes annulées",
+      "cancelledAmount": "Montant annulé",
+      "hourlyDistribution": "Distribution des ventes horaires",
+      "orderTypeBreakdown": "Répartition par type de commande",
+      "itemWiseSales": "Ventes par article",
+      "topCustomers": "Meilleurs clients",
+      "type": "Type",
+      "orders": "Commandes",
+      "revenue": "Revenus",
+      "item": "Article",
+      "qty": "Qté",
+      "avgRate": "Taux moyen",
+      "total": "Total",
+      "vsPrevious": "vs préc.",
+      "noChange": "Aucun changement"
+    },
+    "inventory": {
+      "noData": "Aucune donnée d'inventaire",
+      "noDataHint": "Sélectionnez une période pour générer un rapport d'inventaire",
+      "totalItems": "Total des articles",
+      "lowStock": "Articles en stock faible",
+      "outOfStock": "Rupture de stock",
+      "totalValue": "Valeur totale du stock",
+      "outOfStockAlert": "articles en rupture de stock",
+      "lowStockAlert": "articles en stock faible",
+      "reorderNote": "Envisagez de réapprovisionner pour maintenir des niveaux de stock adéquats",
+      "stockLevels": "Niveaux de stock actuels",
+      "item": "Article",
+      "currentStock": "Stock actuel",
+      "reorderLevel": "Niveau de réapprovisionnement",
+      "status": "Statut",
+      "unit": "Unité",
+      "value": "Valeur",
+      "coming_soon": "Bientôt disponible — le rapport d'inventaire n'est pas encore accessible"
+    }
   },
   "product_dialog": {
     "special_instructions": "Instructions spéciales",
@@ -522,7 +612,9 @@
     "mobile_hint": "La prise en charge mobile sera disponible dans une future version.",
     "required": "Requis :",
     "switch_v1": "Passer à la version 1",
-    "title": "Bureau uniquement"
+    "title": "Bureau uniquement",
+    "min_width": "Largeur minimale :",
+    "mobile_version_hint": "Version mobile"
   },
   "error_boundary": {
     "message": "Une erreur inattendue s'est produite. Veuillez réessayer.",
@@ -548,7 +640,10 @@
   },
   "aggregator": {
     "loading": "Chargement des agrégateurs...",
-    "select_placeholder": "Sélectionner un agrégateur"
+    "select_placeholder": "Sélectionner un agrégateur",
+    "failed_load": "Échec du chargement des agrégateurs",
+    "failed_load_menu": "Échec du chargement du menu agrégateur",
+    "retry_placeholder": "Échec du chargement — appuyez pour réessayer"
   },
   "accessibility": {
     "loading_content": "Chargement du contenu...",
@@ -574,6 +669,21 @@
     "disclaimer": "Les analyses IA sont des suggestions — vérifiez toujours avec les données réelles",
     "default_question_top_items": "Quels sont les articles les plus vendus ?",
     "default_question_trends": "Quelles tendances voyez-vous ?",
-    "not_configured": "Les Analyses IA nécessitent une configuration. Définissez les variables d'environnement VITE_AI_BASE_URL et VITE_AI_API_KEY."
+    "not_configured": "Les Analyses IA nécessitent une configuration. Définissez les variables d'environnement VITE_AI_BASE_URL et VITE_AI_API_KEY.",
+    "errors": {
+      "request_failed": "Échec de la requête IA",
+      "generate_failed": "Échec de la génération de l'analyse"
+    }
+  },
+  "app": {
+    "errors": {
+      "failed_initialize": "Échec de l'initialisation de l'application. Veuillez recharger la page.",
+      "failed_fetch_profile": "Échec du chargement du profil PDV"
+    }
+  },
+  "performance": {
+    "criticalLatency": "Latence critique détectée",
+    "degradedLatency": "Latence élevée détectée",
+    "reconnected": "Connexion restaurée"
   }
 }

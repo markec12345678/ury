@@ -193,7 +193,7 @@ def _build_kot_response(branch, status_filter):
     # Step 2: Batch-fetch all KOT headers (no child tables yet)
     kot_headers = frappe.get_all(
         "URY KOT",
-        filters={"name": ("in", kot_names)},
+        filters={"name": ("in", kot_names), "docstatus": 1},
         fields=[
             "name", "invoice", "restaurant_table", "customer_name", "type",
             "order_status", "production", "start_time_prep", "start_time_serv",

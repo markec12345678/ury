@@ -25,7 +25,7 @@ async function bootstrap() {
     });
     // Signal to E2E tests that MSW is ready
     document.documentElement.setAttribute('data-msw-ready', 'true');
-    console.log('[MSW] Service worker active — API requests are being mocked');
+    if (import.meta.env.DEV) console.log('[MSW] Service worker active — API requests are being mocked');
   }
 
   await initI18n();
