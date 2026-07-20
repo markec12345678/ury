@@ -28,23 +28,21 @@ import { URYMenuItem } from '../../lib/menu-management-api';
 type Tab = 'items' | 'courses';
 
 const MenuManagement = () => {
-  const {
-    menus,
-    selectedMenu,
-    courses,
-    loading,
-    searchQuery,
-    selectedCourseFilter,
-    fetchMenus,
-    fetchCourses,
-    fetchAvailableItems,
-    toggleMenuStatus,
-    setSearchQuery,
-    setSelectedCourseFilter,
-    clearSelectedMenu,
-    updateItemInMenu,
-    removeItemFromMenu,
-  } = useMenuManagementStore();
+  const menus = useMenuManagementStore((s) => s.menus);
+  const selectedMenu = useMenuManagementStore((s) => s.selectedMenu);
+  const courses = useMenuManagementStore((s) => s.courses);
+  const loading = useMenuManagementStore((s) => s.loading);
+  const searchQuery = useMenuManagementStore((s) => s.searchQuery);
+  const selectedCourseFilter = useMenuManagementStore((s) => s.selectedCourseFilter);
+  const fetchMenus = useMenuManagementStore((s) => s.fetchMenus);
+  const fetchCourses = useMenuManagementStore((s) => s.fetchCourses);
+  const fetchAvailableItems = useMenuManagementStore((s) => s.fetchAvailableItems);
+  const toggleMenuStatus = useMenuManagementStore((s) => s.toggleMenuStatus);
+  const setSearchQuery = useMenuManagementStore((s) => s.setSearchQuery);
+  const setSelectedCourseFilter = useMenuManagementStore((s) => s.setSelectedCourseFilter);
+  const clearSelectedMenu = useMenuManagementStore((s) => s.clearSelectedMenu);
+  const updateItemInMenu = useMenuManagementStore((s) => s.updateItemInMenu);
+  const removeItemFromMenu = useMenuManagementStore((s) => s.removeItemFromMenu);
 
   const [activeTab, setActiveTab] = useState<Tab>('items');
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);

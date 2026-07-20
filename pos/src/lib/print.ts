@@ -3,7 +3,7 @@ import {
   getInvoicePrintHtml,
   networkPrint,
   selectNetworkPrinter,
-  updatePrintStatus
+  updatePrintStatus,
 } from './invoice-api';
 import { PosProfileCombined } from './pos-profile-api';
 
@@ -12,7 +12,16 @@ interface PrintOrderParams {
   posProfile: PosProfileCombined
 }
 
+const VALID_INVOICE_ID = /^[A-Za-z0-9\/-]+$/;
+
+function validateInvoiceId(id: string): void {
+  if (!VALID_INVOICE_ID.test(id)) {
+    throw new Error(`Invalid invoice ID format: ${id}`);
+  }
+}
+
 export async function printOrder({ orderId, posProfile }: PrintOrderParams): Promise<'qz' | 'network' | 'socket'> {
+  validateInvoiceId(orderId);
   const { print_type, qz_host, print_format, printer, name, cashier, multiple_cashier } = posProfile;
 
   if (!print_format) {

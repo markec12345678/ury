@@ -77,7 +77,16 @@ export async function getPOSInvoices({
   }
 }
 
+const VALID_INVOICE_ID = /^[A-Za-z0-9\/-]+$/;
+
+function validateInvoiceId(id: string): void {
+  if (!VALID_INVOICE_ID.test(id)) {
+    throw new Error(`Invalid invoice ID format: ${id}`);
+  }
+}
+
 export async function getPOSInvoiceItems(invoiceId: string) {
+  validateInvoiceId(invoiceId);
   try {
     const response = await call.get<GetPOSInvoiceItemsResponse>(
       'ury.ury_pos.api.getPosInvoiceItems',
@@ -109,9 +118,13 @@ export async function updateInvoiceStatus(
   }
 } 
 
+interface SearchPosInvoiceResponse {
+  message: POSInvoice[];
+}
+
 export async function searchPosInvoice(query: string, status: string) {
   try {
-    const response = await call.get('ury.ury_pos.api.searchPosInvoice', {
+    const response = await call.get<SearchPosInvoiceResponse>('ury.ury_pos.api.searchPosInvoice', {
       query,
       status,
     });
@@ -122,6 +135,7 @@ export async function searchPosInvoice(query: string, status: string) {
 } 
 
 export async function getInvoicePrintHtml(invoiceId: string, printFormat: string) {
+  validateInvoiceId(invoiceId);
   try {
     const response = await call.get<{ message: { html: string } }>(
       'frappe.www.printview.get_html_and_style',
@@ -142,6 +156,7 @@ export async function getInvoicePrintHtml(invoiceId: string, printFormat: string
 } 
 
 export async function networkPrint(orderId: string, printer: string, printFormat: string) {
+  validateInvoiceId(orderId);
   try {
     await call.post('ury.ury.api.ury_print.network_printing', {
       doctype: 'POS Invoice',
@@ -155,6 +170,7 @@ export async function networkPrint(orderId: string, printer: string, printFormat
 }
 
 export async function selectNetworkPrinter(orderId: string, posProfile: string, printFormat?: string | null) {
+  validateInvoiceId(orderId);
   try {
     await call.post('ury.ury.api.ury_print.select_network_printer', {
       invoice_id: orderId,
@@ -168,6 +184,7 @@ export async function selectNetworkPrinter(orderId: string, posProfile: string, 
 
 
 export async function updatePrintStatus(orderId: string) {
+  validateInvoiceId(orderId);
   try {
     await call.post('ury.ury.api.ury_print.qz_print_update', { invoice: orderId });
   } catch (error) {

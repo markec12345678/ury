@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
+from datetime import datetime
 from erpnext.controllers.queries import item_query
 from ury.ury.api.utils import _get_user_branch
 from ury.ury_pos.api import getBranchRoom
@@ -224,8 +225,6 @@ def sync_order(
 
     if last_invoice and last_modified_time:
         lastModifiedTime = invoice.modified
-        from datetime import datetime
-
         if isinstance(last_modified_time, str):
             try:
                 last_modified_time = datetime.strptime(
@@ -273,6 +272,11 @@ def sync_order(
         invoice.custom_comments = comments
     invoice.no_of_pax = no_of_pax
     invoice.pos_profile = pos_profile
+    # H-01: Validate cashier and waiter are active users
+    for role_user in [("Cashier", cashier), ("Waiter", waiter)]:
+        if role_user[1] and not frappe.db.exists("User", {"name": role_user[1], "enabled": 1}):
+            frappe.throw(_("Invalid {0}: {1}").format(role_user[0], role_user[1]))
+
     invoice.cashier = cashier
     invoice.waiter = waiter
     invoice.custom_aggregator_id = aggregator_id
@@ -288,6 +292,11 @@ def sync_order(
         price_list = invoice.selling_price_list
 
     # dummy payment
+    # C-02: Validate mode_of_payment against POS Profile's allowed payment methods
+    allowed_mops = frappe.get_all("POS Profile Payment", filters={"parent": pos_profile}, pluck="mode_of_payment")
+    if mode_of_payment not in allowed_mops:
+        frappe.throw(_("Invalid mode of payment: {0}").format(mode_of_payment))
+
     if invoice.invoice_created == 0:
         invoice.append(
             "payments",
@@ -742,10 +751,15 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
             frappe.throw(_("Invalid payments data"), frappe.ValidationError)
     if not payments:
         frappe.throw(_("At least one payment is required"))
+    # H-03: Validate each payment's mode_of_payment against POS Profile's configured payment methods
+    allowed_mops = frappe.get_all("POS Profile Payment", filters={"parent": pos_profile}, pluck="mode_of_payment")
     for p in payments:
         amount = flt(p.get("amount", 0))
         if amount < 0:
             frappe.throw(_("Payment amount cannot be negative"))
+        mop = p.get("mode_of_payment")
+        if mop not in allowed_mops:
+            frappe.throw(_("Invalid mode of payment: {0}").format(mop))
 
     # R44-FIX: At least one of invoice or table must be provided — otherwise
     # we would create an orphaned invoice with no way to reference it.
@@ -772,6 +786,11 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
     invoice.pos_profile = pos_profile
     invoice.additional_discount_percentage=additionalDiscount
     invoice.calculate_taxes_and_totals()
+
+    # H-07: Validate that payment amounts match the grand total (prevent negative invoice from discount)
+    total_payments = flt(sum(flt(p.get("amount", 0)) for p in payments))
+    if flt(total_payments - invoice.grand_total, 2) < 0:
+        frappe.throw(_("Total payment amount ({0}) is less than grand total ({1}). Discount may have created a negative balance.").format(total_payments, invoice.grand_total))
 
     invoice.payments = []
 

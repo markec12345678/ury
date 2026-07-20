@@ -350,7 +350,7 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
                 except OSError:
                     pass
 
-    filename = f"report_{report_type}_{frappe.generate_hash(length=8)}.html"
+    filename = f"report_{report_type}_{frappe.session.user}_{_get_user_branch()}_{frappe.generate_hash(length=8)}.html"
     filepath = os.path.join(temp_dir, filename)
 
     with open(filepath, "w") as f:

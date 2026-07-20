@@ -96,6 +96,9 @@ def get_cashiers(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 def get_pos_invoices(start, end, pos_profile, user):
     frappe.only_for("Restaurant Manager", "Cashier")
+    # H-08: Validate that requesting user matches the user parameter (unless Restaurant Manager)
+    if frappe.session.user != user and "Restaurant Manager" not in frappe.get_roles():
+        frappe.throw(_("You can only view your own POS invoices"), frappe.PermissionError)
     # Get branch from pos_profile for filtering
     branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
     # Filter by date range in SQL instead of Python (M9)

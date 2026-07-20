@@ -95,9 +95,16 @@ export default {
           return;
         }
 
-        const data = await res.json();
+        let data;
+        try {
+          data = await res.json();
+        } catch (_jsonErr) {
+          this.error = "Unexpected server response";
+          this.password = '';
+          return;
+        }
 
-        if (res.ok && (data.message === "Logged In" || data.home_page)) {
+        if (data.message === "Logged In" || data.home_page) {
           // Update shared auth state so route guard works
           if (this.authState) {
             this.authState.isLoggedIn = true;

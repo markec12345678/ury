@@ -27,6 +27,7 @@ class URYKOT(Document):
                     f"KOT Print Failed for {self.name} on printer {printer}\n{frappe.get_traceback()}",
                     "KOT Print Error",
                 )
+                frappe.msgprint(_("Print failed for some printers"))
 
         
         pos_kot_printers = frappe.db.get_all(

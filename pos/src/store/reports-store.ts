@@ -159,7 +159,11 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
       try {
         const { selectedPeriod, customFromDate, customToDate } = get();
         const { prevFrom, prevTo } = getPreviousPeriodDates(selectedPeriod, customFromDate, customToDate);
-        const report = await getSalesReport(selectedPeriod, prevFrom, prevTo);
+        // R37-FIX: Pass 'daily' as the period parameter for previous-period fetches
+        // instead of selectedPeriod. The server may override custom date ranges when
+        // it receives a named period like 'last_month' — passing 'daily' ensures the
+        // API respects the explicit from/to dates we calculated for the previous period.
+        const report = await getSalesReport('daily', prevFrom, prevTo);
         set({ previousSalesReport: report });
       } catch (err) {
         // Don't show error toast for previous period - it's optional

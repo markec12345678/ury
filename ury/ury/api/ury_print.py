@@ -177,11 +177,11 @@ def print_pos_page(doctype, name, print_format):
     data = {"name": name, "doctype": doctype, "print_format": print_format}
 
     result = frappe.db.get_value(
-        "POS Invoice", name, ["restaurant_table", "branch", "name"]
+        "POS Invoice", name, ["restaurant_table", "branch", "name", "invoice_printed"]
     )
     if not result:
         frappe.throw(_("POS Invoice {0} not found").format(name))
-    restaurant_table, branch, invoice_name = result
+    restaurant_table, branch, invoice_name, invoice_printed = result
     if not branch:
         frappe.throw(_("POS Invoice {0} has no branch assigned").format(name), frappe.PermissionError)
     # R38-FIX: Validate invoice belongs to user's branch
@@ -190,8 +190,6 @@ def print_pos_page(doctype, name, print_format):
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     print_channel = "{}_{}".format("print", branch)
     frappe.publish_realtime(print_channel, {"data": data})
-
-    invoice_printed = frappe.db.get_value("POS Invoice", name, "invoice_printed")
 
     if invoice_printed == 0:
         frappe.db.set_value("POS Invoice", name, "invoice_printed", 1)

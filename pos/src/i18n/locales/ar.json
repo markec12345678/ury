@@ -291,7 +291,25 @@
     "export_menu": "تصدير القائمة",
     "current_price": "السعر الحالي",
     "fixed_amount": "ثابت",
-    "change": "تغيير"
+    "change": "تغيير",
+    "failed_update_prices": "فشل تحديث الأسعار",
+    "bulk_action_failed": "فشل الإجراء الجماعي",
+    "add_course": "إضافة فئة",
+    "add_item_to_menu": "إضافة صنف إلى القائمة",
+    "search_items_to_add": "البحث عن أصناف لإضافتها...",
+    "no_items_found": "لم يتم العثور على أصناف",
+    "price_label": "السعر",
+    "course_category": "الفئة / المجموعة",
+    "no_course": "بدون فئة",
+    "mark_special_dish": "تحديد كطبق مميز",
+    "back": "رجوع",
+    "adding": "جاري الإضافة...",
+    "add_to_menu": "إضافة إلى القائمة",
+    "edit_menu_item": "تعديل صنف القائمة",
+    "special_dish": "طبق مميز",
+    "saving": "جاري الحفظ...",
+    "save_changes": "حفظ التغييرات",
+    "loading_courses": "جاري تحميل الفئات..."
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -390,7 +408,42 @@
     "previous_period": "الفترة السابقة",
     "current_period": "الفترة الحالية",
     "change": "تغيير",
-    "no_report_data": "حدد فترة لإنشاء تقرير"
+    "no_report_data": "حدد فترة لإنشاء تقرير",
+    "types": {
+      "sales": "المبيعات",
+      "expense": "المصروفات",
+      "profitLoss": "الأرباح والخسائر",
+      "inventory": "المخزون"
+    },
+    "periods": {
+      "today": "اليوم",
+      "yesterday": "أمس",
+      "thisWeek": "هذا الأسبوع",
+      "thisMonth": "هذا الشهر",
+      "lastMonth": "الشهر الماضي",
+      "last7Days": "آخر 7 أيام",
+      "last30Days": "آخر 30 يومًا",
+      "custom": "مخصص"
+    },
+    "compare": {
+      "show": "عرض المقارنة",
+      "hide": "إخفاء المقارنة"
+    },
+    "loading": "جاري تحميل التقرير...",
+    "dateFrom": "من",
+    "dateTo": "إلى",
+    "apply": "تطبيق",
+    "select_period_expense": "حدد فترة لإنشاء تقرير المصروفات",
+    "select_period_profit_loss": "حدد فترة لإنشاء تقرير الأرباح والخسائر",
+    "no_fixed_expenses": "لا توجد مصروفات ثابتة مسجلة",
+    "no_variable_expenses": "لا توجد مصروفات متغيرة مسجلة لهذه الفترة",
+    "type": "النوع",
+    "description": "الوصف",
+    "amount": "المبلغ",
+    "date": "التاريخ",
+    "revenue": "الإيرادات",
+    "cogs": "تكلفة البضاعة المباعة",
+    "operating_expenses": "المصروفات التشغيلية"
   },
   "product_dialog": {
     "special_instructions": "تعليمات خاصة",

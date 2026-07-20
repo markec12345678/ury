@@ -16,7 +16,7 @@ interface BatchPriceUpdateDialogProps {
 type ApplyMode = 'percentage' | 'fixed';
 
 const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDialogProps) => {
-  const { batchUpdateItemPrices } = useMenuManagementStore();
+  const batchUpdateItemPrices = useMenuManagementStore((s) => s.batchUpdateItemPrices);
 
   const [priceMap, setPriceMap] = useState<Record<string, number>>(
     Object.fromEntries(items.map((item) => [item.name, item.rate]))

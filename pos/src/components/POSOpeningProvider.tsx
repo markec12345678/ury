@@ -37,9 +37,9 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
         setErrorMessage(null);
 
         // First check if POS is opened
-        const openingResponse = await checkPOSOpening();
+        const openingStatus = await checkPOSOpening();
         if (cancelled) return;
-        if (openingResponse.message === 1) {
+        if (openingStatus === 1) {
           // POS is not opened
           setValidationType('opening');
           return;

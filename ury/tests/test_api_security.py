@@ -111,8 +111,8 @@ class TestURYDashboardAPI(unittest.TestCase):
         """Dashboard queries should use parameterized branch filtering."""
         import inspect
         try:
-            from ury.ury.api.ury_dashboard import get_dashboard_data
-            source = inspect.getsource(get_dashboard_data)
+            from ury.ury.api.ury_dashboard import get_dashboard_summary
+            source = inspect.getsource(get_dashboard_summary)
             self.assertNotIn("f\"AND branch = '", source)
         except ImportError:
             self.skipTest("Frappe environment not available")

@@ -287,7 +287,25 @@
     "export_menu": "Izvozi jedilnik",
     "current_price": "Trenutna cena",
     "fixed_amount": "Fiksno",
-    "change": "Sprememba"
+    "change": "Sprememba",
+    "failed_update_prices": "Neuspešna posodobitev cen",
+    "bulk_action_failed": "Množično dejanje ni uspelo",
+    "add_course": "Dodaj kategorijo",
+    "add_item_to_menu": "Dodaj jed v jedilnik",
+    "search_items_to_add": "Išči jedi za dodajanje...",
+    "no_items_found": "Ni najdenih jedi",
+    "price_label": "Cena",
+    "course_category": "Kategorija / Skupina",
+    "no_course": "Brez kategorije",
+    "mark_special_dish": "Označi kot posebno jed",
+    "back": "Nazaj",
+    "adding": "Dodajanje...",
+    "add_to_menu": "Dodaj v jedilnik",
+    "edit_menu_item": "Uredi jed v jedilniku",
+    "special_dish": "Posebna jed",
+    "saving": "Shranjevanje...",
+    "save_changes": "Shrani spremembe",
+    "loading_courses": "Nalaganje kategorij..."
   },
   "dashboard": {
     "title": "Nadzorna plošča",
@@ -386,7 +404,42 @@
     "previous_period": "Prejšnje obdobje",
     "current_period": "Trenutno obdobje",
     "change": "Sprememba",
-    "no_report_data": "Izberite obdobje za generiranje poročila"
+    "no_report_data": "Izberite obdobje za generiranje poročila",
+    "types": {
+      "sales": "Prodaja",
+      "expense": "Stroški",
+      "profitLoss": "Dobiček in izguba",
+      "inventory": "Zaloga"
+    },
+    "periods": {
+      "today": "Danes",
+      "yesterday": "Včeraj",
+      "thisWeek": "Ta teden",
+      "thisMonth": "Ta mesec",
+      "lastMonth": "Prejšnji mesec",
+      "last7Days": "Zadnjih 7 dni",
+      "last30Days": "Zadnjih 30 dni",
+      "custom": "Po meri"
+    },
+    "compare": {
+      "show": "Prikaži primerjavo",
+      "hide": "Skrij primerjavo"
+    },
+    "loading": "Nalaganje poročila...",
+    "dateFrom": "Od",
+    "dateTo": "Do",
+    "apply": "Uporabi",
+    "select_period_expense": "Izberite obdobje za generiranje poročila o stroških",
+    "select_period_profit_loss": "Izberite obdobje za generiranje poročila o dobičku in izgubi",
+    "no_fixed_expenses": "Ni zabeleženih stalnih stroškov",
+    "no_variable_expenses": "Ni zabeleženih spremenljivih stroškov za to obdobje",
+    "type": "Vrsta",
+    "description": "Opis",
+    "amount": "Znesek",
+    "date": "Datum",
+    "revenue": "Prihodki",
+    "cogs": "SMP",
+    "operating_expenses": "Poslovni stroški"
   },
   "product_dialog": {
     "special_instructions": "Posebna navodila",

@@ -5,11 +5,13 @@ import {
   getRevenueChart,
   getOrdersChart,
   getCategorySalesChart,
+  getPaymentMethodChart,
   getTableOccupancy,
   getLiveMetrics,
   DashboardSummary,
   RevenueChartData,
   CategorySalesData,
+  PaymentMethodChartData,
   OrdersChartData,
   TableOccupancy,
   LiveMetrics,
@@ -40,6 +42,7 @@ interface DashboardState {
   revenueChart: RevenueChartData | null;
   ordersChart: OrdersChartData | null;
   categorySales: CategorySalesData | null;
+  paymentMethodChart: PaymentMethodChartData | null;
   tableOccupancy: TableOccupancy | null;
   liveMetrics: LiveMetrics | null;
   selectedPeriod: DashboardPeriod;
@@ -59,6 +62,7 @@ interface DashboardActions {
   fetchRevenueChart: (period?: DashboardPeriod, granularity?: ChartGranularity) => Promise<void>;
   fetchOrdersChart: (period?: DashboardPeriod) => Promise<void>;
   fetchCategorySales: (period?: DashboardPeriod) => Promise<void>;
+  fetchPaymentMethodChart: (period?: DashboardPeriod) => Promise<void>;
   fetchTableOccupancy: () => Promise<void>;
   fetchLiveMetrics: () => Promise<void>;
   fetchAll: (period?: DashboardPeriod) => Promise<void>;
@@ -77,6 +81,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
     revenueChart: null,
     ordersChart: null,
     categorySales: null,
+    paymentMethodChart: null,
     tableOccupancy: null,
     liveMetrics: null,
     selectedPeriod: 'today',
@@ -150,6 +155,17 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
       }
     },
 
+    fetchPaymentMethodChart: async (period) => {
+      const p = period || get().selectedPeriod;
+      try {
+        const paymentMethodChart = await getPaymentMethodChart(p);
+        set({ paymentMethodChart });
+      } catch (error) {
+        logger.error('Failed to fetch payment method chart:', error);
+        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load payment method chart'] }));
+      }
+    },
+
     fetchTableOccupancy: async () => {
       try {
         const tableOccupancy = await getTableOccupancy();
@@ -181,6 +197,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
           get().fetchRevenueChart(p),
           get().fetchOrdersChart(p),
           get().fetchCategorySales(p),
+          get().fetchPaymentMethodChart(p),
           get().fetchTableOccupancy(),
           get().fetchLiveMetrics(),
         ]);
@@ -197,9 +214,6 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ error: 'Failed to load dashboard data', loading: false });
       }
     },
-
-    // R44-FIX: Track the auto-refresh interval timer so it can be cleared
-    _autoRefreshTimer: null as ReturnType<typeof setInterval> | null,
 
     setSelectedPeriod: (period) => {
       set({ selectedPeriod: period });

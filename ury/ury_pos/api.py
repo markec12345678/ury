@@ -1,4 +1,5 @@
 import frappe
+import warnings
 from frappe import _
 from frappe.utils import flt, validate_phone_number
 from datetime import timedelta
@@ -120,6 +121,7 @@ def getMenuCourses():
 def getBranch():
     """Deprecated: Use _get_user_branch() from utils for new code.
     Kept for backward compatibility with existing callers."""
+    warnings.warn("getBranch() is deprecated, use _get_user_branch()", DeprecationWarning, stacklevel=2)
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     return _get_user_branch()
 
@@ -206,13 +208,13 @@ def _get_invoices_list(branch, status, limit, limit_start, cashier=None):
     fields = base_fields + (extra_fields if use_extra_fields else "")
     cashier_clause = "AND cashier = %s" if cashier else ""
     
-    sql = f"""
-        SELECT {fields}
-        FROM `tabPOS Invoice` 
-        WHERE branch = %s AND status = %s {cashier_clause} {extra_where}
-        ORDER BY modified desc
-        LIMIT %s OFFSET %s
-    """.strip()
+    sql = (
+        "SELECT " + fields
+        + " FROM `tabPOS Invoice`"
+        + " WHERE branch = %s AND status = %s " + cashier_clause + " " + extra_where
+        + " ORDER BY modified desc"
+        + " LIMIT %s OFFSET %s"
+    )
     
     params = [branch, sql_status]
     if cashier:
@@ -547,6 +549,12 @@ def create_customer(customer_name, mobile_number=None, customer_group="Individua
         validate_phone_number(mobile_number, throw=True)
     except frappe.ValidationError:
         frappe.throw(_("Invalid mobile number format"))
+
+    # H-02: Validate customer_group and territory
+    if not frappe.db.exists("Customer Group", customer_group):
+        frappe.throw(_("Invalid Customer Group"))
+    if not frappe.db.exists("Territory", territory):
+        frappe.throw(_("Invalid Territory"))
 
     try:
         customer = frappe.get_doc({

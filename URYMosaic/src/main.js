@@ -17,9 +17,9 @@ const authState = reactive({ isLoggedIn: false });
 // causing authenticated users to flash the login page on refresh.
 let authChecked = false;
 const authCheckPromise = fetch("/api/method/frappe.auth.get_logged_user")
-  .then(res => res.ok ? res.json() : Promise.reject())
+  .then(res => res.ok ? res.json().catch(() => null) : Promise.reject())
   .then(data => {
-    if (data.message && data.message !== "Guest") {
+    if (data && data.message && data.message !== "Guest") {
       authState.isLoggedIn = true;
     }
   })

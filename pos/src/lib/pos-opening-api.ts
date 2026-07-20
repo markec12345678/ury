@@ -1,21 +1,17 @@
 import { call } from './frappe-sdk-retry';
 import { getErrorMessage } from './error-utils';
 
-export interface POSOpeningResponse {
-  message: number;
-}
-
 export interface POSCloseValidationResponse {
   message: string;
 }
 
-export const checkPOSOpening = async (): Promise<POSOpeningResponse> => {
+export const checkPOSOpening = async (): Promise<number> => {
   try {
-    const response = await call.get<POSOpeningResponse>(
+    const response = await call.get<{ message: number }>(
       'ury.ury_pos.api.posOpening'
     );
     
-    return response;
+    return response.message;
   } catch (error) {
     throw new Error(`Failed to check POS opening status: ${getErrorMessage(error)}`, { cause: error });
   }

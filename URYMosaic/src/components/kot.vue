@@ -6,10 +6,13 @@
       class="fixed inset-0 z-[60] overflow-y-auto modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="modal-title"
+      @keydown="handleModalKeydown"
     >
       <div class="flex items-center justify-center">
         <div class="w-full rounded-lg bg-white p-6 shadow-lg md:max-w-md">
           <p
+            id="modal-title"
             class="block text-left text-xl font-medium text-gray-700 dark:text-gray-300"
           >
             <span
@@ -45,8 +48,7 @@
       <div v-for="kot in visibleKots" :key="kot.name">
         <div
           :class="[kot.color]"
-          class="shadow-lg gap-4 p-3 rounded-2xl max-w-80 w-full h-auto masonry-item"
-          style="margin-top: 28px"
+          class="shadow-lg gap-4 p-3 rounded-2xl max-w-80 w-full h-auto masonry-item mt-7"
           role="button"
           tabindex="0"
           :aria-label="`${kot.tableortakeaway}, Order ${kot.order_no || (kot.invoice ? String(kot.invoice).slice(-4) : '—')}, ${kot.timeRemaining} elapsed`"
@@ -101,7 +103,7 @@
                   </span><br v-if="kot.is_aggregator"/>
                   <span class="text-sm font-medium text-[#6B7280]">Order</span>
                   <span class="text-gray-900 ml-2 font-semibold"
-                    >{{ daily_order_number ? kot.order_no : (kot.invoice ? String(kot.invoice).slice(-4) : '—') }}
+                    >{{ daily_order_number === 1 ? kot.order_no : (kot.invoice ? String(kot.invoice).slice(-4) : '—') }}
                     
                   </span>
                   <span
@@ -186,6 +188,7 @@
     <!-- Audio Alert Message -->
     <div
       v-if="showAudioAlertMessage"
+      role="alert"
       class="absolute top-1 left-1/2 transform -translate-x-1/2 p-2 font-bold text-2xl text-red-500 text-center"
     >
       Audio notifications disabled. Click anywhere to enable.
@@ -325,6 +328,22 @@ export default {
     return false;
   },
   methods: {
+    // M1-FIX: Focus trap for auth modal — cycles focus within the dialog on Tab/Shift+Tab
+    handleModalKeydown(e) {
+      if (e.key !== 'Tab') return;
+      const modal = e.currentTarget;
+      const focusable = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) { e.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    },
     playAlertSound(path) {
       if (!path) return; // R37-FIX: Guard against null/undefined audio path
       const currentDomain = window.location.origin;
@@ -378,12 +397,22 @@ export default {
     fetchKOT() {
       // Deduplicate concurrent fetchKOT calls to prevent state corruption
       if (this._fetchInProgress) return this._fetchInProgress;
+      // R46-FIX (H1): Capture current production so we can detect if the
+      // station changed while the network request was in-flight. If it did,
+      // the response belongs to the old station and must be discarded.
+      const currentProduction = this.production;
+      // M7-FIX: AbortController with 15-second timeout for API requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       this._fetchInProgress = new Promise((resolve, reject) => {
         try {
           this.call
             .get("ury.ury.api.ury_kot_display.kot_list", {})
             .then((result) => {
+              clearTimeout(timeoutId);
               if (!this._isMounted) { resolve(); return; }
+              // R46-FIX (H1): Station changed while fetch was in-flight — discard stale data
+              if (this.production !== currentProduction) { resolve(); return; }
               // R37-FIX: Null-check result.message to prevent TypeError crash
               const msg = result?.message;
               if (!msg) { resolve(); return; }
@@ -455,13 +484,21 @@ export default {
               resolve();
             })
             .catch((error) => {
+              clearTimeout(timeoutId);
               if (import.meta.env?.DEV) console.error(error);
-              reject(error);
+              // M7-FIX: Convert abort errors to timeout errors for clearer messaging
+              if (error.name === 'AbortError' || (error.code === 'ERR_CANCELED')) {
+                reject(new Error('Request timed out after 15 seconds'));
+              } else {
+                reject(error);
+              }
             });
         } catch (error) {
+          clearTimeout(timeoutId);
           reject(error);
         }
       }).finally(() => {
+        clearTimeout(timeoutId);
         this._fetchInProgress = null;
       });
       return this._fetchInProgress;
@@ -688,8 +725,9 @@ export default {
         kot.type !== "Cancelled" &&
         kot.type !== "Partially cancelled" &&
         !this.notifiedKots.has(kot.name) &&
-        this.isOnline // R45-FIX: Skip delay notification when offline — avoids wasteful
+        this.isOnline && // R45-FIX: Skip delay notification when offline — avoids wasteful
                      // failed API calls every minute for each KOT past the alert threshold.
+        !this._notificationCooldown // R46-FIX (H2): Skip during 30s post-mount cooldown
       ) {
         // R42-FIX: Mark as notified AFTER the API call succeeds, not before.
         const kotName = kot.name;
@@ -824,7 +862,7 @@ export default {
       return error && (
         error.httpStatus === 401 ||
         error.httpStatus === 403 ||
-        /auth/i.test(String(error.message || ''))
+        /(?:session|csrf|token).*expir|unauthorized|not permitted|authentication_failed/i.test(String(error.message || ''))
       );
     },
     // R45-FIX: Centralized fetch error handler for fetchKOTWithRetry failures.
@@ -872,6 +910,8 @@ export default {
       this.isOnline = true;
       this.setStatusMessage("You are online");
       this.hideStatusMessageAfterDelay();
+      // R46-FIX (H1): Invalidate stale fetch promise so reconnect gets fresh data
+      this._fetchInProgress = null;
       // R39-FIX: Use retry wrapper for transient network errors on reconnect
       // R41-FIX: Show error feedback if fetch fails after all retries —
       // without this the user sees "You are online" but stale/empty data.
@@ -921,6 +961,12 @@ export default {
     this._isMounted = false;
     this._fetchInProgress = null;
     this.notifiedKots = new Set();
+    // R46-FIX (H2): 30-second cooldown after mount before sending delay
+    // notifications. notifiedKots is an empty Set on every page refresh,
+    // so without this cooldown all KOTs past the alert threshold would
+    // trigger orderDelayNotify() simultaneously on mount.
+    this._notificationCooldown = true;
+    setTimeout(() => { this._notificationCooldown = false; }, 30000);
     // API client as non-reactive instance property (avoids Proxy overhead)
     this.call = markRaw(frappe.call());
     // R37-FIX: socketHandler as non-reactive to avoid unnecessary Proxy overhead
@@ -1145,7 +1191,7 @@ export default {
               // primary key. If the server sends a different name in doc.kot, the KOT
               // would become orphaned — findIndex in serveOrder/confirmOrder uses the
               // original name as the lookup key.
-              const { name: _incomingName, ...kotData } = doc.kot;
+              const { name: _ignored, ...kotData } = doc.kot;
               Object.assign(targetKot, { timecolor: 'text-black', timeRemaining: '— : —', ...kotData });
               // Restore strikethrough state after Object.assign
               if (targetKot.kot_items) {
@@ -1174,7 +1220,7 @@ export default {
               this._cancelTimeout = setTimeout(() => {
                 if (!this._isMounted) return;
                 // R43-FIX: Remove redundant masonryLoading() — fetchKOT() calls it.
-                this.fetchKOT().catch((e) => { console.error("KOT fetch failed:", e); });
+                this.fetchKOTWithRetry().catch((e) => { console.error("KOT fetch failed:", e); });
               }, 1500);
             }
             // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
@@ -1295,6 +1341,10 @@ export default {
       if (this.kot_channel && this._socket && this.socketHandler) {
         this._socket.off(this.kot_channel, this.socketHandler);
       }
+      // R46-FIX (H1): Invalidate stale fetch promise so a fresh one is created
+      // for the new station. Without this, fetchKOT() returns the in-flight
+      // promise for the OLD station, resulting in wrong data + wrong socket channel.
+      this._fetchInProgress = null;
       // fetchKOT will set the new kot_channel and re-register the handler
       // R45-FIX: Handle fetch failure on station change — previously .catch(() => {})
       // silently swallowed errors, leaving the user with an empty KDS and no feedback.

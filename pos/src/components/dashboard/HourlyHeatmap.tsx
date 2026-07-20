@@ -1,9 +1,20 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useDashboardStore } from '../../store/dashboard-store';
-import { t } from '../../i18n';
+import { t, getActiveLanguage } from '../../i18n';
 import { cn } from '../../lib/utils';
 
-const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+/** Returns locale-aware short day-of-week labels (e.g. Mon, Tue … or Lun, Mar …) */
+function getLocalizedDayLabels(): string[] {
+  const locale = getActiveLanguage() || 'en';
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  // Use a week where 2024-01-01 = Monday
+  const labels: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(Date.UTC(2024, 0, 1 + i)); // Mon=Jan1, Tue=Jan2, …
+    labels.push(formatter.format(date));
+  }
+  return labels;
+}
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 interface HeatmapCell {
@@ -73,6 +84,8 @@ const HourlyHeatmap = () => {
     return heatmapData.cells.find((c) => c.day === day && c.hour === hour)?.count || 0;
   };
 
+  const dayLabels = useMemo(() => getLocalizedDayLabels(), []);
+
   const legendSteps = [
     { label: '0', color: 'bg-blue-50' },
     { label: t('dashboard.legend_low'), color: 'bg-blue-200' },
@@ -102,7 +115,7 @@ const HourlyHeatmap = () => {
               }}
             >
               <p className="text-xs font-medium text-gray-900">
-                {DAYS_OF_WEEK[hoveredCell.day]} {hoveredCell.hour}:00 - {hoveredCell.hour + 1}:00
+                {dayLabels[hoveredCell.day]} {hoveredCell.hour}:00 - {hoveredCell.hour + 1}:00
               </p>
               <p className="text-xs text-gray-500">
                 {hoveredCell.count} {t('dashboard.orders_count')}
@@ -126,7 +139,7 @@ const HourlyHeatmap = () => {
 
             {/* Heatmap grid */}
             <div className="space-y-0.5">
-              {DAYS_OF_WEEK.map((day, dayIndex) => (
+              {dayLabels.map((day, dayIndex) => (
                 <div key={day} className="flex items-center gap-0.5">
                   <div className="w-10 shrink-0 text-right pr-1">
                     <span className="text-[10px] text-gray-500">{day}</span>

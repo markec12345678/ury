@@ -1,6 +1,7 @@
 import { useReportsStore } from '../../store/reports-store';
 import { formatCurrency } from '../../lib/utils';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { t } from '../../i18n';
 
 const ProfitLossView = () => {
   // R41-FIX: Use individual Zustand selector instead of useReportsStore()
@@ -9,7 +10,7 @@ const ProfitLossView = () => {
   if (!profitLossReport) {
     return (
       <div className="text-center py-12 text-gray-400">
-        Select a period to generate a profit & loss report
+        {t('reports.select_period_profit_loss')}
       </div>
     );
   }
@@ -38,7 +39,7 @@ const ProfitLossView = () => {
         }`}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Net Profit</h3>
+          <h3 className="text-lg font-bold text-gray-900">{t('reports.net_profit')}</h3>
           {isProfitable ? (
             <TrendingUp className="w-6 h-6 text-emerald-500" />
           ) : (
@@ -53,7 +54,7 @@ const ProfitLossView = () => {
           {formatCurrency(net_profit)}
         </p>
         <p className="text-sm text-gray-500 mt-1">
-          Profit Margin: {profit_margin}%
+          {t('reports.profit_margin')}: {profit_margin}%
         </p>
       </div>
 
@@ -62,31 +63,31 @@ const ProfitLossView = () => {
         {/* Revenue Section */}
         <div className="p-4 border-b border-gray-100">
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            Revenue
+            {t('reports.revenue')}
           </h4>
-          <PLRow label="Total Revenue" value={total_revenue} bold />
+          <PLRow label={t('reports.total_revenue')} value={total_revenue} bold />
         </div>
 
         {/* Cost Section */}
         <div className="p-4 border-b border-gray-100 bg-gray-50">
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            Cost of Goods
+            {t('reports.cost_of_goods')}
           </h4>
-          <PLRow label="COGS" value={-cost_of_goods} negative />
+          <PLRow label={t('reports.cogs')} value={-cost_of_goods} negative />
           <div className="border-t border-gray-200 mt-2 pt-2">
-            <PLRow label="Gross Profit" value={gross_profit} bold highlight={gross_profit >= 0} />
+            <PLRow label={t('reports.gross_profit')} value={gross_profit} bold highlight={gross_profit >= 0} />
           </div>
         </div>
 
         {/* Expenses Section */}
         <div className="p-4 border-b border-gray-100">
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            Operating Expenses
+            {t('reports.operating_expenses')}
           </h4>
-          <PLRow label="Fixed Expenses" value={-fixed_expenses} negative />
-          <PLRow label="Variable Expenses" value={-variable_expenses} negative />
+          <PLRow label={t('reports.fixed_expenses')} value={-fixed_expenses} negative />
+          <PLRow label={t('reports.variable_expenses')} value={-variable_expenses} negative />
           <div className="border-t border-gray-200 mt-2 pt-2">
-            <PLRow label="Total Expenses" value={-total_expenses} negative bold />
+            <PLRow label={t('reports.total_expenses')} value={-total_expenses} negative bold />
           </div>
         </div>
 
@@ -97,7 +98,7 @@ const ProfitLossView = () => {
           }`}
         >
           <PLRow
-            label="Net Profit"
+            label={t('reports.net_profit')}
             value={net_profit}
             bold
             large

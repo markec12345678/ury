@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import {
   PieChart,
   Pie,
@@ -9,57 +9,23 @@ import {
 } from 'recharts';
 import { useDashboardStore } from '../../store/dashboard-store';
 import { formatCurrency } from '../../lib/utils';
-import { logger } from '../../lib/logger';
 import { t } from '../../i18n';
-import { getPaymentMethodChart, type PaymentMethodDataPoint } from '../../lib/dashboard-api';
+import type { PaymentMethodDataPoint } from '../../lib/dashboard-api';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
-interface PaymentMethodData {
-  method: string;
-  amount: number;
-  count?: number;
-}
-
 const PaymentMethodChart = () => {
-  // R41-FIX: Use individual Zustand selector instead of useDashboardStore()
-  const selectedPeriod = useDashboardStore((s) => s.selectedPeriod);
-  const [data, setData] = useState<PaymentMethodData[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const result = await getPaymentMethodChart(selectedPeriod);
-        if (!cancelled) {
-          setData(
-            (result?.data || []).map((item: PaymentMethodDataPoint) => ({
-              method: item.payment_method || 'Unknown',
-              amount: Number(item.total_paid) || 0,
-              count: Number(item.transaction_count) || 0,
-            }))
-          );
-        }
-      } catch (error) {
-        if (!cancelled) logger.error('Failed to fetch payment method chart:', error);
-        if (!cancelled) setData([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => { cancelled = true; };
-  }, [selectedPeriod]);
+  const paymentMethodChart = useDashboardStore((s) => s.paymentMethodChart);
+  const loading = useDashboardStore((s) => s.loading);
 
   const chartData = useMemo(() => {
-    return data.map((item) => ({
-      name: item.method,
-      value: item.amount,
-      count: item.count,
+    if (!paymentMethodChart?.data) return [];
+    return paymentMethodChart.data.map((item: PaymentMethodDataPoint) => ({
+      name: item.payment_method || 'Unknown',
+      value: Number(item.total_paid) || 0,
+      count: Number(item.transaction_count) || 0,
     }));
-  }, [data]);
+  }, [paymentMethodChart]);
 
   const totalAmount = useMemo(() => {
     return chartData.reduce((sum, item) => sum + item.value, 0);

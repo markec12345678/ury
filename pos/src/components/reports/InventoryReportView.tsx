@@ -10,46 +10,26 @@ import { cn } from '../../lib/utils';
 import { Badge } from '../ui';
 import { t } from '../../i18n';
 
-// Placeholder data for when backend isn't available yet
-const placeholderInventory: InventoryReport = {
-  from_date: new Date().toISOString().split('T')[0],
-  to_date: new Date().toISOString().split('T')[0],
-  summary: {
-    total_items: 156,
-    low_stock_items: 12,
-    out_of_stock_items: 3,
-    total_stock_value: 48750.0,
-  },
-  items: [
-    { item_code: 'ITEM001', item_name: 'Chicken Breast (kg)', current_stock: 45, reorder_level: 20, stock_uom: 'kg', valuation_rate: 8.5, stock_value: 382.5, status: 'OK' },
-    { item_code: 'ITEM002', item_name: 'Olive Oil (L)', current_stock: 8, reorder_level: 10, stock_uom: 'L', valuation_rate: 12.0, stock_value: 96.0, status: 'Low' },
-    { item_code: 'ITEM003', item_name: 'Basmati Rice (kg)', current_stock: 60, reorder_level: 25, stock_uom: 'kg', valuation_rate: 3.2, stock_value: 192.0, status: 'OK' },
-    { item_code: 'ITEM004', item_name: 'Fresh Salmon (kg)', current_stock: 0, reorder_level: 5, stock_uom: 'kg', valuation_rate: 22.0, stock_value: 0, status: 'Out of Stock' },
-    { item_code: 'ITEM005', item_name: 'Garlic (kg)', current_stock: 12, reorder_level: 8, stock_uom: 'kg', valuation_rate: 4.5, stock_value: 54.0, status: 'OK' },
-    { item_code: 'ITEM006', item_name: 'Parmesan Cheese (kg)', current_stock: 3, reorder_level: 5, stock_uom: 'kg', valuation_rate: 18.0, stock_value: 54.0, status: 'Low' },
-    { item_code: 'ITEM007', item_name: 'White Wine (bottle)', current_stock: 0, reorder_level: 6, stock_uom: 'bottle', valuation_rate: 14.0, stock_value: 0, status: 'Out of Stock' },
-    { item_code: 'ITEM008', item_name: 'Butter (kg)', current_stock: 15, reorder_level: 10, stock_uom: 'kg', valuation_rate: 6.0, stock_value: 90.0, status: 'OK' },
-    { item_code: 'ITEM009', item_name: 'Heavy Cream (L)', current_stock: 4, reorder_level: 8, stock_uom: 'L', valuation_rate: 5.5, stock_value: 22.0, status: 'Low' },
-    { item_code: 'ITEM010', item_name: 'Tomatoes (kg)', current_stock: 30, reorder_level: 15, stock_uom: 'kg', valuation_rate: 2.8, stock_value: 84.0, status: 'OK' },
-  ],
-};
-
 const InventoryReportView = () => {
   // R41-FIX: Use individual Zustand selector instead of useReportsStore()
   const inventoryReport = useReportsStore((s) => s.inventoryReport);
 
-  // Use real data if available, otherwise use placeholder
-  const report = inventoryReport || placeholderInventory;
-
-  if (!report) {
+  // Show explicit no-data state when there is no report data
+  if (!inventoryReport) {
     return (
-      <div className="text-center py-12 text-gray-400">
-        {t('reports.inventory.noData') || 'Select a period to generate an inventory report'}
+      <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+        <Package className="w-12 h-12 mb-3 text-gray-300" />
+        <p className="text-lg font-medium text-gray-500">
+          {t('reports.inventory.noData') || 'No Inventory Data'}
+        </p>
+        <p className="text-sm mt-1">
+          {t('reports.inventory.noDataHint') || 'Select a period to generate an inventory report'}
+        </p>
       </div>
     );
   }
 
-  const { summary, items } = report;
+  const { summary, items } = inventoryReport;
 
   const statusBadgeVariant = (status: string) => {
     switch (status) {

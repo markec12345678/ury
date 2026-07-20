@@ -3,6 +3,7 @@ import { X, Check } from 'lucide-react';
 import { Button, Input } from '../ui';
 import { useMenuManagementStore } from '../../store/menu-management-store';
 import { URYMenuItem, URYMenuCourse } from '../../lib/menu-management-api';
+import { t } from '../../i18n';
 
 interface EditItemDialogProps {
   item: URYMenuItem;
@@ -12,7 +13,7 @@ interface EditItemDialogProps {
 }
 
 const EditItemDialog = ({ item, menuName, courses, onClose }: EditItemDialogProps) => {
-  const { updateItemInMenu } = useMenuManagementStore();
+  const updateItemInMenu = useMenuManagementStore((s) => s.updateItemInMenu);
   const [rate, setRate] = useState(item.rate);
   const [course, setCourse] = useState(item.course || '');
   const [specialDish, setSpecialDish] = useState(item.special_dish);
@@ -36,7 +37,7 @@ const EditItemDialog = ({ item, menuName, courses, onClose }: EditItemDialogProp
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Edit Menu Item</h2>
+          <h2 className="text-lg font-semibold">{t('menu_management.edit_menu_item')}</h2>
           <Button variant="ghost" onClick={onClose}>
             <X className="w-5 h-5" />
           </Button>
@@ -49,7 +50,7 @@ const EditItemDialog = ({ item, menuName, courses, onClose }: EditItemDialogProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price
+              {t('menu_management.price_label')}
             </label>
             <Input
               type="number"
@@ -61,14 +62,14 @@ const EditItemDialog = ({ item, menuName, courses, onClose }: EditItemDialogProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Course / Category
+              {t('menu_management.course_category')}
             </label>
             <select
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               value={course}
               onChange={(e) => setCourse(e.target.value)}
             >
-              <option value="">No course</option>
+              <option value="">{t('menu_management.no_course')}</option>
               {courses.map((c) => (
                 <option key={c.name} value={c.name}>
                   {c.course}
@@ -86,17 +87,17 @@ const EditItemDialog = ({ item, menuName, courses, onClose }: EditItemDialogProp
               className="rounded"
             />
             <label htmlFor="edit_special_dish" className="text-sm text-gray-700">
-              Special Dish
+              {t('menu_management.special_dish')}
             </label>
           </div>
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={saving} className="flex-1">
               <Check className="w-4 h-4 me-1" />
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('menu_management.saving') : t('menu_management.save_changes')}
             </Button>
           </div>
         </div>

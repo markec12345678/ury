@@ -11,7 +11,8 @@ def set_order_number(doc, event):
     lock_key = f"ury_order_number_lock:{pos_profile}"
     lock_token = frappe.generate_hash(length=12)
     lock_acquired = False
-    for attempt in range(3):
+    max_retries = 10
+    for attempt in range(max_retries):
         # Atomic set-if-not-exists: returns True if we acquired the lock
         existing = frappe.cache().get_value(lock_key)
         if not existing:
@@ -20,7 +21,9 @@ def set_order_number(doc, event):
             if frappe.cache().get_value(lock_key) == lock_token:
                 lock_acquired = True
                 break
-        time.sleep(0.3)
+        # Short, non-blocking Redis-based wait: check again after a brief pause
+        # Reduced from 0.3s to 0.05s with max 10 retries (0.5s total max wait)
+        time.sleep(0.05)
     if not lock_acquired:
         frappe.log_error(f"Order number lock timeout for {pos_profile}\n{frappe.get_traceback()}", "URY Order Number")
         frappe.throw(_("Could not acquire order number lock for POS Profile {0}. Please try again.").format(pos_profile))
@@ -49,12 +52,34 @@ def _do_set_order_number(doc, pos_profile):
     if last_invoice:
         last_invoice_str = str(last_invoice)
         suffix = last_invoice_str[-5:]
-        last_invoice_number = int(suffix) if suffix.isdigit() else 0
+        if not suffix.isdigit():
+            frappe.log_error(
+                "Non-numeric suffix in last invoice reference: '{}'. "
+                "Expected the last 5 characters to be digits. "
+                "Invoice: {}".format(suffix, last_invoice_str),
+                "URY Order Number Error",
+            )
+            frappe.throw(
+                _("Unable to parse order number: invoice reference '{0}' has a non-numeric suffix '{1}'. "
+                  "Please check the invoice naming series.").format(last_invoice_str, suffix)
+            )
+        last_invoice_number = int(suffix)
 
         current_invoice = doc.name
 
         current_suffix = str(current_invoice)[-5:]
-        current_invoice_number = int(current_suffix) if current_suffix.isdigit() else 0
+        if not current_suffix.isdigit():
+            frappe.log_error(
+                "Non-numeric suffix in current invoice reference: '{}'. "
+                "Expected the last 5 characters to be digits. "
+                "Invoice: {}".format(current_suffix, current_invoice),
+                "URY Order Number Error",
+            )
+            frappe.throw(
+                _("Unable to parse order number: invoice reference '{0}' has a non-numeric suffix '{1}'. "
+                  "Please check the invoice naming series.").format(current_invoice, current_suffix)
+            )
+        current_invoice_number = int(current_suffix)
 
         order_number = current_invoice_number - last_invoice_number
         if order_number > 0:

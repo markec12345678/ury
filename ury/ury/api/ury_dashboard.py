@@ -137,6 +137,11 @@ def get_category_sales_chart(period="this_month"):
     # Limit the IN clause to prevent SQL query bloat with large datasets
     MAX_INVOICES = 1000
     if len(invoice_names) > MAX_INVOICES:
+        frappe.msgprint(
+            title=_("Data Truncated"),
+            indicator="yellow",
+            msg=_("Invoice count ({0}) exceeds the {1} cap. Displayed data is incomplete.").format(len(invoice_names), MAX_INVOICES)
+        )
         invoice_names = invoice_names[:MAX_INVOICES]
 
     # R38-FIX: Look up the branch's menu to ensure course mapping is branch-scoped
@@ -351,6 +356,11 @@ def _get_top_selling_items(from_date, to_date, branch=None, limit=10):
     # Limit the IN clause to prevent SQL query bloat with large datasets
     MAX_INVOICES = 1000
     if len(invoice_names) > MAX_INVOICES:
+        frappe.msgprint(
+            title=_("Data Truncated"),
+            indicator="yellow",
+            msg=_("Invoice count ({0}) exceeds the {1} cap. Displayed data is incomplete.").format(len(invoice_names), MAX_INVOICES)
+        )
         invoice_names = invoice_names[:MAX_INVOICES]
 
     items = frappe.db.sql("""

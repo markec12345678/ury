@@ -4,6 +4,7 @@ import { Button, Input } from '../ui';
 import { useMenuManagementStore } from '../../store/menu-management-store';
 import { URYMenuCourse, AvailableItem } from '../../lib/menu-management-api';
 import { formatCurrency } from '../../lib/utils';
+import { t } from '../../i18n';
 
 interface AddItemDialogProps {
   menuName: string;
@@ -12,7 +13,8 @@ interface AddItemDialogProps {
 }
 
 const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
-  const { availableItems, addItemToMenu } = useMenuManagementStore();
+  const availableItems = useMenuManagementStore((s) => s.availableItems);
+  const addItemToMenu = useMenuManagementStore((s) => s.addItemToMenu);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<AvailableItem | null>(null);
   const [rate, setRate] = useState<number>(0);
@@ -48,7 +50,7 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden m-4 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Add Item to Menu</h2>
+          <h2 className="text-lg font-semibold">{t('menu_management.add_item_to_menu')}</h2>
           <Button variant="ghost" onClick={onClose}>
             <X className="w-5 h-5" />
           </Button>
@@ -60,7 +62,7 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
             <div className="relative mb-4">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search items to add..."
+                placeholder={t('menu_management.search_items_to_add')}
                 className="ps-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -88,7 +90,7 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
                 </button>
               ))}
               {filteredItems.length === 0 && (
-                <p className="text-center text-gray-400 py-8">No items found</p>
+                <p className="text-center text-gray-400 py-8">{t('menu_management.no_items_found')}</p>
               )}
             </div>
           </div>
@@ -102,7 +104,7 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price
+                {t('menu_management.price_label')}
               </label>
               <Input
                 type="number"
@@ -114,14 +116,14 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Course / Category
+                {t('menu_management.course_category')}
               </label>
               <select
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                 value={course}
                 onChange={(e) => setCourse(e.target.value)}
               >
-                <option value="">No course</option>
+                <option value="">{t('menu_management.no_course')}</option>
                 {courses.map((c) => (
                   <option key={c.name} value={c.name}>
                     {c.course}
@@ -139,7 +141,7 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
                 className="rounded"
               />
               <label htmlFor="special_dish" className="text-sm text-gray-700">
-                Mark as Special Dish
+                {t('menu_management.mark_special_dish')}
               </label>
             </div>
 
@@ -149,7 +151,7 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
                 onClick={() => setSelectedItem(null)}
                 className="flex-1"
               >
-                Back
+                {t('menu_management.back')}
               </Button>
               <Button
                 onClick={handleAdd}
@@ -157,7 +159,7 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
                 className="flex-1"
               >
                 <Plus className="w-4 h-4 me-1" />
-                {adding ? 'Adding...' : 'Add to Menu'}
+                {adding ? t('menu_management.adding') : t('menu_management.add_to_menu')}
               </Button>
             </div>
           </div>

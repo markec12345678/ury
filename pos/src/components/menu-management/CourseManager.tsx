@@ -6,8 +6,11 @@ import type { URYMenuCourse } from '../../lib/menu-management-api';
 import { t } from '../../i18n';
 
 const CourseManager = () => {
-  const { courses, coursesLoading, addCourse, updateCourseItem, deleteCourse } =
-    useMenuManagementStore();
+  const courses = useMenuManagementStore((s) => s.courses);
+  const coursesLoading = useMenuManagementStore((s) => s.coursesLoading);
+  const addCourse = useMenuManagementStore((s) => s.addCourse);
+  const updateCourseItem = useMenuManagementStore((s) => s.updateCourseItem);
+  const deleteCourse = useMenuManagementStore((s) => s.deleteCourse);
 
   const [newCourseName, setNewCourseName] = useState('');
   const [newPriority, setNewPriority] = useState(0);
@@ -81,7 +84,7 @@ const CourseManager = () => {
         </div>
         <Button onClick={handleAddCourse} disabled={!newCourseName.trim()}>
           <Plus className="w-4 h-4 me-1" />
-          {t('common.save') || 'Add'}
+          {t('menu_management.add_course') || 'Add Course'}
         </Button>
       </div>
 

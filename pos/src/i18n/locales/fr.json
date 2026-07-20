@@ -284,7 +284,25 @@
     "export_menu": "Exporter le menu",
     "current_price": "Prix actuel",
     "fixed_amount": "Fixe",
-    "change": "Modification"
+    "change": "Modification",
+    "failed_update_prices": "Échec de la mise à jour des prix",
+    "bulk_action_failed": "Échec de l'action en masse",
+    "add_course": "Ajouter une catégorie",
+    "add_item_to_menu": "Ajouter un article au menu",
+    "search_items_to_add": "Rechercher des articles à ajouter...",
+    "no_items_found": "Aucun article trouvé",
+    "price_label": "Prix",
+    "course_category": "Catégorie / Groupe",
+    "no_course": "Sans catégorie",
+    "mark_special_dish": "Marquer comme plat spécial",
+    "back": "Retour",
+    "adding": "Ajout en cours...",
+    "add_to_menu": "Ajouter au menu",
+    "edit_menu_item": "Modifier l'article du menu",
+    "special_dish": "Plat spécial",
+    "saving": "Enregistrement...",
+    "save_changes": "Enregistrer les modifications",
+    "loading_courses": "Chargement des catégories..."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -383,7 +401,42 @@
     "previous_period": "Période précédente",
     "current_period": "Période actuelle",
     "change": "Modification",
-    "no_report_data": "Sélectionnez une période pour générer un rapport"
+    "no_report_data": "Sélectionnez une période pour générer un rapport",
+    "types": {
+      "sales": "Ventes",
+      "expense": "Dépenses",
+      "profitLoss": "Profit & Perte",
+      "inventory": "Inventaire"
+    },
+    "periods": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "thisWeek": "Cette semaine",
+      "thisMonth": "Ce mois-ci",
+      "lastMonth": "Mois dernier",
+      "last7Days": "7 derniers jours",
+      "last30Days": "30 derniers jours",
+      "custom": "Personnalisé"
+    },
+    "compare": {
+      "show": "Afficher la comparaison",
+      "hide": "Masquer la comparaison"
+    },
+    "loading": "Chargement du rapport...",
+    "dateFrom": "De",
+    "dateTo": "À",
+    "apply": "Appliquer",
+    "select_period_expense": "Sélectionnez une période pour générer un rapport de dépenses",
+    "select_period_profit_loss": "Sélectionnez une période pour générer un rapport de profit et perte",
+    "no_fixed_expenses": "Aucune dépense fixe enregistrée",
+    "no_variable_expenses": "Aucune dépense variable enregistrée pour cette période",
+    "type": "Type",
+    "description": "Description",
+    "amount": "Montant",
+    "date": "Date",
+    "revenue": "Revenus",
+    "cogs": "CMPV",
+    "operating_expenses": "Dépenses d'exploitation"
   },
   "product_dialog": {
     "special_instructions": "Instructions spéciales",

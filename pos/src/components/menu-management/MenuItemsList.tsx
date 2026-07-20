@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Pencil, Trash2, Star, Ban, Check, ArrowUpDown, ArrowUp, ArrowDown, ImageOff } from 'lucide-react';
 import { Button, Badge } from '../ui';
 import { cn } from '../../lib/utils';
@@ -32,13 +33,18 @@ const MenuItemsList = ({
   sortConfig,
   onSort,
 }: MenuItemsListProps) => {
-  const { removeItemFromMenu, updateItemInMenu, availableItems } = useMenuManagementStore();
+  const removeItemFromMenu = useMenuManagementStore((s) => s.removeItemFromMenu);
+  const updateItemInMenu = useMenuManagementStore((s) => s.updateItemInMenu);
+  const availableItems = useMenuManagementStore((s) => s.availableItems);
 
-  // Build a lookup map for available item images
-  const imageLookup = new Map<string, string | null>();
-  for (const ai of availableItems) {
-    imageLookup.set(ai.name, ai.image);
-  }
+  // Build a lookup map for available item images (memoized to avoid rebuild on every render)
+  const imageLookup = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const ai of availableItems) {
+      map.set(ai.name, ai.image);
+    }
+    return map;
+  }, [availableItems]);
 
   const allSelected = items.length > 0 && items.every((item) => selectedItems.has(item.name));
   const someSelected = items.some((item) => selectedItems.has(item.name)) && !allSelected;
