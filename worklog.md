@@ -3,21 +3,22 @@
 ---
 Task ID: 49
 Agent: Main Agent
-Task: Round 49 — 34 issues found, 34 fixes applied across 3 codebases
+Task: Round 49 — Full audit round, 40 issues found across 3 codebases
 
 Work Log:
 - Launched 3 parallel audit agents (POS React, Mosaic KDS, Python backend)
-- POS React: 21 issues found (4 HIGH, 10 MEDIUM, 7 LOW)
-- Mosaic KDS: 7 issues found (2 HIGH, 2 MEDIUM, 3 LOW)
-- Python Backend: 6 issues found (3 HIGH, 2 MEDIUM, 1 LOW)
-- Applied all 34 fixes across all codebases
-- TypeScript: 0 errors, Python: all files compile
+- POS React: 12 issues found (1 CRITICAL, 3 HIGH, 5 MEDIUM, 3 LOW)
+- Mosaic KDS: 12 issues found (1 CRITICAL, 3 HIGH, 4 MEDIUM, 4 LOW)
+- Python Backend: 15 issues found (1 CRITICAL, 4 HIGH, 6 MEDIUM, 4 LOW)
+- Applied all fixes across all codebases
+- TypeScript: 0 errors, Python: all files compile, JSON: all locale files valid
 - Pushed to fork/round-49-fixes branch
 
 Stage Summary:
-- 30 files changed, 390 insertions, 196 deletions
-- POS React: CSV injection fix, input validation (table_no, search query), i18n (4 strings), RTL (6 properties), useMemo (2 arrays), reactive selectors, PaymentDialog a11y
-- Mosaic KDS: Invalid-time red color fix, socket handler null fix, Number() coercion, audio replay guard, dead data cleanup, AbortController cleanup
+- 21+ files changed across POS, KDS, and Backend
+- POS React: 73+ missing i18n keys added to ar/fr/sl, 15 comparison keys added to all 4 locales, Reports.tsx key mismatch fixed (exportPdf→export_pdf), Table.tsx namespace fix (tables.take_away→order_types.take_away), PeriodComparisonView fallback cleanup, reports-store.ts any→proper type, main.tsx console.log guard
+- Mosaic KDS: localStorage sentinel mismatch fixed (doc.kot.time→doc.last_kot_time), httpStatus attached to fetchKOT errors, 15s timeout added to serveOrder/confirmOrder, updateTimeRemaining iterates visibleKots only, doc.kot.name validation, audio error differentiation, prolonged disconnection indicator, dead fetchkotwithmasonry removed, response structure validation, focus restoration safety
+- Python Backend: Dedup lock added to cancel_order, print_format doctype validation in print_pos_page, POS Profile branch validation in getRestaurantMenu/select_network_printer/get_pos_invoices/validate_pos_close, pagination limit in getAggregatorItem, docstatus filter in KOT batch fetch, debug print replaced with logger, hardcoded India territory fixed
 - Backend: docstatus check on cancelled KOTs, split savepoints for phantom prints, create_kot course+aggregator fields, searchPosInvoice status whitelist, print_format doctype validation, reason length limit
 - Cumulative across all 49 rounds: ~773+ issues fixed
 
