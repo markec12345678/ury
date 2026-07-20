@@ -9,6 +9,10 @@
           class="w-20 h-20 mx-auto mb-4 rounded-lg"
           @error="imageFailed = true"
         />
+        <!-- R49-FIX: Text fallback when logo fails — matches Header.vue pattern.
+             Without this, screen readers have nothing to announce and visually
+             there's empty space where the logo should be. -->
+        <span v-else class="text-3xl font-bold text-gray-800 mb-4 block">URY Mosaic</span>
         <h1 class="text-2xl font-bold text-gray-800">URY Kitchen Display</h1>
         <p class="text-gray-500 mt-1">Sign in to access the kitchen display</p>
       </div>

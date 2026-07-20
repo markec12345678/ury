@@ -52,7 +52,7 @@ const AIInsightsPanel = () => {
     return (
       <button
         onClick={togglePanel}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+        className="fixed bottom-6 end-6 z-50 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 group"
         title={t('ai.open_panel') || 'AI Insights'}
       >
         <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
@@ -64,7 +64,7 @@ const AIInsightsPanel = () => {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-96 max-h-[600px] flex flex-col bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+    <div className="fixed bottom-6 end-6 z-50 w-96 max-h-[600px] flex flex-col bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white">
         <div className="flex items-center gap-2">

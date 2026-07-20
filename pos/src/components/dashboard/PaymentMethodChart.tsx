@@ -21,7 +21,7 @@ const PaymentMethodChart = () => {
   const chartData = useMemo(() => {
     if (!paymentMethodChart?.data) return [];
     return paymentMethodChart.data.map((item: PaymentMethodDataPoint) => ({
-      name: item.payment_method || 'Unknown',
+      name: item.payment_method || t('common.unknown'),
       value: Number(item.total_paid) || 0,
       count: Number(item.transaction_count) || 0,
     }));

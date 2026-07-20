@@ -47,7 +47,8 @@
     "back": "Back",
     "next": "Next",
     "previous": "Previous",
-    "operation_failed": "Operation failed"
+    "operation_failed": "Operation failed",
+    "unknown": "Unknown"
   },
   "header": {
     "search": "Search",
@@ -208,6 +209,8 @@
     "aria_edit_order": "Edit order",
     "aria_cancel_order": "Cancel order",
     "aria_print": "Print",
+    "table_label": "Table {{name}}",
+    "qty": "Qty: {{qty}}",
     "pagination": {
       "previous": "Previous",
       "next": "Next",
@@ -407,6 +410,7 @@
     "of_total": "of total",
     "no_revenue_data": "No revenue data available",
     "no_order_data": "No order data available",
+    "uncategorized": "Uncategorized",
     "no_category_data": "No category data available",
     "legend_less": "Less",
     "legend_more": "More",

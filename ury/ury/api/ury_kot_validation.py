@@ -128,6 +128,37 @@ def get_productions_for_branch(branch):
 def create_kot(
     posInvoice, pos_profile_name, kot_naming_series, production_items, production_name
 ):
+    # R49-FIX: Fetch menu and course mapping for Duplicate KOT items,
+    # matching create_kot_doc in ury_kot_generate.py which already includes
+    # course info. Without this, Duplicate KOTs appear without course on KDS.
+    menu = None
+    item_courses = {}
+    if posInvoice.branch:
+        restaurant = frappe.db.get_value("URY Restaurant", {"branch": posInvoice.branch}, "name")
+        if restaurant:
+            if posInvoice.restaurant_table:
+                room = frappe.db.get_value("URY Table", posInvoice.restaurant_table, "restaurant_room")
+                room_wise_menu = frappe.db.get_value("URY Restaurant", restaurant, "room_wise_menu")
+                if room_wise_menu and room:
+                    menu = frappe.db.get_value("Menu for Room", {"parent": restaurant, "room": room}, "menu")
+            if not menu:
+                menu = frappe.db.get_value("URY Restaurant", restaurant, "active_menu")
+    if menu:
+        item_codes = list({i.item_code for i in production_items})
+        if item_codes:
+            rows = frappe.db.sql(
+                """SELECT item, course FROM `tabURY Menu Item`
+                   WHERE parent = %s AND item IN %s""",
+                (menu, item_codes),
+                as_dict=True,
+            )
+            item_courses = {r.item: r.course for r in rows}
+
+    # R49-FIX: Include is_aggregator and aggregator_id fields, matching
+    # create_kot_doc in ury_kot_generate.py.
+    is_aggregator = 1 if getattr(posInvoice, "order_type", None) == "Aggregators" else 0
+    aggregator_id = getattr(posInvoice, "custom_aggregator_id", None)
+
     kotdoc = frappe.new_doc("URY KOT")
     kotdoc.update(
         {
@@ -140,6 +171,8 @@ def create_kot(
             "production": production_name,
             "order_no": getattr(posInvoice, "custom_ury_order_number", None),
             "branch": posInvoice.branch,
+            "is_aggregator": is_aggregator,
+            "aggregator_id": aggregator_id,
         }
     )
 
@@ -150,6 +183,8 @@ def create_kot(
                 "item": item.item_code,
                 "item_name": item.item_name,
                 "quantity": item.qty,
+                # R49-FIX: Include course so KDS can sort/display by course
+                "course": item_courses.get(item.item_code),
             },
         )
 

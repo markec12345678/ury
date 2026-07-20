@@ -53,7 +53,8 @@
     "skip_to_content": "تخطي إلى المحتوى",
     "back": "رجوع",
     "next": "التالي",
-    "previous": "السابق"
+    "previous": "السابق",
+    "unknown": "غير معروف"
   },
   "header": {
     "search": "بحث",
@@ -189,6 +190,8 @@
     "no_orders_found": "لم يتم العثور على طلبات",
     "click_to_view": "انقر على أي بطاقة طلب لعرض تفاصيلها",
     "status_title": "حالة الطلب",
+    "table_label": "طاولة {{name}}",
+    "qty": "الكمية: {{qty}}",
     "pagination": {
       "previous": "السابق",
       "next": "التالي",
@@ -380,6 +383,7 @@
     "no_revenue_data": "لا توجد بيانات إيرادات متاحة",
     "no_order_data": "لا توجد بيانات طلبات متاحة",
     "no_category_data": "لا توجد بيانات فئات متاحة",
+    "uncategorized": "غير مصنف",
     "legend_less": "أقل",
     "legend_more": "أكثر",
     "legend_low": "منخفض",

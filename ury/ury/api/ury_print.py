@@ -38,6 +38,13 @@ def network_printing(
     printer_branch = frappe.db.get_value("Network Printer Settings", printer_setting, "branch")
     if printer_branch and printer_branch != _get_user_branch():
         frappe.throw(_("Printer does not belong to your branch"), frappe.PermissionError)
+    # R49-FIX: Validate print_format belongs to the doctype to prevent
+    # rendering arbitrary print formats. Without this, a user could specify
+    # any print format name, potentially accessing formats they shouldn't.
+    if print_format:
+        pf_doctype = frappe.db.get_value("Print Format", print_format, "doc_type")
+        if pf_doctype and pf_doctype != doctype:
+            frappe.throw(_("Print Format '{0}' is not valid for {1}").format(print_format, doctype), frappe.ValidationError)
     # file_path is always server-generated to prevent path traversal
     file_path = None
     try:

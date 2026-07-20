@@ -353,14 +353,21 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
 
     # R47-FIX: Sanitize username for filesystem safety — email addresses
     # shouldn't contain path separators, but sanitize defensively.
+    # R49-FIX: Also sanitize report_type and branch for filename safety
     safe_user = re.sub(r'[^\w@.\-]', '_', frappe.session.user)
-    filename = f"report_{report_type}_{safe_user}_{_get_user_branch()}_{frappe.generate_hash(length=8)}.html"
+    safe_report_type = re.sub(r'[^\w\-]', '_', report_type)
+    safe_branch = re.sub(r'[^\w\-]', '_', _get_user_branch() or "unknown")
+    filename = f"report_{safe_report_type}_{safe_user}_{safe_branch}_{frappe.generate_hash(length=8)}.html"
     filepath = os.path.join(temp_dir, filename)
 
     with open(filepath, "w") as f:
         f.write(report_html)
 
-    return f"/reports/{filename}"
+    # R49-FIX: Return path under Frappe's private files route which requires
+    # authentication. The previous "/reports/{filename}" path could be served
+    # by the web server without authentication if the private directory is
+    # mapped. Use Frappe's secure file download route instead.
+    return f"/api/method/frappe.utils.file_manager.download_file?file_path=private/reports/{filename}"
 
 
 # ---- Helper functions ----

@@ -22,13 +22,16 @@ def create_order_items(items):
     for item in items:
         qty = item.get("qty")
         item_name = item.get("item_name")
+        item_code = item.get("item", item.get("item_code"))
         if qty is None or item_name is None:
             frappe.throw(_("Item data is missing required fields (qty, item_name)"))
+        if not item_code:
+            frappe.throw(_("Item code is required for item '{0}'").format(item_name or "unknown"))
         qty = flt(qty)
         if qty <= 0:
             frappe.throw(_("Item '{0}' has invalid quantity ({1}). Quantity must be positive.").format(item_name, qty))
         order_item = {
-            "item_code": item.get("item", item.get("item_code")),
+            "item_code": item_code,
             "qty": qty,
             "item_name": item_name,
             "comments": item.get("comment", item.get("comments", "")),
@@ -106,7 +109,7 @@ def _get_existing_kots_with_items(invoice_id, branch=None):
     params = [invoice_id] + branch_params
     rows = frappe.db.sql(
         """SELECT ki.parent as kot_name, ki.item
-           FROM `tabURY KOT Item` ki
+           FROM `tabURY KOT Items` ki
            INNER JOIN `tabURY KOT` k ON ki.parent = k.name
            WHERE k.invoice = %s AND k.docstatus = 1
                AND k.type IN ('New Order', 'Order Modified')
@@ -408,7 +411,8 @@ def kot_execute(
     comments=None,
 ):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
-    frappe.db.savepoint("before_kot_execute")
+    # R49-FIX: Removed single savepoint here — positive and cancel KOTs now
+    # use independent savepoints to prevent phantom-print rollback (see below).
     # Avoid mutable default argument pitfall
     current_items = load_json(current_items or [])
     previous_items = load_json(previous_items or [])
@@ -454,16 +458,30 @@ def kot_execute(
         "branch": branch,
     }
 
-    try:
-        if positive_qty_items:
+    # R49-FIX: Process positive and cancel KOTs in separate savepoints so that
+    # a failure in cancel-KOT creation does not roll back already-printed
+    # positive KOTs. Previously, the single savepoint meant that if cancel-KOT
+    # creation failed after positive KOTs had been submitted (and their
+    # on_submit hooks had already printed them), the rollback would produce
+    # "phantom" printed KOTs that no longer exist in the database.
+    if positive_qty_items:
+        frappe.db.savepoint("before_positive_kot")
+        try:
             process_items_for_kot(
                 **shared_kwargs,
                 items=positive_qty_items,
                 kot_naming_series=kot_naming_series,
                 kot_type="New Order",
             )
+        except Exception:
+            frappe.db.rollback(savepoint="before_positive_kot")
+            raise
+        # Release the savepoint — positive KOTs are now committed and printed
+        frappe.db.release_savepoint("before_positive_kot")
 
-        if total_cancel_items:
+    if total_cancel_items:
+        frappe.db.savepoint("before_cancel_kot")
+        try:
             process_items_for_cancel_kot(
                 **shared_kwargs,
                 items=total_cancel_items,
@@ -471,9 +489,9 @@ def kot_execute(
                 kot_type="Partially cancelled",
                 invoiceItems=new_invoice_items_array,
             )
-    except Exception:
-        frappe.db.rollback(savepoint="before_kot_execute")
-        raise
+        except Exception:
+            frappe.db.rollback(savepoint="before_cancel_kot")
+            raise
 
 
 # ---------------------------------------------------------------------------

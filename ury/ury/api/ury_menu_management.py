@@ -25,16 +25,26 @@ def get_menus():
         order_by="name"
     )
 
+    if not menus:
+        return []
+
+    # R49-FIX: Batch-fetch all menu items in one query instead of N+1 per-menu queries
+    menu_names = [m.name for m in menus]
+    all_items = frappe.get_all(
+        "URY Menu Item",
+        filters={"parent": ("in", menu_names), "parenttype": "URY Menu"},
+        fields=[
+            "name", "item", "item_name", "rate", "special_dish",
+            "disabled", "course", "course_icon", "idx", "parent"
+        ],
+        order_by="idx"
+    )
+    items_by_menu = {}
+    for item in all_items:
+        items_by_menu.setdefault(item.parent, []).append(item)
+
     for menu in menus:
-        items = frappe.get_all(
-            "URY Menu Item",
-            filters={"parent": menu.name, "parenttype": "URY Menu"},
-            fields=[
-                "name", "item", "item_name", "rate", "special_dish",
-                "disabled", "course", "course_icon", "idx"
-            ],
-            order_by="idx"
-        )
+        items = items_by_menu.get(menu.name, [])
         menu["items"] = items
         menu["item_count"] = len(items)
         menu["enabled_count"] = len([i for i in items if not i.get("disabled")])

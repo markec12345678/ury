@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3,
   RefreshCw,
@@ -15,7 +15,7 @@ import { cn } from '../../lib/utils';
 import { useDashboardStore } from '../../store/dashboard-store';
 import type { DashboardPeriod } from '../../lib/dashboard-api';
 import { formatCurrency } from '../../lib/utils';
-import { t } from '../../i18n';
+import { t, getActiveLanguage } from '../../i18n';
 import RevenueChartComponent from './RevenueChart';
 import OrdersChartComponent from './OrdersChart';
 import CategorySalesChart from './CategorySalesChart';
@@ -31,9 +31,10 @@ type PeriodOption = {
 };
 
 const Dashboard = () => {
-  // C1-FIX: PERIODS defined inside the component so t() re-evaluates on language change.
-  // Previously at module scope, t() was called once on import and frozen.
-  const PERIODS: PeriodOption[] = [
+  const language = typeof window !== 'undefined' ? getActiveLanguage() : 'en';
+  // R49-FIX: Memoize PERIODS so it recalculates only when language changes,
+  // avoiding unnecessary object creation on every render.
+  const PERIODS: PeriodOption[] = useMemo(() => [
     { value: 'today', label: t('dashboard.today') },
     { value: 'yesterday', label: t('dashboard.yesterday') },
     { value: 'this_week', label: t('dashboard.this_week') },
@@ -43,7 +44,7 @@ const Dashboard = () => {
     { value: 'last_7_days', label: t('dashboard.last_7_days') },
     { value: 'last_30_days', label: t('dashboard.last_30_days') },
     { value: 'last_90_days', label: t('dashboard.last_90_days') },
-  ];
+  ], [language]);
   // R41-FIX: Use individual Zustand selectors instead of useDashboardStore()
   // which subscribes to ALL state changes (revenueChart, ordersChart, etc.),
   // causing unnecessary re-renders when unrelated state changes.

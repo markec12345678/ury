@@ -21,7 +21,7 @@ const CategorySalesChart = () => {
   const chartData = useMemo(() => {
     if (!categorySales?.data) return [];
     return categorySales.data.map((item: CategorySalesItem) => ({
-      name: item.category || 'Uncategorized',
+      name: item.category || t('dashboard.uncategorized'),
       value: Number(item.total_amount) || 0,
       qty: Number(item.total_qty) || 0,
     }));

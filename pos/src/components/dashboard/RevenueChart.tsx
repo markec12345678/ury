@@ -12,7 +12,7 @@ import {
 import { useDashboardStore } from '../../store/dashboard-store';
 import type { ChartGranularity } from '../../lib/dashboard-api';
 import { formatCurrency } from '../../lib/utils';
-import { t } from '../../i18n';
+import { t, getActiveLanguage } from '../../i18n';
 
 const RevenueChartComponent = () => {
   // R41-FIX: Use individual Zustand selectors instead of useDashboardStore()
@@ -33,12 +33,15 @@ const RevenueChartComponent = () => {
     }));
   }, [revenueChart, selectedGranularity]);
 
-  const granularities = [
+  const language = typeof window !== 'undefined' ? getActiveLanguage() : 'en';
+  // R49-FIX: Memoize granularities so it recalculates only when language changes,
+  // avoiding unnecessary object creation on every render.
+  const granularities = useMemo(() => [
     { value: 'hourly', label: t('dashboard.hourly') },
     { value: 'daily', label: t('dashboard.daily') },
     { value: 'weekly', label: t('dashboard.weekly') },
     { value: 'monthly', label: t('dashboard.monthly') },
-  ];
+  ], [language]);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">

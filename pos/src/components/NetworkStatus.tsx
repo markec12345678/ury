@@ -50,7 +50,7 @@ export function NetworkStatus() {
   // Back online briefly
   if (isOnline && wasOffline) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+      <div className="fixed top-0 start-0 end-0 z-50 flex justify-center pointer-events-none">
         <div
           className="bg-green-600 text-white px-4 py-1.5 rounded-b-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-slide-down"
           role="status"
@@ -65,7 +65,7 @@ export function NetworkStatus() {
 
   // Offline banner
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+    <div className="fixed top-0 start-0 end-0 z-50 flex justify-center pointer-events-none">
       <div
         className="bg-red-600 text-white px-4 py-1.5 rounded-b-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-slide-down"
         role="status"

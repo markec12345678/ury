@@ -158,7 +158,7 @@ function NewCustomerForm({
             className="pl-10"
             aria-invalid={!!formError && !newCustomerPhone}
           />
-          <Phone className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
+          <Phone className="absolute start-3 top-2.5 text-gray-400 w-5 h-5" />
         </div>
         {formError && !newCustomerPhone && (
           <div className="text-xs text-red-500 mt-1">{t('customer.phone_required')}</div>
@@ -367,7 +367,7 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
               aria-label={t('customer.search_placeholder')}
               autoComplete="off"
             />
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
           {isOpen && (
             <div className="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto" role="listbox" aria-label={t('customer.search_results') || 'Search results'}>

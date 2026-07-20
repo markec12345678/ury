@@ -1,6 +1,12 @@
 import { call } from './frappe-sdk-retry';
 import { getErrorMessage } from './error-utils';
 
+const VALID_TABLE_ID = /^[A-Za-z0-9\-_ ]+$/;
+
+function validateTableId(id: string): void {
+  if (!VALID_TABLE_ID.test(id)) throw new Error(`Invalid table identifier: ${id}`);
+}
+
 export interface POSInvoiceItem {
   name: string;
   item_code: string;
@@ -45,6 +51,7 @@ export interface TableOrder {
  * @returns The order details and customer information if an active order exists
  */
 export async function getTableOrder(table_no: string): Promise<TableOrder> {
+  validateTableId(table_no);
   const res = await call.get('ury.ury.doctype.ury_order.ury_order.get_order_invoice', { 
     table: table_no
   });

@@ -49,7 +49,8 @@
     "skip_to_content": "Preskoči na vsebino",
     "back": "Nazaj",
     "next": "Naprej",
-    "previous": "Prejšnje"
+    "previous": "Prejšnje",
+    "unknown": "Neznano"
   },
   "header": {
     "search": "Iskanje",
@@ -185,6 +186,8 @@
     "no_orders_found": "Ni najdenih naročil",
     "click_to_view": "Kliknite na kartico naročila za ogled podrobnosti",
     "status_title": "Status naročila",
+    "table_label": "Miza {{name}}",
+    "qty": "Količina: {{qty}}",
     "pagination": {
       "previous": "Prejšnja",
       "next": "Naslednja",
@@ -376,6 +379,7 @@
     "no_revenue_data": "Podatki o prihodkih niso na voljo",
     "no_order_data": "Podatki o naročilih niso na voljo",
     "no_category_data": "Podatki o kategorijah niso na voljo",
+    "uncategorized": "Nekategorizirano",
     "legend_less": "Manj",
     "legend_more": "Več",
     "legend_low": "Nizko",

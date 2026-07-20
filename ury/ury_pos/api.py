@@ -250,6 +250,11 @@ def searchPosInvoice(query,status):
     branch = _get_user_branch()
     if not query:
         return {"data": [], "next": False}
+    # R49-FIX: Validate status against the same whitelist used by
+    # _get_invoices_list, preventing arbitrary filter values.
+    ALLOWED_STATUSES = {"Draft", "Paid", "Cancelled", "Return", "Unbilled", "Recently Paid"}
+    if status not in ALLOWED_STATUSES:
+        frappe.throw(_("Invalid status filter: {0}").format(status), frappe.ValidationError)
     query = query.lower()
     escaped = query.replace("%", r"\\%").replace("_", r"\\_")
     search_value = f"%{escaped}%"
@@ -541,6 +546,9 @@ def create_customer(customer_name, mobile_number=None, customer_group="Individua
     frappe.only_for("Restaurant Manager", "Cashier")
     if not customer_name:
         frappe.throw(_("Customer name is required"))
+    # R49-FIX: Sanitize customer_name length to prevent excessively long names
+    if len(customer_name) > 200:
+        frappe.throw(_("Customer name is too long (max 200 characters)"))
     if not mobile_number:
         frappe.throw(_("Mobile Number is required"))
     # R44-FIX: Narrow exception catch — only catch the specific validation

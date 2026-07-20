@@ -409,6 +409,9 @@ function getPreviousPeriodDates(
 
 function escapeCsvField(field: string | number): string {
   const str = String(field);
+  if (str.startsWith('=') || str.startsWith('+') || str.startsWith('-') || str.startsWith('@') || str.startsWith('\t') || str.startsWith('\r')) {
+    return `"'${str.replace(/"/g, '""')}"`;
+  }
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
   }

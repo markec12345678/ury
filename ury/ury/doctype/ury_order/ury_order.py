@@ -250,6 +250,16 @@ def sync_order(
                 msg=_("This order has been modified. Please reload the page to retrieve the latest edits."),
             )
             return {"status": "Failure"}
+    elif last_invoice and not last_modified_time:
+        # R49-FIX: When last_invoice is provided but last_modified_time is missing,
+        # require the client to provide it — otherwise the optimistic concurrency
+        # check is bypassed entirely, allowing silent overwrites.
+        frappe.msgprint(
+            title=_("Stale Data"),
+            indicator="red",
+            msg=_("Please reload the page to retrieve the latest edits before saving."),
+        )
+        return {"status": "Failure"}
     else:
         if invoice.name and invoice.invoice_printed == 0 and not billing_user:
             frappe.msgprint(
@@ -692,6 +702,9 @@ def cancel_order(invoice_id, reason):
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     if not frappe.has_permission("POS Invoice", "cancel", invoice_id):
         frappe.throw(_("Not permitted to cancel orders"), frappe.PermissionError)
+    # R49-FIX: Validate reason length to prevent excessively long strings
+    if reason and len(str(reason)) > 500:
+        frappe.throw(_("Cancel reason is too long (max 500 characters)"), frappe.ValidationError)
     # R39-FIX: Validate invoice belongs to user's branch
     inv_branch = frappe.db.get_value("POS Invoice", invoice_id, "branch")
     if not inv_branch:

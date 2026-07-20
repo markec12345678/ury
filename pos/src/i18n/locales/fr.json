@@ -46,7 +46,8 @@
     "skip_to_content": "Aller au contenu",
     "back": "Retour",
     "next": "Suivant",
-    "previous": "Précédent"
+    "previous": "Précédent",
+    "unknown": "Inconnu"
   },
   "header": {
     "search": "Recherche",
@@ -182,6 +183,8 @@
     "no_orders_found": "Aucune commande trouvée",
     "click_to_view": "Cliquez sur n'importe quel badge de commande pour voir ses détails",
     "status_title": "Statut de la commande",
+    "table_label": "Table {{name}}",
+    "qty": "Qté : {{qty}}",
     "pagination": {
       "previous": "Précédent",
       "next": "Suivant",
@@ -373,6 +376,7 @@
     "no_revenue_data": "Aucune donnée de revenus disponible",
     "no_order_data": "Aucune donnée de commandes disponible",
     "no_category_data": "Aucune donnée de catégorie disponible",
+    "uncategorized": "Non catégorisé",
     "legend_less": "Moins",
     "legend_more": "Plus",
     "legend_low": "Bas",

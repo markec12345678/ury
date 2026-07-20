@@ -31,7 +31,7 @@ const OrderTypeChart = () => {
   const chartData = useMemo(() => {
     if (!summary?.order_type_breakdown) return [];
     return summary.order_type_breakdown.map((item, index) => ({
-      name: item.order_type || 'Unknown',
+      name: item.order_type || t('common.unknown'),
       orders: Number(item.count) || 0,
       revenue: Number(item.revenue) || 0,
       fill: ORDER_TYPE_COLORS[item.order_type] || DEFAULT_COLORS[index % DEFAULT_COLORS.length],

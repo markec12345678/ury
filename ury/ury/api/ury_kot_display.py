@@ -9,7 +9,8 @@ from ury.ury.api.utils import _get_user_branch
 def serve_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
     # R39-FIX: Combine two get_value calls into one for efficiency
-    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "creation", "order_status", "type"], as_dict=True)
+    # R49-FIX: Include docstatus in query to reject cancelled/draft KOTs
+    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "creation", "order_status", "type", "docstatus"], as_dict=True)
     if not kot_data:
         frappe.throw(_("KOT {0} not found").format(name))
     user_branch = _get_user_branch()
@@ -24,6 +25,11 @@ def serve_kot(name):
         frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(name), frappe.PermissionError)
     if kot_data.branch != user_branch:
         frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
+    # R49-FIX: Only submitted KOTs (docstatus=1) can be served.
+    # A cancelled KOT (docstatus=2) retains its old order_status but
+    # must not be transitioned to "Served".
+    if kot_data.docstatus != 1:
+        frappe.throw(_("KOT {0} is not a submitted document and cannot be served").format(name), frappe.ValidationError)
     # R45-FIX: Only allow serving KOTs that are in "Ready For Prepare" status
     if kot_data.order_status != "Ready For Prepare":
         frappe.throw(_("KOT {0} is not in a servable state (current: {1})").format(name, kot_data.order_status), frappe.ValidationError)
@@ -71,7 +77,8 @@ def confirm_cancel_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
     # R48-FIX: Include "verified" in the initial query to avoid a redundant
     # get_value call and enable a single-pass check-then-set pattern.
-    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "type", "verified"], as_dict=True)
+    # R49-FIX: Include docstatus to reject cancelled/draft KOTs
+    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "type", "verified", "docstatus"], as_dict=True)
     if not kot_data:
         frappe.throw(_("KOT {0} not found").format(name))
     kot_branch = kot_data.branch
@@ -85,6 +92,10 @@ def confirm_cancel_kot(name):
         frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(name), frappe.PermissionError)
     if kot_branch != user_branch:
         frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
+    # R49-FIX: Only submitted KOTs (docstatus=1) can be verified.
+    # A cancelled KOT (docstatus=2) should not be verifiable.
+    if kot_data.docstatus != 1:
+        frappe.throw(_("KOT {0} is not a submitted document and cannot be verified").format(name), frappe.ValidationError)
     # R41-FIX: Only allow verification on Cancelled or Partially cancelled KOTs
     if kot_data.type not in ("Cancelled", "Partially cancelled"):
         frappe.throw(_("Only cancelled KOTs can be verified"), frappe.ValidationError)

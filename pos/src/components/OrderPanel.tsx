@@ -58,7 +58,6 @@ const OrderPanel = () => {
   const clearOrder = usePOSStore((s) => s.clearOrder);
   const setSelectedItem = usePOSStore((s) => s.setSelectedItem);
   const orderLoading = usePOSStore((s) => s.orderLoading);
-  const isOrderInteractionDisabled = usePOSStore((s) => s.isOrderInteractionDisabled);
   const isUpdatingOrder = usePOSStore((s) => s.isUpdatingOrder);
   const posProfile = usePOSStore((s) => s.posProfile);
   const selectedOrderType = usePOSStore((s) => s.selectedOrderType);
@@ -196,7 +195,7 @@ const OrderPanel = () => {
     }
   };
 
-  const isInteractionDisabled = isOrderInteractionDisabled() || isSubmitting;
+  const isInteractionDisabled = orderLoading || isSubmitting;
 
   // EmptyCartUI and LoadingOrderUI moved outside component to prevent re-creation on every render
 

@@ -123,9 +123,11 @@ interface SearchPosInvoiceResponse {
 }
 
 export async function searchPosInvoice(query: string, status: string) {
+  const trimmed = query.trim();
+  if (!trimmed || trimmed.length > 100) throw new Error('Invalid search query');
   try {
     const response = await call.get<SearchPosInvoiceResponse>('ury.ury_pos.api.searchPosInvoice', {
-      query,
+      query: trimmed,
       status,
     });
     return response.message;

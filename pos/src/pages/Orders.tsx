@@ -243,7 +243,7 @@ export default function Orders() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-gray-500">
-                          {order.restaurant_table ? `Table ${order.restaurant_table} • ` : ''}{t(`order_types.${order.order_type.toLowerCase().replace(/ /g, '_')}`)}
+                          {order.restaurant_table ? `${t('orders.table_label', { name: order.restaurant_table })} • ` : ''}{t(`order_types.${order.order_type.toLowerCase().replace(/ /g, '_')}`)}
                         </p>
                       </div>
                       <Badge variant={getBadgeVariant(order.status)} className="ms-2">
@@ -427,7 +427,7 @@ export default function Orders() {
                     <div key={item.item_code || item.item_name} className="flex justify-between items-start py-2 border-b border-gray-100">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">{item.item_name}</p>
-                        <p className="text-xs text-gray-500">Qty: {item.qty}</p>
+                        <p className="text-xs text-gray-500">{t('orders.qty', { qty: item.qty })}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-gray-900">
