@@ -72,6 +72,12 @@ def order_delay_notification(kot_id):
     )
 
     if kot.order_status == "Ready For Prepare":
+        # R47-FIX: Prevent duplicate notifications — use a cache key per KOT
+        # to avoid sending the same notification multiple times within 5 minutes.
+        dedup_key = f"ury_kot_notification_sent:{kot_id}"
+        if frappe.cache().get_value(dedup_key):
+            return
+
         for recipient in recipients:
             users = _get_users_with_role(recipient.receiver_by_role)
             for user in users:
@@ -84,3 +90,6 @@ def order_delay_notification(kot_id):
                         "type": "Alert",
                     }
                 ).insert(ignore_permissions=True)
+
+        # R47-FIX: Mark this KOT as notified for 5 minutes to prevent duplicates
+        frappe.cache().set_value(dedup_key, True, expires_in_sec=300)

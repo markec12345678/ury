@@ -16,10 +16,7 @@ interface PaymentDialogProps {
   roundedTotal: number;
   invoice: string;
   customer: string;
-  posProfile: string;
   table: string | null;
-  cashier: string;
-  owner: string;
   fetchOrders: () => Promise<void>;
   clearSelectedOrder: () => void;
 }
@@ -30,10 +27,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   roundedTotal,
   invoice,
   customer,
-  posProfile,
   table,
-  cashier,
-  owner,
   fetchOrders,
   clearSelectedOrder
 }) => {
@@ -159,12 +153,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         // R39-FIX: Send the original user-entered percentage instead of re-converting
         // the absolute discount back to a percentage, which loses floating-point precision.
         additionalDiscount: appliedDiscountPercent > 0 ? appliedDiscountPercent : null,
-        cashier,
+        cashier: storePosProfile?.cashier || '',
         customer,
         invoice,
-        owner,
+        owner: storePosProfile?.owner || '',
         payments,
-        pos_profile: posProfile,
+        pos_profile: storePosProfile?.name || '',
         table,
       });
       showToast.success(t('success.payment_successful'));

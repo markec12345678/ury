@@ -421,6 +421,11 @@ def kot_execute(
     removed_item = get_removed_items(new_invoice_items_array, new_Order_items_array)
 
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
+    # R47-FIX: Validate invoice belongs to user's branch (was missing — all other
+    # invoice-taking endpoints validate branch ownership)
+    user_branch = _get_user_branch()
+    if pos_invoice.branch and pos_invoice.branch != user_branch:
+        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     pos_profile_id = pos_invoice.pos_profile
     kot_naming_series = frappe.db.get_value(
         "POS Profile", pos_profile_id, "custom_kot_naming_series"
@@ -433,7 +438,7 @@ def kot_execute(
               "Ensure it is configured in the POS Profile: {0}").format(pos_profile_id)
         )
 
-    branch = _get_user_branch()
+    branch = user_branch
 
     positive_qty_items = [item for item in final_array if flt(item["qty"]) > 0]
     negative_qty_items = [item for item in final_array if flt(item["qty"]) <= 0]
@@ -489,11 +494,20 @@ def compare_two_array(array_1, array_2):
         else:
             array_2_by_code[code] = dict(item)
 
-    for x in array_1:
-        code = x["item_code"]
-        # Make a copy to avoid mutating the original dict
-        item = dict(x)
+    # R47-FIX: Aggregate quantities for duplicate item codes in array_1 as well,
+    # not just array_2. Previously, if array_1 had two rows with the same item_code,
+    # each was diffed individually against the aggregated array_2 total, producing
+    # incorrect results.
+    array_1_by_code = {}
+    for item in array_1:
+        code = item["item_code"]
+        if code in array_1_by_code:
+            array_1_by_code[code]["qty"] += flt(item["qty"])
+        else:
+            array_1_by_code[code] = dict(item)
+            array_1_by_code[code]["qty"] = flt(array_1_by_code[code]["qty"])
 
+    for code, item in array_1_by_code.items():
         if code not in array_2_by_code:
             # Item was added (new)
             finalarray.append(item)

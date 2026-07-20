@@ -49,11 +49,8 @@
         <div
           :class="[kot.color]"
           class="shadow-lg gap-4 p-3 rounded-2xl max-w-80 w-full h-auto masonry-item mt-7"
-          role="button"
-          tabindex="0"
+          role="group"
           :aria-label="`${kot.tableortakeaway}, Order ${kot.order_no || (kot.invoice ? String(kot.invoice).slice(-4) : '—')}, ${kot.timeRemaining} elapsed`"
-          @keydown.enter="rotateCard(kot)"
-          @keydown.space.prevent="rotateCard(kot)"
         >
           <div class="w-64">
             <div
@@ -251,6 +248,10 @@ async function fetchSiteName() {
                 'Content-Type': 'application/json'
             }
         });
+        if (!response.ok) {
+            if (import.meta.env?.DEV) console.error('fetchSiteName: response not ok, status', response.status);
+            return '';
+        }
         const data = await response.json();
         return data?.message?.site_name || '';
     } catch (error) {
@@ -397,19 +398,38 @@ export default {
     fetchKOT() {
       // Deduplicate concurrent fetchKOT calls to prevent state corruption
       if (this._fetchInProgress) return this._fetchInProgress;
+      // R47-FIX (H2): Capture fetch generation to detect if a newer fetch
+      // was started while this one was in-flight. If so, discard results.
+      const fetchId = this._fetchId;
       // R46-FIX (H1): Capture current production so we can detect if the
       // station changed while the network request was in-flight. If it did,
       // the response belongs to the old station and must be discarded.
       const currentProduction = this.production;
       // M7-FIX: AbortController with 15-second timeout for API requests
+      // R47-FIX (H1): Use native fetch() instead of Frappe SDK so the
+      // AbortController signal is actually connected to the network request.
+      // The SDK's .get() does not accept a signal parameter, making the
+      // timeout dead code. Raw fetch() with signal enables real cancellation.
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
-      this._fetchInProgress = new Promise((resolve, reject) => {
+      const promise = new Promise((resolve, reject) => {
         try {
-          this.call
-            .get("ury.ury.api.ury_kot_display.kot_list", {})
+          fetch('/api/method/ury.ury.api.ury_kot_display.kot_list', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            signal: controller.signal,
+          })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+              return response.json();
+            })
             .then((result) => {
               clearTimeout(timeoutId);
+              // R47-FIX (H2): A newer fetch started while this one was in-flight — discard
+              if (this._fetchId !== fetchId) { resolve(); return; }
               if (!this._isMounted) { resolve(); return; }
               // R46-FIX (H1): Station changed while fetch was in-flight — discard stale data
               if (this.production !== currentProduction) { resolve(); return; }
@@ -487,7 +507,10 @@ export default {
               clearTimeout(timeoutId);
               if (import.meta.env?.DEV) console.error(error);
               // M7-FIX: Convert abort errors to timeout errors for clearer messaging
-              if (error.name === 'AbortError' || (error.code === 'ERR_CANCELED')) {
+              // R47-FIX (H1): Native fetch throws DOMException with name 'AbortError'
+              // when the signal fires. The SDK's ERR_CANCELED (axios) is no longer
+              // possible since we bypass the SDK for this call.
+              if (error.name === 'AbortError') {
                 reject(new Error('Request timed out after 15 seconds'));
               } else {
                 reject(error);
@@ -499,9 +522,15 @@ export default {
         }
       }).finally(() => {
         clearTimeout(timeoutId);
-        this._fetchInProgress = null;
+        // R47-FIX (H2): Only clear _fetchInProgress if it still refers to
+        // THIS promise. A newer concurrent fetch may have set its own promise,
+        // and unconditionally clearing would wipe the newer fetch's guard.
+        if (this._fetchInProgress === promise) {
+          this._fetchInProgress = null;
+        }
       });
-      return this._fetchInProgress;
+      this._fetchInProgress = promise;
+      return promise;
     },
     rotateCard(kot) {
       // R39-FIX: Removed masonryLoading() call — the card overlay is
@@ -716,11 +745,17 @@ export default {
       const minutes =
         parseInt(timeRemaining[0], 10) * 60 + parseInt(timeRemaining[1], 10);
 
+      // R47-FIX (L3): Skip delay notifications when time is invalid.
+      // When calculateTimeRemaining returns '— : —' (missing/malformed time),
+      // parseInt produces NaN → Infinity, which falsely passes the >= threshold check.
+      const hasValidTime = !isNaN(minutes);
+
       // R36-FIX: Handle NaN from invalid time format — treat as elapsed time exceeded
       const validMinutes = isNaN(minutes) ? Infinity : minutes;
 
       if (
         // R41-FIX: Use >= instead of === for alert threshold comparison.
+        hasValidTime &&
         validMinutes >= Number(this.kot_alert_time) &&
         kot.type !== "Cancelled" &&
         kot.type !== "Partially cancelled" &&
@@ -911,6 +946,8 @@ export default {
       this.setStatusMessage("You are online");
       this.hideStatusMessageAfterDelay();
       // R46-FIX (H1): Invalidate stale fetch promise so reconnect gets fresh data
+      // R47-FIX (H2): Increment fetch generation so any in-flight fetch discards its results
+      this._fetchId++;
       this._fetchInProgress = null;
       // R39-FIX: Use retry wrapper for transient network errors on reconnect
       // R41-FIX: Show error feedback if fetch fails after all retries —
@@ -960,13 +997,17 @@ export default {
     // R36-FIX: Initialize as non-reactive instance properties (no Proxy overhead)
     this._isMounted = false;
     this._fetchInProgress = null;
+    // R47-FIX (H2): Fetch generation counter — incremented before each new fetch
+    // triggered by station change or reconnect. Enables stale-result detection
+    // so an old fetch's .then() doesn't overwrite a newer fetch's data.
+    this._fetchId = 0;
     this.notifiedKots = new Set();
     // R46-FIX (H2): 30-second cooldown after mount before sending delay
     // notifications. notifiedKots is an empty Set on every page refresh,
     // so without this cooldown all KOTs past the alert threshold would
     // trigger orderDelayNotify() simultaneously on mount.
     this._notificationCooldown = true;
-    setTimeout(() => { this._notificationCooldown = false; }, 30000);
+    this._notificationCooldownTimer = setTimeout(() => { this._notificationCooldown = false; }, 30000);
     // API client as non-reactive instance property (avoids Proxy overhead)
     this.call = markRaw(frappe.call());
     // R37-FIX: socketHandler as non-reactive to avoid unnecessary Proxy overhead
@@ -1158,7 +1199,7 @@ export default {
               // potentially missing KOTs that were added/removed server-side.
               // R43-FIX: Remove redundant masonryLoading() — fetchKOT() already calls
               // masonryLoading(true) at the end of its .then() handler.
-              this.fetchKOT().then(() => {
+              this.fetchKOTWithRetry().then(() => {
                 if (doc.kot && doc.kot.time != null) {
                   try {
                     localStorage.setItem("kot_time_" + this.production, doc.kot.time);
@@ -1175,7 +1216,7 @@ export default {
             // return undefined, causing findIndex to fail and the bad data to
             // be unshifted into the KOT array, corrupting the display.
             if (!doc.kot || typeof doc.kot !== 'object' || Array.isArray(doc.kot)) {
-              this.fetchKOT().catch((e) => { console.error("KOT fetch failed:", e); });
+              this.fetchKOTWithRetry().catch((e) => { console.error("KOT fetch failed:", e); });
               return;
             }
             // Incremental update — deduplicate to avoid duplicate cards
@@ -1281,6 +1322,9 @@ export default {
     if (this._statusTimeout) clearTimeout(this._statusTimeout);
     if (this._socketRetryTimer) clearTimeout(this._socketRetryTimer);
     if (this._fetchRetryTimer) clearTimeout(this._fetchRetryTimer);
+    if (this._notificationCooldownTimer) clearTimeout(this._notificationCooldownTimer);
+    // R47-FIX (M4): Restore body scroll in case modal was open at unmount time
+    document.body.style.overflow = '';
     // R41-FIX: Cancel pending debounced masonry calls on unmount.
     // Without this, a debounced masonryLayout could fire after unmount,
     // attempting DOM operations on a detached element tree.
@@ -1321,6 +1365,10 @@ export default {
     },
   },
   watch: {
+    // R47-FIX (M4): Prevent background scrolling when auth modal is open
+    showModal(val) {
+      document.body.style.overflow = val ? 'hidden' : '';
+    },
     // R41-FIX: Vue reuses component instances when navigating between routes
     // that use the same component (Home). Without this watcher, navigating
     // from /station/kitchen to /station/bar would NOT re-mount the KOT
@@ -1344,6 +1392,8 @@ export default {
       // R46-FIX (H1): Invalidate stale fetch promise so a fresh one is created
       // for the new station. Without this, fetchKOT() returns the in-flight
       // promise for the OLD station, resulting in wrong data + wrong socket channel.
+      // R47-FIX (H2): Increment fetch generation so the old fetch's .then() discards results
+      this._fetchId++;
       this._fetchInProgress = null;
       // fetchKOT will set the new kot_channel and re-register the handler
       // R45-FIX: Handle fetch failure on station change — previously .catch(() => {})

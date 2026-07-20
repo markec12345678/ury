@@ -132,10 +132,7 @@ const defaultProps = {
   roundedTotal: 100,
   invoice: 'INV-001',
   customer: 'Walk In Customer',
-  posProfile: 'POS-Profile-1',
   table: null,
-  cashier: 'Cashier1',
-  owner: 'Admin',
   fetchOrders: vi.fn().mockResolvedValue(undefined),
   clearSelectedOrder: vi.fn(),
 };

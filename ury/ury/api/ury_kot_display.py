@@ -33,11 +33,13 @@ def serve_kot(name):
 
     production_time = current_time - creation_time
     production_time_minutes = flt(production_time.total_seconds() / 60, 2)
+    # R47-FIX: Use update_modified=False to avoid unnecessary modified timestamp
+    # changes that could interfere with optimistic concurrency checks
     frappe.db.set_value("URY KOT", name, {
         "start_time_serv": current_time,
         "production_time": production_time_minutes,
         "order_status": "Served",
-    })
+    }, update_modified=False)
 
 
 # Function to mark it as verified by a user in cancel type KOT
@@ -68,7 +70,9 @@ def confirm_cancel_kot(name):
         frappe.throw(_("KOT {0} has already been verified").format(name), frappe.ValidationError)
     # Use server-side identity instead of client-supplied user parameter
     verified_by = frappe.session.user
-    frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by})
+    # R47-FIX: Use update_modified=False to avoid unnecessary modified timestamp
+    # changes that could interfere with optimistic concurrency checks
+    frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by}, update_modified=False)
 
 
 @frappe.whitelist()

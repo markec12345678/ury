@@ -109,8 +109,8 @@ const TableView = () => {
         }, {} as Record<string, number>);
         setRoomCounts(nextCounts);
         persistRoomCounts(nextCounts);
-      } catch (_error) {
-        logger.error('Failed to load room counts', _error);
+      } catch (error) {
+        logger.error('Failed to load room counts', error);
       } finally {
         setLoadingRoomCounts(false);
       }

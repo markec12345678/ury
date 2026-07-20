@@ -3,7 +3,7 @@ import { useRootStore } from '../store/root-store';
 import { t } from '../i18n';
 import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Lock } from 'lucide-react';
 
 interface Props {
   children: React.ReactNode;
@@ -49,7 +49,7 @@ const AuthGuard: React.FC<Props> = ({ children }) => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-red-600 text-xl mb-4">⚠️</div>
+          <div className="text-red-600 mb-4"><AlertTriangle className="w-8 h-8 mx-auto" aria-hidden="true" /></div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('auth_guard.access_denied')}</h2>
           <p className="text-gray-600">{authError || configError}</p>
         </div>
@@ -66,7 +66,7 @@ const AuthGuard: React.FC<Props> = ({ children }) => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-amber-600 text-xl mb-4">⚠️</div>
+          <div className="text-amber-600 mb-4"><AlertTriangle className="w-8 h-8 mx-auto" aria-hidden="true" /></div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('auth_guard.configuration_error')}</h2>
           <p className="text-gray-600">{t('auth_guard.pos_profile_not_configured')}</p>
         </div>
@@ -78,7 +78,7 @@ const AuthGuard: React.FC<Props> = ({ children }) => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-amber-600 text-xl mb-4">🔒</div>
+          <div className="text-amber-600 mb-4"><Lock className="w-8 h-8 mx-auto" aria-hidden="true" /></div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('auth_guard.permission_required')}</h2>
           <p className="text-gray-600">{t('auth_guard.no_permission')}</p>
           <p className="text-sm text-gray-500 mt-2">{t('auth_guard.required_roles')} {posProfile.role_allowed_for_billing?.map(r => r.role).join(', ')}</p>

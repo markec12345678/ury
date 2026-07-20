@@ -3,6 +3,7 @@ import { call } from '../../lib/frappe-sdk-retry';
 import { getPOSInvoices, getPOSInvoiceItems, searchPosInvoice, POSInvoiceItem, POSInvoiceTax } from '../../lib/invoice-api';
 import type { POSInvoice } from '../../lib/invoice-api';
 import { getErrorMessage } from '../../lib/error-utils';
+import { usePOSStore } from '../pos-store';
 
 export interface OrdersState {
   orders: POSInvoice[];
@@ -69,16 +70,12 @@ export const createOrdersSlice: StateCreator<
     try {
       const { orderSearchQuery, selectedStatus } = get();
       
-      // Get POS profile to access paid_limit
-      const posProfile = sessionStorage.getItem('posProfile');
+      // H7-FIX: Read posProfile from Zustand store instead of sessionStorage.
+      // sessionStorage is a stale snapshot; the store is the source of truth.
+      const posProfile = usePOSStore.getState().posProfile;
       let paidLimit: number | undefined;
       if (posProfile) {
-        try {
-          const profile = JSON.parse(posProfile);
-          paidLimit = profile?.paid_limit;
-        } catch {
-          sessionStorage.removeItem('posProfile');
-        }
+        paidLimit = posProfile?.paid_limit;
       }
       
       if (orderSearchQuery && orderSearchQuery.trim()) {

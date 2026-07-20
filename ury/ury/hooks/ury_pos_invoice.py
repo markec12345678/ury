@@ -103,10 +103,12 @@ def validate_invoice_print(doc, method):
 
 def table_status_delete(doc, method):
     if doc.restaurant_table:
+        # R47-FIX: Use update_modified=False for auxiliary status updates
         frappe.db.set_value(
             "URY Table",
             doc.restaurant_table,
             {"occupied": 0, "latest_invoice_time": None},
+            update_modified=False,
         )
 
 

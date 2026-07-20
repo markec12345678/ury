@@ -33,6 +33,11 @@ def network_printing(
             frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
     elif doctype not in ALLOWED_PRINT_DOCTYPES:
         frappe.throw(_("Invalid doctype for printing"), frappe.ValidationError)
+    # R47-FIX: Validate printer_setting belongs to user's branch or POS Profile.
+    # Without this, a user could print to any printer on the system.
+    printer_branch = frappe.db.get_value("Network Printer Settings", printer_setting, "branch")
+    if printer_branch and printer_branch != _get_user_branch():
+        frappe.throw(_("Printer does not belong to your branch"), frappe.PermissionError)
     # file_path is always server-generated to prevent path traversal
     file_path = None
     try:
@@ -75,14 +80,15 @@ def network_printing(
             )
 
             if restaurant_table and invoice_printed == 0:
-                frappe.db.set_value("POS Invoice", name, "invoice_printed", 1)
+                frappe.db.set_value("POS Invoice", name, "invoice_printed", 1, update_modified=False)
                 frappe.db.set_value(
                     "URY Table",
                     restaurant_table,
                     {"occupied": 0, "latest_invoice_time": None},
+                    update_modified=False,
                 )
             else:
-                frappe.db.set_value("POS Invoice", name, "invoice_printed", 1)
+                frappe.db.set_value("POS Invoice", name, "invoice_printed", 1, update_modified=False)
 
             return "Success"
         except Exception as e:
@@ -192,13 +198,14 @@ def print_pos_page(doctype, name, print_format):
     frappe.publish_realtime(print_channel, {"data": data})
 
     if invoice_printed == 0:
-        frappe.db.set_value("POS Invoice", name, "invoice_printed", 1)
+        frappe.db.set_value("POS Invoice", name, "invoice_printed", 1, update_modified=False)
 
         if restaurant_table:
             frappe.db.set_value(
                 "URY Table",
                 restaurant_table,
                 {"occupied": 0, "latest_invoice_time": None},
+                update_modified=False,
             )
 
 

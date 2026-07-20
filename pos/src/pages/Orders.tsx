@@ -15,7 +15,7 @@ import { getErrorMessage } from '../lib/error-utils';
 import PaymentDialog from '../components/PaymentDialog';
 import { printOrder } from '../lib/print';
 import { call } from '../lib/frappe-sdk-retry';
-import { t } from '../i18n';
+import { t, getActiveLanguage } from '../i18n';
 
 export default function Orders() {
   // R41-FIX: Use individual Zustand selectors instead of useRootStore()
@@ -72,7 +72,7 @@ export default function Orders() {
 
   // Function to format the date and time
   const formatDateTime = (date: string, time: string) => {
-    const formattedDate = new Date(date + ' ' + time).toLocaleString('en-US', {
+    const formattedDate = new Date(date + ' ' + time).toLocaleString(getActiveLanguage() || 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
@@ -336,7 +336,7 @@ export default function Orders() {
                     <button
                       type="button"
                       className="inline-flex items-center justify-center rounded-md p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      aria-label="Edit order"
+                      aria-label={t('orders.aria_edit_order')}
                       onClick={handleEditOrder}
                       disabled={editLoading}
                     >
@@ -346,7 +346,7 @@ export default function Orders() {
                     <button
                       type="button"
                       className="inline-flex items-center justify-center rounded-md p-2 bg-gray-100 hover:bg-gray-200 text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-                      aria-label="Cancel order"
+                      aria-label={t('orders.aria_cancel_order')}
                       onClick={() => setCancelDialogOpen(true)}
                     >
                       <X className="w-4 h-4" />
@@ -466,7 +466,7 @@ export default function Orders() {
                   size="icon"
                   className="flex-shrink-0"
                   onClick={handlePrintOrder}
-                  aria-label="Print"
+                  aria-label={t('orders.aria_print')}
                   disabled={isPrinting}
                 >
                   {isPrinting ? <Spinner className="w-5 h-5" hideMessage /> : <Printer className="w-5 h-5" />}
@@ -502,10 +502,7 @@ export default function Orders() {
           roundedTotal={selectedOrder.rounded_total}
           invoice={selectedOrder.name}
           customer={selectedOrder.customer}
-          posProfile={posProfile?.name || ''}
           table={selectedOrder.restaurant_table || null}
-          cashier={posProfile?.cashier || ''}
-          owner={posProfile?.owner || ''}
           fetchOrders={fetchOrders}
           clearSelectedOrder={clearSelectedOrder}
         />

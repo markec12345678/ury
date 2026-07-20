@@ -6,6 +6,7 @@ Generate daily/weekly/monthly reports with PDF export support.
 import frappe
 from frappe import _
 import html as _html
+import re
 from frappe.utils import getdate, add_days, add_months, get_first_day, get_last_day, flt, fmt_money
 import json
 from ury.ury.api.utils import _get_user_branch, _branch_filter
@@ -350,7 +351,10 @@ def export_report_pdf(report_type="sales", period="daily", from_date=None, to_da
                 except OSError:
                     pass
 
-    filename = f"report_{report_type}_{frappe.session.user}_{_get_user_branch()}_{frappe.generate_hash(length=8)}.html"
+    # R47-FIX: Sanitize username for filesystem safety — email addresses
+    # shouldn't contain path separators, but sanitize defensively.
+    safe_user = re.sub(r'[^\w@.\-]', '_', frappe.session.user)
+    filename = f"report_{report_type}_{safe_user}_{_get_user_branch()}_{frappe.generate_hash(length=8)}.html"
     filepath = os.path.join(temp_dir, filename)
 
     with open(filepath, "w") as f:

@@ -123,8 +123,8 @@ const SalesReportView = () => {
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
                 <Legend />
-                <Bar yAxisId="left" dataKey="revenue" fill="#3b82f6" name="Revenue" radius={[2, 2, 0, 0]} />
-                <Bar yAxisId="right" dataKey="orders" fill="#10b981" name="Orders" radius={[2, 2, 0, 0]} />
+                <Bar yAxisId="left" dataKey="revenue" fill="#3b82f6" name={t('reports.sales.revenue')} radius={[2, 2, 0, 0]} />
+                <Bar yAxisId="right" dataKey="orders" fill="#10b981" name={t('reports.sales.orders')} radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

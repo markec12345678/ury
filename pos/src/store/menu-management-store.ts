@@ -17,6 +17,7 @@ import {
   AvailableItem,
 } from '../lib/menu-management-api';
 import { showToast } from '../components/ui/toast';
+import { t } from '../i18n';
 
 function extractServerMessage(error: unknown): string {
   try {
@@ -113,8 +114,8 @@ export const useMenuManagementStore = create<
       const menus = await getMenus();
       set({ menus, loading: false });
     } catch {
-      set({ error: 'Failed to load menus', loading: false });
-      showToast.error('Failed to load menus');
+      set({ error: t('menu_management.failed_load_menus'), loading: false });
+      showToast.error(t('menu_management.failed_load_menus'));
     }
   },
 
@@ -124,8 +125,8 @@ export const useMenuManagementStore = create<
       const menu = await getMenuDetail(menuName);
       set({ selectedMenu: menu, menuDetailLoading: false });
     } catch {
-      set({ error: 'Failed to load menu details', menuDetailLoading: false });
-      showToast.error('Failed to load menu details');
+      set({ error: t('menu_management.failed_load_menu_details'), menuDetailLoading: false });
+      showToast.error(t('menu_management.failed_load_menu_details'));
     }
   },
 
@@ -136,7 +137,7 @@ export const useMenuManagementStore = create<
       set({ courses, coursesLoading: false });
     } catch {
       set({ coursesLoading: false });
-      showToast.error('Failed to load courses');
+      showToast.error(t('menu_management.failed_load_courses'));
     }
   },
 
@@ -147,7 +148,7 @@ export const useMenuManagementStore = create<
       set({ availableItems: items, itemsLoading: false });
     } catch {
       set({ itemsLoading: false });
-      showToast.error('Failed to load available items');
+      showToast.error(t('menu_management.failed_load_available_items'));
     }
   },
 
@@ -156,9 +157,9 @@ export const useMenuManagementStore = create<
       await toggleMenu(menuName, enabled);
       const menus = await getMenus();
       set({ menus });
-      showToast.success(enabled ? 'Menu enabled' : 'Menu disabled');
+      showToast.success(enabled ? t('menu_management.menu_enabled') : t('menu_management.menu_disabled'));
     } catch {
-      showToast.error('Failed to toggle menu status');
+      showToast.error(t('menu_management.failed_toggle_menu'));
     }
   },
 
@@ -166,9 +167,9 @@ export const useMenuManagementStore = create<
     try {
       await addMenuItem(menuName, item, rate, course, specialDish);
       await get().fetchMenuDetail(menuName);
-      showToast.success('Item added to menu');
+      showToast.success(t('menu_management.item_added'));
     } catch (error: unknown) {
-      const msg = extractServerMessage(error) || 'Failed to add item';
+      const msg = extractServerMessage(error) || t('menu_management.failed_add_item'));
       showToast.error(msg);
     }
   },
@@ -177,9 +178,9 @@ export const useMenuManagementStore = create<
     try {
       await updateMenuItem(menuName, itemRowName, updates);
       await get().fetchMenuDetail(menuName);
-      showToast.success('Item updated');
+      showToast.success(t('menu_management.item_updated'));
     } catch {
-      showToast.error('Failed to update item');
+      showToast.error(t('menu_management.failed_update_item'));
     }
   },
 
@@ -187,9 +188,9 @@ export const useMenuManagementStore = create<
     try {
       await removeMenuItem(menuName, itemRowName);
       await get().fetchMenuDetail(menuName);
-      showToast.success('Item removed from menu');
+      showToast.success(t('menu_management.item_removed'));
     } catch {
-      showToast.error('Failed to remove item');
+      showToast.error(t('menu_management.failed_remove_item'));
     }
   },
 
@@ -197,9 +198,9 @@ export const useMenuManagementStore = create<
     try {
       await batchUpdatePrices(menuName, updates);
       await get().fetchMenuDetail(menuName);
-      showToast.success(`${updates.length} prices updated`);
+      showToast.success(t('menu_management.prices_updated_count', { count: String(updates.length) }));
     } catch {
-      showToast.error('Failed to update prices');
+      showToast.error(t('menu_management.failed_update_prices'));
     }
   },
 
@@ -207,9 +208,9 @@ export const useMenuManagementStore = create<
     try {
       await createMenuCourse(course, servingPriority, indicateInKds);
       await get().fetchCourses();
-      showToast.success('Course created');
+      showToast.success(t('menu_management.course_created'));
     } catch (error: unknown) {
-      const msg = extractServerMessage(error) || 'Failed to create course';
+      const msg = extractServerMessage(error) || t('menu_management.failed_create_course'));
       showToast.error(msg);
     }
   },
@@ -218,9 +219,9 @@ export const useMenuManagementStore = create<
     try {
       await updateMenuCourse(courseName, updates);
       await get().fetchCourses();
-      showToast.success('Course updated');
+      showToast.success(t('menu_management.course_updated'));
     } catch {
-      showToast.error('Failed to update course');
+      showToast.error(t('menu_management.failed_update_course'));
     }
   },
 
@@ -228,9 +229,9 @@ export const useMenuManagementStore = create<
     try {
       await deleteMenuCourse(courseName);
       await get().fetchCourses();
-      showToast.success('Course deleted');
+      showToast.success(t('menu_management.course_deleted'));
     } catch (error: unknown) {
-      const msg = extractServerMessage(error) || 'Failed to delete course';
+      const msg = extractServerMessage(error) || t('menu_management.failed_delete_course'));
       showToast.error(msg);
     }
   },

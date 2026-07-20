@@ -19,8 +19,9 @@
 
       <form @submit.prevent="handleLogin" class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+          <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
           <input
+            id="login-username"
             v-model="username"
             type="text"
             :disabled="isLoading"
@@ -31,8 +32,9 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
           <input
+            id="login-password"
             v-model="password"
             type="password"
             :disabled="isLoading"

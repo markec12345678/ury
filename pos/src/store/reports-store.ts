@@ -12,6 +12,7 @@ import {
   ReportType,
 } from '../lib/reports-api';
 import { showToast } from '../components/ui/toast';
+import { t } from '../i18n';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -106,8 +107,8 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
         const report = await getSalesReport(p, fromDate, toDate);
         set({ salesReport: report, loading: false });
       } catch {
-        set({ error: 'Failed to load sales report', loading: false });
-        showToast.error('Failed to load sales report');
+        set({ error: t('reports.failed_load_sales'), loading: false });
+        showToast.error(t('reports.failed_load_sales'));
       }
     },
 
@@ -117,8 +118,8 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
         const report = await getExpenseReport(fromDate, toDate);
         set({ expenseReport: report, loading: false });
       } catch {
-        set({ error: 'Failed to load expense report', loading: false });
-        showToast.error('Failed to load expense report');
+        set({ error: t('reports.failed_load_expense'), loading: false });
+        showToast.error(t('reports.failed_load_expense'));
       }
     },
 
@@ -128,8 +129,8 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
         const report = await getProfitLossReport(fromDate, toDate);
         set({ profitLossReport: report, loading: false });
       } catch {
-        set({ error: 'Failed to load profit & loss report', loading: false });
-        showToast.error('Failed to load profit & loss report');
+        set({ error: t('reports.failed_load_profit_loss'), loading: false });
+        showToast.error(t('reports.failed_load_profit_loss'));
       }
     },
 
@@ -149,8 +150,10 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
           await get().fetchProfitLossReport(customFromDate || undefined, customToDate || undefined);
           break;
         case 'inventory':
-          // Inventory report uses placeholder data for now
-          set({ loading: false });
+          // Inventory report backend endpoint is not yet available.
+          // Show a "coming soon" message by keeping inventoryReport null.
+          set({ loading: false, inventoryReport: null });
+          showToast.info(t('reports.inventory.coming_soon'));
           break;
       }
     },
@@ -189,7 +192,7 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
           if (pdfUrl) {
             window.open(pdfUrl, '_blank', 'noopener,noreferrer');
             set({ exporting: false });
-            showToast.success('PDF report generated');
+            showToast.success(t('reports.pdf_report_generated'));
             return;
           }
         } catch {
@@ -219,10 +222,10 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
           `${selectedReportType}_report_${new Date().toISOString().split('T')[0]}.pdf`
         );
         set({ exporting: false });
-        showToast.success('PDF report downloaded');
+        showToast.success(t('reports.pdf_report_downloaded'));
       } catch {
         set({ exporting: false });
-        showToast.error('Failed to export PDF');
+        showToast.error(t('reports.failed_export_pdf'));
       }
     },
 
@@ -236,7 +239,7 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
         switch (selectedReportType) {
           case 'sales':
             if (!salesReport) {
-              showToast.error('No sales report data to export');
+              showToast.error(t('reports.no_sales_data_export'));
               return;
             }
             csvContent = generateSalesCsv(salesReport);
@@ -244,7 +247,7 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
             break;
           case 'expense':
             if (!expenseReport) {
-              showToast.error('No expense report data to export');
+              showToast.error(t('reports.no_expense_data_export'));
               return;
             }
             csvContent = generateExpenseCsv(expenseReport);
@@ -252,7 +255,7 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
             break;
           case 'profit_loss':
             if (!profitLossReport) {
-              showToast.error('No profit & loss report data to export');
+              showToast.error(t('reports.no_profit_loss_data_export'));
               return;
             }
             csvContent = generatePLCsv(profitLossReport);
@@ -260,7 +263,7 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
             break;
           case 'inventory':
             if (!inventoryReport) {
-              showToast.error('No inventory report data to export');
+              showToast.error(t('reports.no_inventory_data_export'));
               return;
             }
             csvContent = generateInventoryCsv(inventoryReport);
@@ -270,10 +273,10 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
 
         if (csvContent) {
           downloadCsv(csvContent, filename);
-          showToast.success('CSV exported successfully');
+          showToast.success(t('reports.csv_exported'));
         }
       } catch {
-        showToast.error('Failed to export CSV');
+        showToast.error(t('reports.failed_export_csv'));
       }
     },
 

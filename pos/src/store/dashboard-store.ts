@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { logger } from '../lib/logger';
+import { t } from '../i18n';
 import {
   getDashboardSummary,
   getRevenueChart,
@@ -104,7 +105,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         // Previously errors were only logged, leaving the UI showing stale
         // or null data with no indication something went wrong.
         logger.error('Failed to fetch dashboard summary:', error);
-        set({ error: 'Failed to load dashboard summary' });
+        set({ error: t('dashboard.failed_load_summary') });
       }
     },
 
@@ -129,7 +130,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
       } catch (error) {
         logger.error('Failed to fetch revenue chart:', error);
         // R44-FIX: Record partial error so UI can indicate failure
-        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load revenue chart'] }));
+        set((s) => ({ partialErrors: [...s.partialErrors, t('dashboard.failed_load_revenue_chart')] }));
       }
     },
 
@@ -140,7 +141,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ ordersChart });
       } catch (error) {
         logger.error('Failed to fetch orders chart:', error);
-        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load orders chart'] }));
+        set((s) => ({ partialErrors: [...s.partialErrors, t('dashboard.failed_load_orders_chart')] }));
       }
     },
 
@@ -151,7 +152,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ categorySales });
       } catch (error) {
         logger.error('Failed to fetch category sales:', error);
-        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load category sales'] }));
+        set((s) => ({ partialErrors: [...s.partialErrors, t('dashboard.failed_load_category_sales')] }));
       }
     },
 
@@ -162,7 +163,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ paymentMethodChart });
       } catch (error) {
         logger.error('Failed to fetch payment method chart:', error);
-        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load payment method chart'] }));
+        set((s) => ({ partialErrors: [...s.partialErrors, t('dashboard.failed_load_payment_chart')] }));
       }
     },
 
@@ -172,7 +173,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
         set({ tableOccupancy });
       } catch (error) {
         logger.error('Failed to fetch table occupancy:', error);
-        set((s) => ({ partialErrors: [...s.partialErrors, 'Failed to load table occupancy'] }));
+        set((s) => ({ partialErrors: [...s.partialErrors, t('dashboard.failed_load_table_occupancy')] }));
       }
     },
 
@@ -206,12 +207,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
           r.status === 'rejected' ? String(r.reason ?? 'Unknown error') : ''
         ).filter(Boolean);
         if (rejected.length === results.length) {
-          set({ error: 'Failed to load dashboard data', loading: false, partialErrors });
+          set({ error: t('dashboard.failed_load'), loading: false, partialErrors });
         } else {
           set({ loading: false, partialErrors });
         }
       } catch {
-        set({ error: 'Failed to load dashboard data', loading: false });
+        set({ error: t('dashboard.failed_load'), loading: false });
       }
     },
 

@@ -92,14 +92,14 @@ const OrderTypeChart = () => {
               <Bar
                 dataKey="orders"
                 fill="#3b82f6"
-                name="Orders"
+                name={t('dashboard.tooltip_orders')}
                 radius={[0, 4, 4, 0]}
                 barSize={12}
               />
               <Bar
                 dataKey="revenue"
                 fill="#10b981"
-                name="Revenue"
+                name={t('dashboard.tooltip_revenue')}
                 radius={[0, 4, 4, 0]}
                 barSize={12}
               />

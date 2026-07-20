@@ -84,7 +84,9 @@ const HourlyHeatmap = () => {
     return heatmapData.cells.find((c) => c.day === day && c.hour === hour)?.count || 0;
   };
 
-  const dayLabels = useMemo(() => getLocalizedDayLabels(), []);
+  // C2-FIX: Depend on active language so day labels update on language change.
+  const lang = getActiveLanguage();
+  const dayLabels = useMemo(() => getLocalizedDayLabels(), [lang]);
 
   const legendSteps = [
     { label: '0', color: 'bg-blue-50' },

@@ -352,6 +352,11 @@ def sync_order(
     cost_center = frappe.db.get_value("POS Profile", pos_profile, "cost_center")
 
     for d in items:
+        # R47-FIX: Validate item qty is positive (create_order_items in kot_generate
+        # validates for KOT creation, but sync_order was missing the same check)
+        qty = flt(d.get("qty"))
+        if qty <= 0:
+            frappe.throw(_("Item '{0}' has invalid quantity ({1}). Quantity must be positive.").format(d.get("item_name", d.get("item")), qty))
         course = courses.get(d.get("item"))
         rate = prices.get(d.get("item"))
         if not rate:
@@ -362,7 +367,7 @@ def sync_order(
             dict(
                 item_code=d.get("item"),
                 item_name=d.get("item_name"),
-                qty=d.get("qty"),
+                qty=qty,
                 **({"custom_course": course} if course else {}),
                 comment=d.get("comment"),
                 rate=rate,
@@ -394,8 +399,10 @@ def sync_order(
 
     # table status
     if invoice.invoice_printed == 0:
+        # R47-FIX: Use update_modified=False for auxiliary status updates
         frappe.db.set_value(
-            "URY Table", table, {"occupied": 1, "latest_invoice_time": invoice.creation}
+            "URY Table", table, {"occupied": 1, "latest_invoice_time": invoice.creation},
+            update_modified=False
         )
 
     invoice.db_set("owner", frappe.session.user)
@@ -571,15 +578,18 @@ def table_transfer(table, newTable, invoice):
             frappe.throw(_("Table {0} is already occupied").format(newTable))
 
         # Update table status
+        # R47-FIX: Use update_modified=False for auxiliary status updates
         frappe.db.set_value(
             "URY Table",
             newTable,
             {"occupied": 1, "latest_invoice_time": pos_invoice.creation},
+            update_modified=False,
         )
         frappe.db.set_value(
             "URY Table",
             table,
             {"occupied": 0, "latest_invoice_time": None},
+            update_modified=False,
         )
 
         # Update POS Invoice
@@ -714,10 +724,12 @@ def cancel_order(invoice_id, reason):
 
     # Update table status
     if pos_invoice.restaurant_table:
+        # R47-FIX: Use update_modified=False for auxiliary status updates
         frappe.db.set_value(
             "URY Table",
             pos_invoice.restaurant_table,
             {"occupied": 0, "latest_invoice_time": None},
+            update_modified=False,
         )
 
 # Method for URY POS
@@ -884,6 +896,7 @@ def change_table_in_kot(invoice, new_table, branch):
 
     # Update each KOT's restaurant_table and send a real-time update
     for kot in kot_list:
-        frappe.db.set_value("URY KOT", kot.name, "restaurant_table", new_table)
+        # R47-FIX: Use update_modified=False for auxiliary status updates
+        frappe.db.set_value("URY KOT", kot.name, "restaurant_table", new_table, update_modified=False)
         kot_channel = "{}_{}_{}".format("kot_update", branch, kot.production)
         frappe.publish_realtime(kot_channel)

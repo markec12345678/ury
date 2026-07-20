@@ -30,19 +30,20 @@ type PeriodOption = {
   label: string;
 };
 
-const PERIODS: PeriodOption[] = [
-  { value: 'today', label: t('dashboard.today') },
-  { value: 'yesterday', label: t('dashboard.yesterday') },
-  { value: 'this_week', label: t('dashboard.this_week') },
-  { value: 'last_week', label: t('dashboard.last_week') },
-  { value: 'this_month', label: t('dashboard.this_month') },
-  { value: 'last_month', label: t('dashboard.last_month') },
-  { value: 'last_7_days', label: t('dashboard.last_7_days') },
-  { value: 'last_30_days', label: t('dashboard.last_30_days') },
-  { value: 'last_90_days', label: t('dashboard.last_90_days') },
-];
-
 const Dashboard = () => {
+  // C1-FIX: PERIODS defined inside the component so t() re-evaluates on language change.
+  // Previously at module scope, t() was called once on import and frozen.
+  const PERIODS: PeriodOption[] = [
+    { value: 'today', label: t('dashboard.today') },
+    { value: 'yesterday', label: t('dashboard.yesterday') },
+    { value: 'this_week', label: t('dashboard.this_week') },
+    { value: 'last_week', label: t('dashboard.last_week') },
+    { value: 'this_month', label: t('dashboard.this_month') },
+    { value: 'last_month', label: t('dashboard.last_month') },
+    { value: 'last_7_days', label: t('dashboard.last_7_days') },
+    { value: 'last_30_days', label: t('dashboard.last_30_days') },
+    { value: 'last_90_days', label: t('dashboard.last_90_days') },
+  ];
   // R41-FIX: Use individual Zustand selectors instead of useDashboardStore()
   // which subscribes to ALL state changes (revenueChart, ordersChart, etc.),
   // causing unnecessary re-renders when unrelated state changes.

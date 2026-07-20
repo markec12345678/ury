@@ -52,7 +52,7 @@ const CourseManager = () => {
   if (coursesLoading) {
     return (
       <div className="flex justify-center py-8">
-        <p className="text-gray-500">Loading courses...</p>
+        <p className="text-gray-500">{t('menu_management.loading_courses')}</p>
       </div>
     );
   }

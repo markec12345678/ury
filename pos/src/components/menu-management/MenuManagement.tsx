@@ -296,12 +296,12 @@ const MenuManagement = () => {
                           : 'bg-gray-100 text-gray-500'
                       )}
                     >
-                      {menu.enabled ? 'Active' : 'Disabled'}
+                      {menu.enabled ? t('menu_management.active') : t('menu_management.disabled')}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span>{menu.item_count} items</span>
-                    <span>{menu.enabled_count} active</span>
+                    <span>{t('menu_management.items_count', { count: String(menu.item_count) })}</span>
+                    <span>{t('menu_management.active_count', { count: String(menu.enabled_count) })}</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <Button
@@ -359,7 +359,7 @@ const MenuManagement = () => {
           <div>
             <h1 className="text-xl font-bold text-gray-900">{selectedMenu.name}</h1>
             <p className="text-sm text-gray-500">
-              {selectedMenu.items.length} items | Branch: {selectedMenu.branch}
+              {t('menu_management.items_count', { count: String(selectedMenu.items.length) })} | {t('menu_management.branch')}: {selectedMenu.branch}
             </p>
           </div>
         </div>
