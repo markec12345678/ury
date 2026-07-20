@@ -1,0 +1,914 @@
+     1→# Copyright (c) 2023, Tridz Technologies Pvt. Ltd. and contributors
+     2→# For license information, please see license.txt
+     3→
+     4→import json
+     5→import frappe
+     6→from frappe import _
+     7→from frappe.model.document import Document
+     8→from frappe.utils import flt
+     9→from datetime import datetime
+    10→from erpnext.controllers.queries import item_query
+    11→from ury.ury.api.utils import _get_user_branch
+    12→from ury.ury_pos.api import getBranchRoom
+    13→from ury.ury.api.ury_kot_generate import kot_execute
+    14→from ury.ury.api.ury_kot_generate import process_items_for_cancel_kot
+    15→
+    16→
+    17→class URYOrder(Document):
+    18→    pass
+    19→
+    20→
+    21→def _get_order_invoice_doc(table=None, invoiceNo=None, order_type=None, is_payment=None):
+    22→    """Internal: returns POS Invoice document object for server-side manipulation.
+    23→    Used by sync_order and make_invoice which need the doc, not a dict."""
+    24→    # Verify user has access to the table's room (BE-R36-017)
+    25→    if table:
+    26→        from ury.ury_pos.api import _get_user_branch_rooms
+    27→        table_room = frappe.db.get_value("URY Table", table, "restaurant_room")
+    28→        if table_room:
+    29→            user_rooms = [r.room for r in _get_user_branch_rooms() if r.room]
+    30→            if user_rooms and table_room not in user_rooms:
+    31→                frappe.throw(_("You do not have access to this table's room"), frappe.PermissionError)
+    32→
+    33→    if table:
+    34→        # Lock the table row to prevent concurrent invoice creation (BE-R36-001)
+    35→        frappe.db.sql(
+    36→            "SELECT name FROM `tabURY Table` WHERE name = %s FOR UPDATE",
+    37→            (table,), as_dict=True
+    38→        )
+    39→        
+    40→        if is_payment == "Payments":
+    41→            invoice_name = frappe.get_value(
+    42→                "POS Invoice", dict(restaurant_table=table, docstatus=0, name=invoiceNo)
+    43→            )
+    44→            
+    45→        else:
+    46→            if invoiceNo:
+    47→                invoice_name = frappe.get_value(
+    48→                    "POS Invoice",
+    49→                    dict(restaurant_table=table, docstatus=0, name=invoiceNo),
+    50→                )
+    51→               
+    52→            else:
+    53→                invoice_name = frappe.get_value(
+    54→                    "POS Invoice",
+    55→                    dict(restaurant_table=table, docstatus=0, invoice_printed=0),
+    56→                )
+    57→                
+    58→        branch, menu_name, restaurant = get_restaurant_and_menu_name(table)
+    59→
+    60→        if invoice_name:
+    61→            invoice = frappe.get_doc("POS Invoice", invoice_name)
+    62→
+    63→        else:
+    64→            invoice = frappe.new_doc("POS Invoice")
+    65→
+    66→            invoice.naming_series = frappe.db.get_value(
+    67→                "URY Restaurant", restaurant, "invoice_series_prefix"
+    68→            )
+    69→
+    70→            invoice.is_pos = 1
+    71→            invoice.update_stock = 1
+    72→            invoice.restaurant = restaurant
+    73→            invoice.branch = branch
+    74→
+    75→            is_take_away = frappe.db.get_value("URY Table", table, "is_take_away")
+    76→            if is_take_away == 1:
+    77→                invoice.order_type = "Take Away"
+    78→            else:
+    79→                invoice.order_type= "Dine In"
+    80→
+    81→        invoice.taxes_and_charges = frappe.db.get_value(
+    82→            "URY Restaurant", restaurant, "default_tax_template"
+    83→        )
+    84→
+    85→        invoice.selling_price_list = frappe.db.get_value(
+    86→            "Price List", dict(restaurant_menu=menu_name, enabled=1)
+    87→        )
+    88→
+    89→    else:
+    90→
+    91→        invoice_name = frappe.get_value(
+    92→                "POS Invoice", dict(docstatus=0, name=invoiceNo)
+    93→            )
+    94→            
+    95→        if invoice_name:
+    96→            invoice = frappe.get_doc("POS Invoice", invoice_name)
+    97→            # R44-FIX: Validate that the loaded invoice belongs to the user's branch
+    98→            user_branch = _get_user_branch()
+    99→            if invoice.branch and invoice.branch != user_branch:
+   100→                frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+   101→            
+   102→
+   103→        else:
+   104→            invoice = frappe.new_doc("POS Invoice")
+   105→            invoice.is_pos = 1
+   106→            invoice.update_stock = 1
+   107→        
+   108→        branch = _get_user_branch()
+   109→        restaurant = frappe.db.get_value("URY Restaurant", {"branch": branch}, "name")
+   110→
+   111→        menu=get_menu_name(order_type)
+   112→
+   113→        if (order_type == "Aggregators" and frappe.db.get_value("Branch", branch, "custom_no_taxes") == 0) or order_type != "Aggregators":
+   114→            invoice.taxes_and_charges = frappe.db.get_value("URY Restaurant", restaurant, "default_tax_template")
+   115→        
+   116→        invoice.selling_price_list = frappe.db.get_value(
+   117→            "Price List", dict(restaurant_menu=menu, enabled=1)
+   118→        )
+   119→        # R43-FIX: Set branch on non-table invoices to prevent branchless invoices
+   120→        invoice.branch = branch
+   121→
+   122→    return invoice
+   123→
+   124→
+   125→@frappe.whitelist()
+   126→def get_order_invoice(table=None, invoiceNo=None, order_type=None, is_payment=None):
+   127→    """returns the active invoice linked to the given table (as a dict for the frontend)"""
+   128→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   129→
+   130→    invoice = _get_order_invoice_doc(table, invoiceNo, order_type, is_payment)
+   131→
+   132→    # Return only the fields the frontend needs — prevent full document leakage (BE-R36-003)
+   133→    if invoice.name:
+   134→        return {
+   135→            "name": invoice.name,
+   136→            "customer": invoice.customer,
+   137→            "restaurant_table": invoice.restaurant_table,
+   138→            "restaurant": invoice.get("restaurant"),
+   139→            "branch": invoice.branch,
+   140→            "order_type": invoice.order_type,
+   141→            "is_pos": invoice.is_pos,
+   142→            "invoice_printed": invoice.invoice_printed,
+   143→            "invoice_created": invoice.invoice_created,
+   144→            "grand_total": invoice.grand_total,
+   145→            "rounded_total": invoice.get("rounded_total"),
+   146→            "total_taxes_and_charges": invoice.get("total_taxes_and_charges"),
+   147→            "selling_price_list": invoice.selling_price_list,
+   148→            "taxes_and_charges": invoice.taxes_and_charges,
+   149→            "naming_series": invoice.naming_series,
+   150→            "update_stock": invoice.update_stock,
+   151→            "mobile_number": invoice.get("mobile_number"),
+   152→            "custom_comments": invoice.get("custom_comments"),
+   153→            "custom_aggregator_id": invoice.get("custom_aggregator_id"),
+   154→            "custom_restaurant_room": invoice.get("custom_restaurant_room"),
+   155→            "no_of_pax": invoice.get("no_of_pax"),
+   156→            "pos_profile": invoice.pos_profile,
+   157→            "cashier": invoice.cashier,
+   158→            "waiter": invoice.waiter,
+   159→            "owner": invoice.owner,
+   160→            "modified": str(invoice.modified),
+   161→            "items": [{"item_code": i.item_code, "item_name": i.item_name, "qty": i.qty, "rate": i.rate, "amount": i.amount, "comment": i.get("comment"), "image": i.get("image"), "description": i.get("description")} for i in invoice.items],
+   162→            "payments": [{"mode_of_payment": p.mode_of_payment, "amount": p.amount} for p in invoice.payments],
+   163→            "customer_name": invoice.get("customer_name"),
+   164→        }
+   165→    return invoice
+   166→
+   167→
+   168→@frappe.whitelist()
+   169→def sync_order(
+   170→    items,
+   171→    cashier,
+   172→    owner,
+   173→    mode_of_payment,
+   174→    customer,
+   175→    no_of_pax,
+   176→    last_invoice,
+   177→    waiter,
+   178→    pos_profile,
+   179→    last_modified_time=None,
+   180→    table=None,
+   181→    invoice=None,
+   182→    comments=None,
+   183→    order_type=None,
+   184→    aggregator_id=None,
+   185→    room=None
+   186→):
+   187→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   188→    # Validate pos_profile belongs to user's branch (BE-R36-002)
+   189→    pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
+   190→    user_branch = _get_user_branch()
+   191→    if pos_profile_branch != user_branch:
+   192→        frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
+   193→    user_role = frappe.get_roles()
+   194→    billing_roles = frappe.get_all(
+   195→        "POS Profile Role",
+   196→        filters={"parent": pos_profile},
+   197→        fields=["role"],
+   198→        pluck="role",
+   199→    )
+   200→    billing_user = bool(set(user_role).intersection(billing_roles))
+   201→
+   202→    # Check if the last invoice was already billed
+   203→    if (
+   204→        last_invoice
+   205→        and frappe.db.get_value("POS Invoice", last_invoice, "invoice_printed") == 1
+   206→        and (not billing_user)
+   207→    ):
+   208→        frappe.msgprint(
+   209→            title=_("Invoice Already Billed"),
+   210→            indicator="red",
+   211→            msg=_("This order has already been billed. Please reload the page."),
+   212→        )
+   213→        return {"status": "Failure"}
+   214→
+   215→    # R41-FIX: Use _get_order_invoice_doc to get the document object, not a dict.
+   216→    # The public get_order_invoice returns a dict for frontend safety (BE-R36-003),
+   217→    # but sync_order needs the document to call .save() etc.
+   218→    invoice = _get_order_invoice_doc(table, invoice, order_type)
+   219→
+   220→    # R41-FIX: Validate last_invoice belongs to user's branch
+   221→    if last_invoice:
+   222→        last_inv_branch = frappe.db.get_value("POS Invoice", last_invoice, "branch")
+   223→        if last_inv_branch and last_inv_branch != user_branch:
+   224→            frappe.throw(_("Invoice does not belong to your branch"), frappe.PermissionError)
+   225→
+   226→    if last_invoice and last_modified_time:
+   227→        lastModifiedTime = invoice.modified
+   228→        if isinstance(last_modified_time, str):
+   229→            try:
+   230→                last_modified_time = datetime.strptime(
+   231→                    last_modified_time, "%Y-%m-%d %H:%M:%S.%f"
+   232→                )
+   233→            except ValueError:
+   234→                last_modified_time = datetime.strptime(
+   235→                    last_modified_time, "%Y-%m-%d %H:%M:%S"
+   236→                )
+   237→        if isinstance(lastModifiedTime, str):
+   238→            try:
+   239→                lastModifiedTime = datetime.strptime(
+   240→                    lastModifiedTime, "%Y-%m-%d %H:%M:%S.%f"
+   241→                )
+   242→            except ValueError:
+   243→                lastModifiedTime = datetime.strptime(
+   244→                    lastModifiedTime, "%Y-%m-%d %H:%M:%S"
+   245→                )
+   246→        if lastModifiedTime != last_modified_time:
+   247→            frappe.msgprint(
+   248→                title=_("Order has been modified"),
+   249→                indicator="red",
+   250→                msg=_("This order has been modified. Please reload the page to retrieve the latest edits."),
+   251→            )
+   252→            return {"status": "Failure"}
+   253→    elif last_invoice and not last_modified_time:
+   254→        # R49-FIX: When last_invoice is provided but last_modified_time is missing,
+   255→        # require the client to provide it — otherwise the optimistic concurrency
+   256→        # check is bypassed entirely, allowing silent overwrites.
+   257→        frappe.msgprint(
+   258→            title=_("Stale Data"),
+   259→            indicator="red",
+   260→            msg=_("Please reload the page to retrieve the latest edits before saving."),
+   261→        )
+   262→        return {"status": "Failure"}
+   263→    else:
+   264→        if invoice.name and invoice.invoice_printed == 0 and not billing_user:
+   265→            frappe.msgprint(
+   266→                title=_("Table Occupied"),
+   267→                indicator="red",
+   268→                msg=_("{0} is already occupied. Please refresh the page.").format(table),
+   269→            )
+   270→            return {"status": "Failure"}
+   271→
+   272→    if not customer:
+   273→        frappe.throw(_("Please enter valid customer details"))
+   274→    else:
+   275→        invoice.customer = customer
+   276→
+   277→    if order_type:
+   278→        invoice.order_type = order_type
+   279→
+   280→    invoice.mobile_number = frappe.db.get_value("Customer", customer, "mobile_number")
+   281→    if comments:
+   282→        invoice.custom_comments = comments
+   283→    invoice.no_of_pax = no_of_pax
+   284→    invoice.pos_profile = pos_profile
+   285→    # H-01: Validate cashier and waiter are active users
+   286→    for role_user in [("Cashier", cashier), ("Waiter", waiter)]:
+   287→        if role_user[1] and not frappe.db.exists("User", {"name": role_user[1], "enabled": 1}):
+   288→            frappe.throw(_("Invalid {0}: {1}").format(role_user[0], role_user[1]))
+   289→
+   290→    invoice.cashier = cashier
+   291→    invoice.waiter = waiter
+   292→    invoice.custom_aggregator_id = aggregator_id
+   293→    invoice.custom_restaurant_room =room
+   294→    invoice.restaurant_table = table
+   295→    
+   296→    if order_type == "Aggregators":
+   297→        price_list = frappe.db.get_value("Aggregator Settings",{"customer": customer, "parent": invoice.branch, "parenttype": "Branch"},"price_list",)
+   298→        
+   299→        if not price_list:
+   300→            frappe.throw(_("Price list for customer {0} in branch {1} not found in Aggregator Settings.").format(customer, invoice.branch))
+   301→    else:
+   302→        price_list = invoice.selling_price_list
+   303→
+   304→    # dummy payment
+   305→    # C-02: Validate mode_of_payment against POS Profile's allowed payment methods
+   306→    allowed_mops = frappe.get_all("POS Profile Payment", filters={"parent": pos_profile}, pluck="mode_of_payment")
+   307→    if mode_of_payment not in allowed_mops:
+   308→        frappe.throw(_("Invalid mode of payment: {0}").format(mode_of_payment))
+   309→
+   310→    if invoice.invoice_created == 0:
+   311→        invoice.append(
+   312→            "payments",
+   313→            dict(mode_of_payment=mode_of_payment, amount=invoice.grand_total),
+   314→        )
+   315→        invoice.invoice_created = 1
+   316→
+   317→    past_item = []
+   318→    for item in invoice.items:
+   319→        previous_item = {
+   320→            "item_code": item.item_code,
+   321→            "item_name": item.item_name,
+   322→            "qty": item.qty,
+   323→            "comments": "",
+   324→        }
+   325→        past_item.append(previous_item)
+   326→        
+   327→
+   328→    # Conditional checking for 'items' type:
+   329→    # - 'ury': JSON passed, hence using isinstance
+   330→    # - 'ury_pos': Already formatted list, hence using else
+   331→    if isinstance(items, str):
+   332→        try:
+   333→            items = json.loads(items)
+   334→        except json.JSONDecodeError:
+   335→            frappe.throw(_("Invalid items data"), frappe.ValidationError)
+   336→    invoice.items = []
+   337→    
+   338→    menu = frappe.db.get_value("URY Menu", {"branch": invoice.branch}, "name")
+   339→
+   340→    # Batch-fetch courses, prices, and cost_center to avoid N+1 queries
+   341→    item_codes = [d.get("item") for d in items]
+   342→    item_codes_unique = list(set(item_codes))
+   343→
+   344→    courses = {}
+   345→    if item_codes_unique:
+   346→        course_rows = frappe.db.get_all(
+   347→            "URY Menu Item",
+   348→            filters={"item": ("in", item_codes_unique), "parent": menu},
+   349→            fields=["item", "course"],
+   350→        )
+   351→        courses = {r.item: r.course for r in course_rows}
+   352→
+   353→    prices = {}
+   354→    if item_codes_unique:
+   355→        price_rows = frappe.db.get_all(
+   356→            "Item Price",
+   357→            filters={"item_code": ("in", item_codes_unique), "price_list": price_list},
+   358→            fields=["item_code", "price_list_rate"],
+   359→        )
+   360→        prices = {r.item_code: r.price_list_rate for r in price_rows}
+   361→
+   362→    cost_center = frappe.db.get_value("POS Profile", pos_profile, "cost_center")
+   363→
+   364→    for d in items:
+   365→        # R47-FIX: Validate item qty is positive (create_order_items in kot_generate
+   366→        # validates for KOT creation, but sync_order was missing the same check)
+   367→        qty = flt(d.get("qty"))
+   368→        if qty <= 0:
+   369→            frappe.throw(_("Item '{0}' has invalid quantity ({1}). Quantity must be positive.").format(d.get("item_name", d.get("item")), qty))
+   370→        course = courses.get(d.get("item"))
+   371→        rate = prices.get(d.get("item"))
+   372→        if not rate:
+   373→            frappe.throw(_("No item price found for Item: {0} in Price List: {1}. Please check the price list settings.").format(d.get("item"), price_list))
+   374→
+   375→        invoice.append(
+   376→            "items",
+   377→            dict(
+   378→                item_code=d.get("item"),
+   379→                item_name=d.get("item_name"),
+   380→                qty=qty,
+   381→                **({"custom_course": course} if course else {}),
+   382→                comment=d.get("comment"),
+   383→                rate=rate,
+   384→                price_list_rate=rate,
+   385→                base_price_list_rate=rate,
+   386→                cost_center=cost_center,
+   387→            ),
+   388→        )
+   389→
+   390→    try:
+   391→        invoice.save()
+   392→    except Exception as e:
+   393→        frappe.log_error(frappe.get_traceback(), "Invoice Save Error")
+   394→        frappe.throw(_("An error occurred. Please check the error log."))
+   395→
+   396→
+   397→    try:
+   398→        kot_execute(invoice.name, customer, table, items, past_item, comments)
+   399→
+   400→    except Exception as e:
+   401→        # Log the KOT error but also notify the user — kitchen won't see this order
+   402→        error_msg = f"KOT Creation Failed: {str(e)}"
+   403→        frappe.log_error(f"{error_msg}\n{frappe.get_traceback()}", "KOT Error")
+   404→        frappe.msgprint(
+   405→            title=_("KOT Creation Failed"),
+   406→            indicator="orange",
+   407→            msg=_("The order was saved but the KOT was not sent to the kitchen. Please check the error log or retry."),
+   408→        )
+   409→
+   410→    # table status
+   411→    if invoice.invoice_printed == 0:
+   412→        # R47-FIX: Use update_modified=False for auxiliary status updates
+   413→        frappe.db.set_value(
+   414→            "URY Table", table, {"occupied": 1, "latest_invoice_time": invoice.creation},
+   415→            update_modified=False
+   416→        )
+   417→
+   418→    invoice.db_set("owner", frappe.session.user)
+   419→    return {
+   420→        "name": invoice.name,
+   421→        "customer": invoice.customer,
+   422→        "grand_total": invoice.grand_total,
+   423→        "modified": invoice.modified,
+   424→        "invoice_printed": invoice.invoice_printed,
+   425→        "restaurant_table": invoice.restaurant_table,
+   426→    }
+   427→
+   428→
+   429→@frappe.whitelist()
+   430→def item_query_restaurant(
+   431→    doctype="Item",
+   432→    txt="",
+   433→    searchfield="name",
+   434→    start=0,
+   435→    page_len=20,
+   436→    filters=None,
+   437→    as_dict=False,
+   438→):
+   439→    """Return items that are selected in active menu of the restaurant"""
+   440→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   441→    restaurant, menu = get_restaurant_and_menu_name(filters["table"])
+   442→    items = frappe.db.get_all("URY Menu Item", ["item"], dict(parent=menu, disabled=0))
+   443→    del filters["table"]
+   444→    filters["name"] = ("in", [d.item for d in items])
+   445→
+   446→    return item_query("Item", txt, searchfield, start, page_len, filters, as_dict)
+   447→
+   448→
+   449→@frappe.whitelist()
+   450→def get_restaurant_and_menu_name(table):
+   451→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   452→    if not table:
+   453→        frappe.throw(_("Please select a table"))
+   454→
+   455→    result = frappe.get_value(
+   456→        "URY Table",
+   457→        table,
+   458→        ["restaurant", "branch", "restaurant_room"],
+   459→    )
+   460→    if not result:
+   461→        frappe.throw(_("URY Table {0} not found").format(table))
+   462→    restaurant, branch, room = result
+   463→    room_wise_menu = frappe.db.get_value(
+   464→        "URY Restaurant",
+   465→        restaurant,
+   466→        "room_wise_menu",
+   467→    )
+   468→
+   469→    if not room_wise_menu:
+   470→        menu = frappe.db.get_value("URY Restaurant", restaurant, "active_menu")
+   471→    else:
+   472→        menu = frappe.db.get_value(
+   473→            "Menu for Room",
+   474→            {"parent": restaurant, "room": room},
+   475→            "menu",
+   476→        )
+   477→
+   478→    if not menu:
+   479→        frappe.throw(
+   480→            _("Please set an active menu for Restaurant {0}").format(restaurant)
+   481→        )
+   482→
+   483→    return branch, menu, restaurant
+   484→
+   485→@frappe.whitelist()
+   486→def get_menu_name(order_type):
+   487→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   488→    branch = _get_user_branch()
+   489→    restaurant = frappe.get_value(
+   490→        "URY Restaurant",
+   491→        {"branch": branch},
+   492→        "name",
+   493→    )
+   494→    order_type_wise_menu = frappe.db.get_value(
+   495→            "URY Restaurant", restaurant, "order_type_wise_menu"
+   496→        )
+   497→    
+   498→    if order_type_wise_menu:
+   499→        menu = frappe.db.get_value(
+   500→            "Order Type Menu",
+   501→            {"parent": restaurant, "order_type": order_type},
+   502→            "menu"
+   503→        )
+   504→        if not menu:
+   505→            menu = frappe.db.get_value("URY Restaurant", restaurant, "active_menu")
+   506→    else:
+   507→        menu = frappe.db.get_value("URY Restaurant", restaurant, "active_menu")   
+   508→    return menu  
+   509→    
+   510→
+   511→@frappe.whitelist()
+   512→def pos_opening_check():
+   513→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   514→    user = frappe.session.user
+   515→    # Handle the administrator case differently
+   516→    if user == "Administrator":
+   517→        return {
+   518→            "opening_exists": False,  # Assuming no POS opening entry is needed for Administrator
+   519→            "cashier": None,
+   520→            "pos_profile": None,
+   521→        }
+   522→    
+   523→    details = getBranchRoom()
+   524→    if not details:
+   525→        frappe.throw(_("No room/branch configuration found for the current user."))
+   526→    room = details[0].get('name')
+   527→    branch = details[0].get('branch')
+   528→    
+   529→    pos_opening_list = frappe.db.sql("""
+   530→        SELECT DISTINCT `tabPOS Opening Entry`.name 
+   531→        FROM `tabPOS Opening Entry`
+   532→        INNER JOIN `tabMultiple Rooms` 
+   533→        ON `tabMultiple Rooms`.parent = `tabPOS Opening Entry`.name
+   534→        WHERE `tabPOS Opening Entry`.branch = %s
+   535→        AND `tabPOS Opening Entry`.status = 'Open'
+   536→        AND `tabPOS Opening Entry`.docstatus = 1
+   537→        AND `tabMultiple Rooms`.room = %s
+   538→    """, (branch, room), as_dict=True)
+   539→    
+   540→    
+   541→    result = {
+   542→        "opening_exists": len(pos_opening_list) > 0,
+   543→        "cashier": None,
+   544→        "pos_profile": None,
+   545→    }
+   546→
+   547→    if result["opening_exists"]:
+   548→        opening_vals = frappe.db.get_value(
+   549→            "POS Opening Entry", pos_opening_list[0].name,
+   550→            ["user", "pos_profile"],
+   551→            as_dict=True,
+   552→        )
+   553→        result["cashier"] = opening_vals.user
+   554→        result["pos_profile"] = opening_vals.pos_profile
+   555→        
+   556→    return result
+   557→
+   558→
+   559→@frappe.whitelist()
+   560→def table_transfer(table, newTable, invoice):
+   561→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   562→    if not frappe.has_permission("POS Invoice", "write", invoice):
+   563→        frappe.throw(_("Not permitted to transfer tables"), frappe.PermissionError)
+   564→    # R39-FIX: Validate invoice belongs to user's branch
+   565→    inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
+   566→    if not inv_branch:
+   567→        frappe.throw(_("POS Invoice {0} not found").format(invoice))
+   568→    user_branch = _get_user_branch()
+   569→    if inv_branch != user_branch:
+   570→        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+   571→    # Lock both source and destination tables to prevent race conditions (BE-R36-007)
+   572→    table_data = frappe.db.sql(
+   573→        """SELECT name, restaurant_room, occupied FROM `tabURY Table`
+   574→           WHERE name IN %s FOR UPDATE""",
+   575→        ((table, newTable),), as_dict=True
+   576→    )
+   577→    table_map = {t.name: t for t in table_data}
+   578→    current_room = table_map[table].restaurant_room if table in table_map else frappe.db.get_value("URY Table", table, "restaurant_room")
+   579→    new_table_data = [table_map[newTable]] if newTable in table_map else []
+   580→    if not new_table_data:
+   581→        frappe.throw(_("Table {0} not found").format(newTable))
+   582→    new_table_room = new_table_data[0].restaurant_room
+   583→    new_table_occupied = new_table_data[0].occupied
+   584→    pos_invoice = frappe.get_doc("POS Invoice", invoice)
+   585→
+   586→    if current_room == new_table_room:
+   587→        if new_table_occupied == 1:
+   588→            frappe.throw(_("Table {0} is already occupied").format(newTable))
+   589→
+   590→        # Update table status
+   591→        # R47-FIX: Use update_modified=False for auxiliary status updates
+   592→        frappe.db.set_value(
+   593→            "URY Table",
+   594→            newTable,
+   595→            {"occupied": 1, "latest_invoice_time": pos_invoice.creation},
+   596→            update_modified=False,
+   597→        )
+   598→        frappe.db.set_value(
+   599→            "URY Table",
+   600→            table,
+   601→            {"occupied": 0, "latest_invoice_time": None},
+   602→            update_modified=False,
+   603→        )
+   604→
+   605→        # Update POS Invoice
+   606→        pos_invoice.restaurant_table = newTable
+   607→        pos_invoice.save()
+   608→
+   609→        try:
+   610→            change_table_in_kot(
+   611→                    pos_invoice.name, newTable, pos_invoice.branch
+   612→                )
+   613→
+   614→        except Exception as e:
+   615→            frappe.log_error(
+   616→                f"KOT table transfer failed for {pos_invoice.name}: {frappe.get_traceback()}",
+   617→                "KOT Table Transfer Error"
+   618→            )
+   619→
+   620→    else:
+   621→        frappe.throw(_("Table transfer between different rooms is restricted."))
+   622→
+   623→
+   624→@frappe.whitelist()
+   625→def captain_transfer(currentCaptain, newCaptain, invoice):
+   626→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   627→    if not frappe.has_permission("POS Invoice", "write", invoice):
+   628→        frappe.throw(_("Not permitted to transfer captain"), frappe.PermissionError)
+   629→    # R39-FIX: Validate invoice belongs to user's branch
+   630→    inv_branch = frappe.db.get_value("POS Invoice", invoice, "branch")
+   631→    if not inv_branch:
+   632→        frappe.throw(_("POS Invoice {0} not found").format(invoice))
+   633→    user_branch = _get_user_branch()
+   634→    if inv_branch != user_branch:
+   635→        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+   636→    # Validate newCaptain user exists and has restaurant role (BE-R36-009)
+   637→    if not frappe.db.exists("User", newCaptain):
+   638→        frappe.throw(_("User {0} does not exist").format(newCaptain))
+   639→    if not frappe.db.get_value("User", newCaptain, "enabled"):
+   640→        frappe.throw(_("User {0} is not active").format(newCaptain))
+   641→    user_roles = frappe.get_roles(newCaptain)
+   642→    if not set(user_roles).intersection({"Restaurant Manager", "Restaurant User", "Cashier"}):
+   643→        frappe.throw(_("User {0} does not have a restaurant role").format(newCaptain))
+   644→    pos_profile=frappe.get_value("POS Invoice", invoice,"pos_profile")
+   645→    multiple_cashier = frappe.db.get_value("POS Profile",pos_profile,"custom_enable_multiple_cashier")
+   646→    branch=frappe.get_value("POS Invoice", invoice,"branch")
+   647→    if multiple_cashier:
+   648→        table = frappe.get_value("POS Invoice", invoice, "restaurant_table")
+   649→        current_room = frappe.get_value("URY Table", table,"restaurant_room")
+   650→        new_captain_room =  frappe.db.sql("""
+   651→                SELECT room
+   652→                FROM `tabURY User`
+   653→                WHERE parent=%s AND user=%s         
+   654→            """,(branch,newCaptain),as_dict=True)
+   655→        room_match = any(room['room'] == current_room for room in new_captain_room)
+   656→        if not room_match:
+   657→            frappe.throw(_("Captain transfer is not allowed between different rooms"))
+   658→
+   659→    pos_invoice = frappe.get_doc("POS Invoice", invoice)
+   660→    pos_invoice.waiter = newCaptain
+   661→    pos_invoice.save()
+   662→
+   663→
+   664→@frappe.whitelist()
+   665→def customer_favourite_item(customer_name):
+   666→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   667→    # R39-FIX: Scope invoices to user's branch to prevent cross-branch data access
+   668→    branch = _get_user_branch()
+   669→    # Get invoice names for this customer within the user's branch
+   670→    invoice_names = frappe.db.get_list(
+   671→        "POS Invoice",
+   672→        filters={"customer": customer_name, "branch": branch, "posting_date": [">=", frappe.utils.add_days(frappe.utils.today(), -90)]},
+   673→        fields=["name"],
+   674→        pluck="name",
+   675→    )
+   676→    if not invoice_names:
+   677→        return []
+   678→
+   679→    # Batch-fetch all items for these invoices in a single query (avoids N+1 get_doc)
+   680→    invoice_items = frappe.db.get_all(
+   681→        "POS Invoice Item",
+   682→        filters={"parent": ("in", invoice_names)},
+   683→        fields=["item_name", "qty"],
+   684→    )
+   685→
+   686→    item_qty = {}
+   687→    for row in invoice_items:
+   688→        item_qty[row.item_name] = item_qty.get(row.item_name, 0) + flt(row.qty)
+   689→
+   690→    result = [
+   691→        {"item_name": item_name, "qty": qty}
+   692→        for item_name, qty in item_qty.items()
+   693→        if qty > 1
+   694→    ]
+   695→    result = sorted(result, key=lambda x: x["qty"], reverse=True)[:3]
+   696→
+   697→    return result
+   698→
+   699→
+   700→@frappe.whitelist()
+   701→def cancel_order(invoice_id, reason):
+   702→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   703→    if not frappe.has_permission("POS Invoice", "cancel", invoice_id):
+   704→        frappe.throw(_("Not permitted to cancel orders"), frappe.PermissionError)
+   705→    # R39-FIX: Validate invoice belongs to user's branch
+   706→    inv_branch = frappe.db.get_value("POS Invoice", invoice_id, "branch")
+   707→    if not inv_branch:
+   708→        frappe.throw(_("POS Invoice {0} not found").format(invoice_id))
+   709→    user_branch = _get_user_branch()
+   710→    if inv_branch != user_branch:
+   711→        frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
+   712→    pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
+   713→
+   714→    frappe.db.savepoint("before_cancel")
+   715→    try:
+   716→        try:
+   717→            cancel_kot(invoice_id)
+   718→        except Exception as e:
+   719→            frappe.log_error(f"Failed to create cancellation KOT for {invoice_id}: {frappe.get_traceback()}", "Cancel KOT Error")
+   720→            frappe.publish_realtime("order_cancelled", {"invoice": invoice_id})
+   721→            frappe.msgprint(
+   722→                title=_("KOT Cancellation Failed"),
+   723→                indicator="orange",
+   724→                msg=_("The order was cancelled but the kitchen was not notified automatically. Please inform the kitchen manually."),
+   725→            )
+   726→
+   727→        # Use standard Frappe cancellation instead of raw SQL
+   728→        pos_invoice.cancel()
+   729→        if reason:
+   730→            # R48-FIX: Use update_modified=False — auxiliary metadata update after cancel()
+   731→            frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason, update_modified=False)
+   732→    except Exception:
+   733→        frappe.db.rollback(savepoint="before_cancel")
+   734→        raise
+   735→
+   736→    # Update table status
+   737→    if pos_invoice.restaurant_table:
+   738→        # R47-FIX: Use update_modified=False for auxiliary status updates
+   739→        frappe.db.set_value(
+   740→            "URY Table",
+   741→            pos_invoice.restaurant_table,
+   742→            {"occupied": 0, "latest_invoice_time": None},
+   743→            update_modified=False,
+   744→        )
+   745→
+   746→# Method for URY POS
+   747→@frappe.whitelist()
+   748→def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=None, table=None, invoice=None):
+   749→    frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+   750→
+   751→    # R39-FIX: Validate POS Profile belongs to user's branch
+   752→    pos_profile_branch = frappe.db.get_value("POS Profile", pos_profile, "branch")
+   753→    user_branch = _get_user_branch()
+   754→    if pos_profile_branch != user_branch:
+   755→        frappe.throw(_("POS Profile does not belong to your branch"), frappe.PermissionError)
+   756→
+   757→    # Validate additional discount
+   758→    if additionalDiscount is not None:
+   759→        additionalDiscount = flt(additionalDiscount)
+   760→        if additionalDiscount < 0 or additionalDiscount > 100:
+   761→            frappe.throw(_("Additional discount must be between 0 and 100"))
+   762→
+   763→    # Check if discounts are enabled for this POS Profile (BE-R36-006)
+   764→    if additionalDiscount:
+   765→        enable_discount = frappe.db.get_value("POS Profile", pos_profile, "custom_enable_discount")
+   766→        if not enable_discount:
+   767→            frappe.throw(_("Discounts are not enabled for this POS Profile"), frappe.PermissionError)
+   768→
+   769→    # Validate payments
+   770→    if isinstance(payments, str):
+   771→        try:
+   772→            payments = json.loads(payments)
+   773→        except json.JSONDecodeError:
+   774→            frappe.throw(_("Invalid payments data"), frappe.ValidationError)
+   775→    if not payments:
+   776→        frappe.throw(_("At least one payment is required"))
+   777→    # H-03: Validate each payment's mode_of_payment against POS Profile's configured payment methods
+   778→    allowed_mops = frappe.get_all("POS Profile Payment", filters={"parent": pos_profile}, pluck="mode_of_payment")
+   779→    for p in payments:
+   780→        amount = flt(p.get("amount", 0))
+   781→        if amount < 0:
+   782→            frappe.throw(_("Payment amount cannot be negative"))
+   783→        mop = p.get("mode_of_payment")
+   784→        if mop not in allowed_mops:
+   785→            frappe.throw(_("Invalid mode of payment: {0}").format(mop))
+   786→
+   787→    # R44-FIX: At least one of invoice or table must be provided — otherwise
+   788→    # we would create an orphaned invoice with no way to reference it.
+   789→    if not invoice and not table:
+   790→        frappe.throw(_("Invoice or table is required to make a payment"), frappe.ValidationError)
+   791→
+   792→    # R43-FIX: Guard against None invoice — get_value with None returns None/error
+   793→    order_type = None
+   794→    if invoice:
+   795→        order_type = frappe.get_value("POS Invoice", invoice, "order_type")
+   796→    # R41-FIX: Use _get_order_invoice_doc to get the document object, not a dict.
+   797→    # make_invoice needs to call .save() and .submit() on the document.
+   798→    invoice = _get_order_invoice_doc(table, invoice, order_type, "Payments")
+   799→
+   800→    if table:
+   801→        _, _, restaurant = get_restaurant_and_menu_name(table)
+   802→        invoice.restaurant = restaurant
+   803→    elif not invoice.restaurant:
+   804→        restaurant = frappe.db.get_value("URY Restaurant", {"branch": invoice.branch}, "name")
+   805→        if restaurant:
+   806→            invoice.restaurant = restaurant
+   807→
+   808→    invoice.customer = customer
+   809→    invoice.pos_profile = pos_profile
+   810→    invoice.additional_discount_percentage=additionalDiscount
+   811→    invoice.calculate_taxes_and_totals()
+   812→
+   813→    # H-07: Validate that payment amounts match the grand total (prevent negative invoice from discount)
+   814→    total_payments = flt(sum(flt(p.get("amount", 0)) for p in payments))
+   815→    if flt(total_payments - invoice.grand_total, 2) < 0:
+   816→        frappe.throw(_("Total payment amount ({0}) is less than grand total ({1}). Discount may have created a negative balance.").format(total_payments, invoice.grand_total))
+   817→
+   818→    invoice.payments = []
+   819→
+   820→    for d in payments:
+   821→        invoice.append(
+   822→            "payments", dict(mode_of_payment=d["mode_of_payment"], amount=d["amount"])
+   823→        )
+   824→
+   825→    # invoice.owner = owner
+   826→    invoice.save()
+   827→    try:
+   828→        invoice.submit()
+   829→    except Exception as e:
+   830→        frappe.log_error(frappe.get_traceback(), "Invoice Submit Error")
+   831→        frappe.throw(_("An error occurred. Please check the error log."))
+   832→
+   833→
+   834→# Cancel KOT Doc Creation
+   835→def cancel_kot(invoice_id):
+   836→
+   837→    pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
+   838→    pos_profile_id = pos_invoice.pos_profile
+   839→    kot_naming_series = frappe.db.get_value("POS Profile", pos_profile_id, "custom_kot_naming_series")
+   840→    cancel_kot_naming_series = "CNCL-" + (kot_naming_series or "")
+   841→
+   842→    items = []
+   843→    # Create a list of items for the canceled KOT
+   844→    for item in pos_invoice.items:
+   845→        order_item = {
+   846→            "item_code": item.item_code,
+   847→            "qty": item.qty,
+   848→            "item_name": item.item_name,
+   849→        }
+   850→        items.append(order_item)
+   851→
+   852→    if pos_invoice.restaurant_table:
+   853→        restaurant_table = pos_invoice.restaurant_table
+   854→    else:
+   855→        restaurant_table = None
+   856→
+   857→    # Build invoiceItems list for comparison in cancel KOT processing
+   858→    invoice_items = [
+   859→        {"item_code": item.item_code, "item_name": item.item_name, "qty": item.qty}
+   860→        for item in pos_invoice.items
+   861→    ]
+   862→
+   863→    # Process items for a canceled KOT
+   864→    process_items_for_cancel_kot(
+   865→        invoice_id,
+   866→        pos_invoice.customer,
+   867→        restaurant_table,
+   868→        items,
+   869→        "",
+   870→        pos_profile_id,
+   871→        cancel_kot_naming_series,
+   872→        "Cancelled",
+   873→        invoice_items,
+   874→        pos_invoice,
+   875→        pos_invoice.branch,
+   876→    )
+   877→
+   878→    # Set the KOTs associated with the invoice as canceled via batch SQL
+   879→    kot_names = frappe.db.get_list(
+   880→        "URY KOT",
+   881→        filters={
+   882→            "invoice": invoice_id,
+   883→            "type": ("in", ("New Order", "Order Modified")),
+   884→            "docstatus": 1,
+   885→        },
+   886→        fields=["name"],
+   887→        pluck="name",
+   888→    )
+   889→
+   890→    if kot_names:
+   891→        for kot_name in kot_names:
+   892→            frappe.get_doc("URY KOT", kot_name).cancel()
+   893→
+   894→
+   895→def change_table_in_kot(invoice, new_table, branch):
+   896→    # Get a list of KOTs associated with the POS Invoice
+   897→    kot_list = frappe.get_all(
+   898→        "URY KOT",
+   899→        filters={
+   900→            "invoice": invoice,
+   901→            "docstatus": 1,
+   902→            "order_status": "Ready For Prepare",
+   903→            "verified": 0,
+   904→        },
+   905→        fields=["name", "production"],
+   906→    )
+   907→
+   908→    # Update each KOT's restaurant_table and send a real-time update
+   909→    for kot in kot_list:
+   910→        # R47-FIX: Use update_modified=False for auxiliary status updates
+   911→        frappe.db.set_value("URY KOT", kot.name, "restaurant_table", new_table, update_modified=False)
+   912→        kot_channel = "{}_{}_{}".format("kot_update", branch, kot.production)
+   913→        frappe.publish_realtime(kot_channel)
+   914→
