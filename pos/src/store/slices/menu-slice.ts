@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { getRestaurantMenu, getAggregatorMenu } from '../../lib/menu-api';
 import { getMenuCourses } from '../../lib/menu-course-api';
 import { getCustomerGroups, getCustomerTerritories } from '../../lib/customer-api';
+import { logger } from '../../lib/logger';
 import type { MenuItem, Category } from './types';
 import type { POSSliceAll } from './combined';
 
@@ -70,7 +71,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
     } catch (error) {
       if (get()._fetchMenuSeq !== seq) return;
       set({ error: 'Failed to load menu items', menuLoading: false });
-      if (import.meta.env.DEV) console.error('Error loading menu items:', error);
+      logger.error('Error loading menu items:', error);
     }
   },
 
@@ -96,7 +97,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
     } catch (error) {
       if (get()._fetchMenuSeq !== seq) return;
       set({ error: 'Failed to load aggregator menu', menuLoading: false });
-      if (import.meta.env.DEV) console.error('Error loading aggregator menu:', error);
+      logger.error('Error loading aggregator menu:', error);
     }
   },
 

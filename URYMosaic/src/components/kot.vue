@@ -687,7 +687,9 @@ export default {
         validMinutes >= Number(this.kot_alert_time) &&
         kot.type !== "Cancelled" &&
         kot.type !== "Partially cancelled" &&
-        !this.notifiedKots.has(kot.name)
+        !this.notifiedKots.has(kot.name) &&
+        this.isOnline // R45-FIX: Skip delay notification when offline — avoids wasteful
+                     // failed API calls every minute for each KOT past the alert threshold.
       ) {
         // R42-FIX: Mark as notified AFTER the API call succeeds, not before.
         const kotName = kot.name;
@@ -815,6 +817,32 @@ export default {
         this._masonry.layout();
       });
     },
+    // R45-FIX: Extract auth error detection into reusable method. Previously
+    // this logic was duplicated in the socket init chain's .catch() and would
+    // be needed again in the connect handler and station watcher.
+    _isAuthError(error) {
+      return error && (
+        error.httpStatus === 401 ||
+        error.httpStatus === 403 ||
+        /auth/i.test(String(error.message || ''))
+      );
+    },
+    // R45-FIX: Centralized fetch error handler for fetchKOTWithRetry failures.
+    // Detects auth expiry (shows login modal) vs other errors (shows status message).
+    // Prevents the common pattern of .catch(() => {}) silently swallowing errors,
+    // which left users with "Reconnected" message but stale/empty data.
+    _handleFetchError(error, fallbackMessage) {
+      if (!this._isMounted) return;
+      if (this._isAuthError(error)) {
+        this.modalTitle = "Session Expired";
+        this.modalMessage = "Your session has expired. Please log in again.";
+        this.showModal = true;
+        if (this.authState) this.authState.isLoggedIn = false;
+      } else {
+        this.setStatusMessage(fallbackMessage || "Data refresh failed. Click Refresh.");
+        this.hideStatusMessageAfterDelay();
+      }
+    },
     // R41-FIX: In-flight operation tracking for serveOrder/confirmOrder.
     // Prevents duplicate POST requests when the user clicks rapidly.
     _markInflight(kotName) {
@@ -916,6 +944,9 @@ export default {
     // R42-FIX: Generation counter for fetchKOTWithRetry — prevents orphaned
     // promise chains when concurrent calls cancel each other's retry timers.
     this._fetchGeneration = 0;
+    // R45-FIX: Initialize _cancelTimeout for consistency with other cleanup
+    // properties — previously relied on falsy undefined check in serveOrder/confirmOrder.
+    this._cancelTimeout = null;
   },
   mounted() {
     this._isMounted = true;
@@ -1037,7 +1068,13 @@ export default {
           // R39-FIX: Use retry wrapper for transient errors on reconnect
           // R43-FIX: Remove redundant .then(() => masonryLoading()) — fetchKOT()
           // already calls masonryLoading(true) on success.
-          this.fetchKOTWithRetry().catch(() => {});
+          // R45-FIX: Handle fetch failure — previously .catch(() => {}) silently
+          // swallowed errors. During extended outages, the user's session may have
+          // expired, so auth errors need to show the login modal. Other errors
+          // show a status message so the user knows data refresh failed.
+          this.fetchKOTWithRetry().catch((error) => {
+            this._handleFetchError(error, "Reconnected but data refresh failed. Click Refresh.");
+          });
         });
 
         // R39-FIX: Use retry wrapper for initial fetch — transient server errors
@@ -1164,12 +1201,8 @@ export default {
           // R41-FIX: Differentiate auth errors from network/server errors.
           // Auth failure → "Not Permitted" with login prompt.
           // Network/server failure → "Connection Error" with retry guidance.
-          const isAuthError = error && (
-            error.httpStatus === 401 ||
-            error.httpStatus === 403 ||
-            /auth/i.test(String(error.message || ''))
-          );
-          if (isAuthError) {
+          // R45-FIX: Use centralized _isAuthError instead of duplicated inline check
+          if (this._isAuthError(error)) {
             this.modalTitle = "Not Permitted";
             this.modalMessage = "Log in to access this page.";
           } else {
@@ -1263,7 +1296,11 @@ export default {
         this._socket.off(this.kot_channel, this.socketHandler);
       }
       // fetchKOT will set the new kot_channel and re-register the handler
-      this.fetchKOTWithRetry().catch(() => {});
+      // R45-FIX: Handle fetch failure on station change — previously .catch(() => {})
+      // silently swallowed errors, leaving the user with an empty KDS and no feedback.
+      this.fetchKOTWithRetry().catch((error) => {
+        this._handleFetchError(error, "Failed to load station data. Click Refresh.");
+      });
     },
   },
 };

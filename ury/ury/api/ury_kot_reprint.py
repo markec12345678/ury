@@ -53,14 +53,14 @@ def reprint_kot(invoice_number):
 
     except frappe.ValidationError:
         raise  # re-raise frappe.throw() validation errors as-is
-    except Exception as e:
-        frappe.log_error(f"KOT Reprint Error for Invoice {invoice_number}: {e}\n{frappe.get_traceback()}", "KOT Reprint Error")
+    except Exception:
+        frappe.log_error(f"KOT Reprint Error for Invoice {invoice_number}:\n{frappe.get_traceback()}", "KOT Reprint Error")
         frappe.throw(_("An unexpected error occurred while reprinting KOT. Please check logs."))
 
 
 def print_kot(printer, docname, kot_print_format):
     try:
         print_by_server("POS Invoice", docname, printer, kot_print_format)
-    except Exception as e:
-        frappe.log_error(f"KOT Reprint Error: {e}\n{frappe.get_traceback()}", "KOT Reprint Error")
+    except Exception:
+        frappe.log_error(f"KOT Reprint Error:\n{frappe.get_traceback()}", "KOT Reprint Error")
         frappe.throw(_("Failed to send print job to printer '{0}'. Please check the printer connection.").format(printer))

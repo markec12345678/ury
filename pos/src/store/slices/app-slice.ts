@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { storage } from '../../lib/storage';
 import { setCurrencySymbol } from '../../lib/utils';
+import { logger } from '../../lib/logger';
 import { getCurrencyInfo, type PosProfileCombined, getCombinedPosProfile } from '../../lib/pos-profile-api';
 import { getPaymentModes } from '../../lib/payment-api';
 import { DEFAULT_ORDER_TYPE } from '../../data/order-types';
@@ -119,7 +120,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
         await get().fetchCurrencySymbol();
       }
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Error fetching POS profile:', error);
+      logger.error('Error fetching POS profile:', error);
       set({
         error: 'Failed to fetch POS profile',
         profileLoading: false,
@@ -136,7 +137,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
       set({ currencySymbol: symbol });
       setCurrencySymbol(symbol);
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Error fetching currency symbol:', error);
+      logger.error('Error fetching currency symbol:', error);
       set({ currencySymbol: get().currency });
       setCurrencySymbol(get().currency);
     }
@@ -148,7 +149,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
       const modes = await getPaymentModes();
       set({ paymentModes: modes });
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Failed to fetch payment modes:', error);
+      logger.error('Failed to fetch payment modes:', error);
       set({ paymentModesError: getErrorMessage(error) });
     }
   },

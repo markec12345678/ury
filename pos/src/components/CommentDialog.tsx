@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MessageSquare, X } from 'lucide-react';
 import { Button } from './ui';
 import { t } from '../i18n';
@@ -27,6 +27,19 @@ const CommentDialog = ({ isOpen, onClose, onSave, initialComment = '' }: Comment
     setComment(initialComment);
     onClose();
   };
+
+  // R45-FIX: Close dialog on Escape key press for keyboard accessibility
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleCancel();
+    }
+  }, [initialComment, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleKeyDown]);
 
   if (!isOpen) return null;
 

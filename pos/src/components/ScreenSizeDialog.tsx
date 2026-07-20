@@ -10,7 +10,12 @@ const ScreenSizeDialog = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="screen-size-dialog-title"
+    >
       <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl">
         <div className="text-center">
           {/* Icon */}
@@ -22,7 +27,7 @@ const ScreenSizeDialog = () => {
           </div>
           
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 id="screen-size-dialog-title" className="text-2xl font-bold text-gray-900 mb-4">
             {t('screen_size.title')}
           </h2>
           
@@ -42,14 +47,14 @@ const ScreenSizeDialog = () => {
               {t('screen_size.current_width')} <span className="font-semibold text-gray-800">{window.innerWidth}px</span>
             </p>
             <p className="text-sm text-gray-600">
-              {t('screen_size.required')} <span className="font-semibold text-gray-800">1024px or larger</span>
+              {t('screen_size.required')} <span className="font-semibold text-gray-800">{t('screen_size.min_width') || '1024px or larger'}</span>
             </p>
           </div>
           
           {/* Alternative Option */}
           <div className="bg-blue-50 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-800 mb-3">
-              You can use URY POS Version 1 for mobile devices.
+              {t('screen_size.mobile_version_hint') || 'You can use URY POS Version 1 for mobile devices.'}
             </p>
             <Button
               onClick={handleSwitchToVersion1}

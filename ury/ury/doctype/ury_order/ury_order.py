@@ -310,7 +310,10 @@ def sync_order(
     # - 'ury': JSON passed, hence using isinstance
     # - 'ury_pos': Already formatted list, hence using else
     if isinstance(items, str):
-        items = json.loads(items)
+        try:
+            items = json.loads(items)
+        except json.JSONDecodeError:
+            frappe.throw(_("Invalid items data"), frappe.ValidationError)
     invoice.items = []
     
     menu = frappe.db.get_value("URY Menu", {"branch": invoice.branch}, "name")
@@ -733,7 +736,10 @@ def make_invoice(customer, payments, cashier, pos_profile, additionalDiscount=No
 
     # Validate payments
     if isinstance(payments, str):
-        payments = json.loads(payments)
+        try:
+            payments = json.loads(payments)
+        except json.JSONDecodeError:
+            frappe.throw(_("Invalid payments data"), frappe.ValidationError)
     if not payments:
         frappe.throw(_("At least one payment is required"))
     for p in payments:

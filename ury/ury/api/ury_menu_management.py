@@ -200,7 +200,10 @@ def batch_update_prices(menu_name, updates):
     """
     frappe.only_for("Restaurant Manager")
     if isinstance(updates, str):
-        updates = json.loads(updates)
+        try:
+            updates = json.loads(updates)
+        except json.JSONDecodeError:
+            frappe.throw(_("Invalid updates data"), frappe.ValidationError)
     if not updates:
         frappe.throw(_("No updates provided"), frappe.ValidationError)
     if len(updates) > 500:

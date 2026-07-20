@@ -10,6 +10,8 @@ no_cache = 1
 base_template_path = "www/printview.html"
 standard_format = "templates/print_formats/standard.html"
 
+ALLOWED_PRINT_DOCTYPES = {"POS Invoice"}
+
 
 @frappe.whitelist()
 def network_printing(
@@ -165,9 +167,6 @@ def qz_print_update(invoice):
     except Exception as e:
         frappe.log_error(message=frappe.get_traceback(), title="Print Fail")
         frappe.throw(_("An error occurred. Please check the error log."))
-
-
-ALLOWED_PRINT_DOCTYPES = {"POS Invoice"}
 
 
 @frappe.whitelist()

@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { useDashboardStore } from '../../store/dashboard-store';
 import { formatCurrency } from '../../lib/utils';
+import { logger } from '../../lib/logger';
 import { t } from '../../i18n';
 import { getPaymentMethodChart, type PaymentMethodDataPoint } from '../../lib/dashboard-api';
 
@@ -42,7 +43,7 @@ const PaymentMethodChart = () => {
           );
         }
       } catch (error) {
-        if (import.meta.env.DEV) console.error('Failed to fetch payment method chart:', error);
+        if (!cancelled) logger.error('Failed to fetch payment method chart:', error);
         if (!cancelled) setData([]);
       } finally {
         if (!cancelled) setLoading(false);

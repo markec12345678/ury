@@ -9,6 +9,7 @@ import { addCustomer, type CreateCustomerData, searchCustomers } from '../lib/cu
 import { AggregatorSelect } from './AggregatorSelect';
 import { t } from '../i18n';
 import { getErrorMessage } from '../lib/error-utils';
+import { logger } from '../lib/logger';
 
 // NewCustomerForm component
 function NewCustomerForm({ 
@@ -115,7 +116,7 @@ function NewCustomerForm({
       if (onSuccess) onSuccess();
       onClose();
     } catch (error: unknown) {
-      if (import.meta.env.DEV) console.error('Failed to create customer:', error);
+      logger.error('Failed to create customer:', error);
       setApiError(getErrorMessage(error));
     } finally {
       setIsCreatingCustomer(false);
@@ -369,7 +370,7 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
           {isOpen && (
-            <div className="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+            <div className="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto" role="listbox" aria-label={t('customer.search_results') || 'Search results'}>
               {searchTerm.trim() === '' && !isSearching && !searchError && (
                 <div className="p-4 text-center text-gray-400 text-sm select-none">{t('customer.type_to_search')}</div>
               )}
@@ -389,6 +390,8 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
                   <button
                     key={customer.name}
                     type="button"
+                    role="option"
+                    aria-selected={idx === highlightedIndex}
                     className={`w-full gap-2 px-4 py-2 text-left rounded-md text-gray-800 text-sm select-none transition-colors ${
                       idx === highlightedIndex ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'
                     }`}

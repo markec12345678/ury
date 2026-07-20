@@ -13,6 +13,7 @@ import { getTableOrder } from '../lib/order-api';
 import { printOrder } from '../lib/print';
 import { showToast } from '../components/ui/toast';
 import { t } from '../i18n';
+import { logger } from '../lib/logger';
 import { getErrorMessage } from '../lib/error-utils';
 
 import LayoutView from '../components/LayoutView';
@@ -109,7 +110,7 @@ const TableView = () => {
         setRoomCounts(nextCounts);
         persistRoomCounts(nextCounts);
       } catch (_error) {
-        if (import.meta.env.DEV) console.error('Failed to load room counts', _error);
+        logger.error('Failed to load room counts', _error);
       } finally {
         setLoadingRoomCounts(false);
       }

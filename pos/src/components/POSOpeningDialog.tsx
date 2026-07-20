@@ -17,7 +17,7 @@ const POSOpeningDialog = ({ onReload, type }: POSOpeningDialogProps) => {
   };
   
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="pos-opening-dialog-title">
       <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl">
         <div className="text-center">
           {/* Icon */}
@@ -32,7 +32,7 @@ const POSOpeningDialog = ({ onReload, type }: POSOpeningDialogProps) => {
           </div>
           
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 id="pos-opening-dialog-title" className="text-2xl font-bold text-gray-900 mb-4">
             {isOpeningIssue ? t('pos.not_opened_title') : t('pos.not_closed_title')}
           </h2>
 

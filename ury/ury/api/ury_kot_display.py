@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import get_datetime
+from frappe.utils import get_datetime, flt
 from ury.ury.api.utils import _get_user_branch
 
 
@@ -9,7 +9,7 @@ from ury.ury.api.utils import _get_user_branch
 def serve_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
     # R39-FIX: Combine two get_value calls into one for efficiency
-    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "creation"], as_dict=True)
+    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "creation", "order_status", "type"], as_dict=True)
     if not kot_data:
         frappe.throw(_("KOT {0} not found").format(name))
     user_branch = _get_user_branch()
@@ -24,12 +24,15 @@ def serve_kot(name):
         frappe.throw(_("KOT {0} has no branch assigned. Contact your administrator.").format(name), frappe.PermissionError)
     if kot_data.branch != user_branch:
         frappe.throw(_("You do not have access to KOTs from another branch"), frappe.PermissionError)
+    # R45-FIX: Only allow serving KOTs that are in "Ready For Prepare" status
+    if kot_data.order_status != "Ready For Prepare":
+        frappe.throw(_("KOT {0} is not in a servable state (current: {1})").format(name, kot_data.order_status), frappe.ValidationError)
 
     current_time = get_datetime()
     creation_time = kot_data.creation
 
     production_time = current_time - creation_time
-    production_time_minutes = production_time.total_seconds() / 60
+    production_time_minutes = flt(production_time.total_seconds() / 60, 2)
     frappe.db.set_value("URY KOT", name, {
         "start_time_serv": current_time,
         "production_time": production_time_minutes,
@@ -59,6 +62,10 @@ def confirm_cancel_kot(name):
     # R41-FIX: Only allow verification on Cancelled or Partially cancelled KOTs
     if kot_data.type not in ("Cancelled", "Partially cancelled"):
         frappe.throw(_("Only cancelled KOTs can be verified"), frappe.ValidationError)
+    # R45-FIX: Prevent duplicate verification
+    already_verified = frappe.db.get_value("URY KOT", name, "verified")
+    if already_verified:
+        frappe.throw(_("KOT {0} has already been verified").format(name), frappe.ValidationError)
     # Use server-side identity instead of client-supplied user parameter
     verified_by = frappe.session.user
     frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by})

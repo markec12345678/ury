@@ -64,17 +64,12 @@ const Dashboard = () => {
     fetchAll();
   }, [fetchAll]);
 
-  // Auto-refresh timer with proper cleanup
-  // R44-FIX: Also clean up the store-level auto-refresh interval on unmount
-  // to prevent the timer from continuing to fire after navigating away.
+  // R45-FIX: Removed component-level auto-refresh interval. The store's
+  // setAutoRefresh() already creates an interval that calls fetchAll()
+  // (which includes fetchLiveMetrics). Having both the component-level and
+  // store-level intervals caused double API calls on every refresh tick.
+  // Now only the store-level interval is used, and we clean it up on unmount.
   const stopAutoRefresh = useDashboardStore((s) => s.stopAutoRefresh);
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const id = setInterval(() => fetchLiveMetrics(), refreshInterval * 1000);
-    return () => clearInterval(id);
-  }, [autoRefresh, refreshInterval, fetchLiveMetrics]);
-
-  // R44-FIX: Stop store-level auto-refresh on unmount
   useEffect(() => {
     return () => { stopAutoRefresh(); };
   }, [stopAutoRefresh]);

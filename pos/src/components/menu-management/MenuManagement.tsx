@@ -22,6 +22,7 @@ import AddItemDialog from './AddItemDialog';
 import EditItemDialog from './EditItemDialog';
 import BulkActionsToolbar from './BulkActionsToolbar';
 import BatchPriceUpdateDialog from './BatchPriceUpdateDialog';
+import { showToast } from '../ui/toast';
 import { URYMenuItem } from '../../lib/menu-management-api';
 
 type Tab = 'items' | 'courses';
@@ -151,24 +152,43 @@ const MenuManagement = () => {
   }, []);
 
   // Bulk action handlers
+  // R45-FIX: Added try/catch to bulk action handlers so that a failure on
+  // one item doesn't silently abort the remaining items. Each operation is
+  // now individually error-handled, and the user is notified of failures.
   const handleEnableSelected = async () => {
     const updates = Array.from(selectedItems);
+    let failures = 0;
     for (const itemName of updates) {
-      const item = selectedMenu?.items.find((i) => i.name === itemName);
-      if (item && item.disabled) {
-        await updateItemInMenu(selectedMenu!.name, itemName, { disabled: 0 });
+      try {
+        const item = selectedMenu?.items.find((i) => i.name === itemName);
+        if (item && item.disabled) {
+          await updateItemInMenu(selectedMenu!.name, itemName, { disabled: 0 });
+        }
+      } catch {
+        failures++;
       }
+    }
+    if (failures > 0) {
+      showToast.error(t('menu_management.bulk_action_failed') || `Failed to update ${failures} item(s)`);
     }
     setSelectedItems(new Set());
   };
 
   const handleDisableSelected = async () => {
     const updates = Array.from(selectedItems);
+    let failures = 0;
     for (const itemName of updates) {
-      const item = selectedMenu?.items.find((i) => i.name === itemName);
-      if (item && !item.disabled) {
-        await updateItemInMenu(selectedMenu!.name, itemName, { disabled: 1 });
+      try {
+        const item = selectedMenu?.items.find((i) => i.name === itemName);
+        if (item && !item.disabled) {
+          await updateItemInMenu(selectedMenu!.name, itemName, { disabled: 1 });
+        }
+      } catch {
+        failures++;
       }
+    }
+    if (failures > 0) {
+      showToast.error(t('menu_management.bulk_action_failed') || `Failed to update ${failures} item(s)`);
     }
     setSelectedItems(new Set());
   };
@@ -178,8 +198,16 @@ const MenuManagement = () => {
     if (!confirm(`Delete ${count} selected item${count > 1 ? 's' : ''} from menu?`)) return;
 
     const updates = Array.from(selectedItems);
+    let failures = 0;
     for (const itemName of updates) {
-      await removeItemFromMenu(selectedMenu!.name, itemName);
+      try {
+        await removeItemFromMenu(selectedMenu!.name, itemName);
+      } catch {
+        failures++;
+      }
+    }
+    if (failures > 0) {
+      showToast.error(t('menu_management.bulk_action_failed') || `Failed to delete ${failures} item(s)`);
     }
     setSelectedItems(new Set());
   };
@@ -303,10 +331,10 @@ const MenuManagement = () => {
 
         {/* Course Manager Dialog */}
         {showCourseManager && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="course-manager-dialog-title">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4">
               <div className="flex items-center justify-between p-4 border-b">
-                <h2 className="text-lg font-semibold">{t('menu_management.manage_courses') || 'Manage Courses'}</h2>
+                <h2 id="course-manager-dialog-title" className="text-lg font-semibold">{t('menu_management.manage_courses') || 'Manage Courses'}</h2>
                 <Button variant="ghost" onClick={() => setShowCourseManager(false)}>
                   <X className="w-5 h-5" />
                 </Button>
