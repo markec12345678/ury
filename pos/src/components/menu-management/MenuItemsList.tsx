@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { Pencil, Trash2, Star, Ban, Check, ArrowUpDown, ArrowUp, ArrowDown, ImageOff } from 'lucide-react';
 import { Button, Badge } from '../ui';
-import { cn } from '../../lib/utils';
-import { formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 import { URYMenuItem } from '../../lib/menu-management-api';
 import { useMenuManagementStore } from '../../store/menu-management-store';
 import { t } from '../../i18n';
@@ -56,7 +55,7 @@ const MenuItemsList = ({
   };
 
   const handleDelete = async (item: URYMenuItem) => {
-    if (confirm(t('menu_management.confirm_delete_item') || `Remove "${item.item_name}" from menu?`)) {
+    if (confirm(t('menu_management.confirm_delete_item'))) {
       await removeItemFromMenu(menuName, item.name);
     }
   };
@@ -103,15 +102,15 @@ const MenuItemsList = ({
                 className="rounded border-gray-300"
               />
             </th>
-            <SortableHeader columnKey="item_name" label={t('menu_management.item_name') || 'Item'} />
-            <SortableHeader columnKey="course" label={t('menu_management.course') || 'Course'} className="text-start" />
-            <SortableHeader columnKey="rate" label={t('menu_management.price') || 'Price'} className="text-end" />
-            <SortableHeader columnKey="disabled" label={t('common.status') || 'Status'} className="text-center" />
+            <SortableHeader columnKey="item_name" label={t('menu_management.item_name')} />
+            <SortableHeader columnKey="course" label={t('menu_management.course')} className="text-start" />
+            <SortableHeader columnKey="rate" label={t('menu_management.price')} className="text-end" />
+            <SortableHeader columnKey="disabled" label={t('common.status')} className="text-center" />
             <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-              {t('menu_management.special') || 'Special'}
+              {t('menu_management.special')}
             </th>
             <th className="text-end px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-              {t('common.actions') || 'Actions'}
+              {t('common.actions')}
             </th>
           </tr>
         </thead>
@@ -183,12 +182,12 @@ const MenuItemsList = ({
                     {item.disabled ? (
                       <>
                         <Ban className="w-3 h-3" />
-                        {t('menu_management.disabled') || 'Disabled'}
+                        {t('menu_management.disabled')}
                       </>
                     ) : (
                       <>
                         <Check className="w-3 h-3" />
-                        {t('menu_management.active') || 'Active'}
+                        {t('menu_management.active')}
                       </>
                     )}
                   </button>

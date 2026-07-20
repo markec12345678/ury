@@ -76,7 +76,7 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
       // R40-FIX: Show error toast to user instead of silently swallowing the error.
       // Previously the catch block was missing, so a failed batch update would
       // leave the user with no feedback about why prices weren't updated.
-      showToast.error(t('menu_management.failed_update_prices') || 'Failed to update prices');
+      showToast.error(t('menu_management.failed_update_prices'));
     } finally {
       setApplying(false);
     }
@@ -88,7 +88,7 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">
-            {t('menu_management.batch_update_prices') || 'Batch Update Prices'}
+            {t('menu_management.batch_update_prices')}
           </h2>
           <Button variant="ghost" onClick={onClose}>
             <X className="w-5 h-5" />
@@ -98,7 +98,7 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
         {/* Apply to all section */}
         <div className="p-4 border-b bg-gray-50">
           <p className="text-sm font-medium text-gray-700 mb-2">
-            {t('menu_management.apply_to_all') || 'Apply to all selected'}
+            {t('menu_management.apply_to_all')}
           </p>
           <div className="flex items-center gap-2">
             <select
@@ -107,7 +107,7 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
               onChange={(e) => setApplyMode(e.target.value as ApplyMode)}
             >
               <option value="percentage">%</option>
-              <option value="fixed">{t('menu_management.fixed_amount') || 'Fixed'}</option>
+              <option value="fixed">{t('menu_management.fixed_amount')}</option>
             </select>
             <Input
               type="number"
@@ -123,7 +123,7 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
               disabled={!applyValue || isNaN(parseFloat(applyValue))}
               size="sm"
             >
-              {t('common.apply') || 'Apply'}
+              {t('common.apply')}
             </Button>
           </div>
           <p className="text-xs text-gray-400 mt-1">
@@ -139,16 +139,16 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
             <thead className="sticky top-0 bg-gray-50">
               <tr>
                 <th className="text-start px-4 py-2 text-xs font-medium text-gray-500 uppercase">
-                  {t('menu_management.item_name') || 'Item Name'}
+                  {t('menu_management.item_name')}
                 </th>
                 <th className="text-end px-4 py-2 text-xs font-medium text-gray-500 uppercase">
-                  {t('menu_management.current_price') || 'Current Price'}
+                  {t('menu_management.current_price')}
                 </th>
                 <th className="text-end px-4 py-2 text-xs font-medium text-gray-500 uppercase">
-                  {t('menu_management.new_price') || 'New Price'}
+                  {t('menu_management.new_price')}
                 </th>
                 <th className="text-end px-4 py-2 text-xs font-medium text-gray-500 uppercase">
-                  {t('menu_management.change') || 'Change'}
+                  {t('menu_management.change')}
                 </th>
               </tr>
             </thead>
@@ -203,16 +203,16 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t bg-gray-50">
           <p className="text-sm text-gray-500">
-            {changes.filter((c) => c.diff !== 0).length} {t('menu_management.items_updated') || 'items will be updated'}
+            {changes.filter((c) => c.diff !== 0).length} {t('menu_management.items_updated')}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>
-              {t('common.cancel') || 'Cancel'}
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleUpdate} disabled={!hasChanges || applying}>
               {applying
-                ? (t('common.loading') || 'Updating...')
-                : (t('menu_management.update_prices') || 'Update Prices')}
+                ? (t('common.loading'))
+                : (t('menu_management.update_prices'))}
             </Button>
           </div>
         </div>

@@ -42,7 +42,7 @@ const CourseManager = () => {
   const handleDelete = async (courseName: string) => {
     if (
       confirm(
-        t('menu_management.confirm_delete_course') || 'Delete this course? Items using it will become uncategorized.'
+        t('menu_management.confirm_delete_course')
       )
     ) {
       await deleteCourse(courseName);
@@ -63,7 +63,7 @@ const CourseManager = () => {
       <div className="flex items-end gap-3 p-4 bg-gray-50 rounded-lg">
         <div className="flex-1">
           <label className="block text-xs font-medium text-gray-500 mb-1">
-            {t('menu_management.course_name') || 'Course Name'}
+            {t('menu_management.course_name')}
           </label>
           <Input
             placeholder="e.g., Starters, Main Course, Desserts"
@@ -74,7 +74,7 @@ const CourseManager = () => {
         </div>
         <div className="w-24">
           <label className="block text-xs font-medium text-gray-500 mb-1">
-            {t('menu_management.priority') || 'Priority'}
+            {t('menu_management.priority')}
           </label>
           <Input
             type="number"
@@ -84,14 +84,14 @@ const CourseManager = () => {
         </div>
         <Button onClick={handleAddCourse} disabled={!newCourseName.trim()}>
           <Plus className="w-4 h-4 me-1" />
-          {t('menu_management.add_course') || 'Add Course'}
+          {t('menu_management.add_course')}
         </Button>
       </div>
 
       {/* Courses list */}
       {courses.length === 0 ? (
         <p className="text-center text-gray-400 py-6">
-          {t('menu_management.no_courses') || 'No courses defined yet'}
+          {t('menu_management.no_courses')}
         </p>
       ) : (
         <div className="space-y-2">

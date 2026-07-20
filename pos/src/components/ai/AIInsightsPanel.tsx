@@ -53,11 +53,11 @@ const AIInsightsPanel = () => {
       <button
         onClick={togglePanel}
         className="fixed bottom-6 end-6 z-50 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 group"
-        title={t('ai.open_panel') || 'AI Insights'}
+        title={t('ai.open_panel')}
       >
         <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
         <span className="text-sm font-medium hidden sm:inline">
-          {t('ai.insights') || 'AI Insights'}
+          {t('ai.insights')}
         </span>
       </button>
     );
@@ -70,21 +70,21 @@ const AIInsightsPanel = () => {
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5" />
           <h3 className="font-semibold text-sm">
-            {t('ai.title') || 'AI Insights'}
+            {t('ai.title')}
           </h3>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={clearConversation}
             className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
-            title={t('ai.clear') || 'Clear conversation'}
+            title={t('ai.clear')}}
           >
             <Trash2 className="w-4 h-4" />
           </button>
           <button
             onClick={togglePanel}
             className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
-            title={t('ai.close') || 'Close'}
+            title={t('ai.close')}}
           >
             <X className="w-4 h-4" />
           </button>
@@ -95,7 +95,7 @@ const AIInsightsPanel = () => {
       {messages.length === 0 && (
         <div className="px-4 py-3 bg-violet-50 border-b border-violet-100">
           <p className="text-xs text-violet-700 mb-2 font-medium">
-            {t('ai.quick_actions') || 'Quick actions'}
+            {t('ai.quick_actions')}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -104,23 +104,23 @@ const AIInsightsPanel = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-violet-700 text-xs font-medium rounded-full border border-violet-200 hover:bg-violet-100 transition-colors disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              {t('ai.analyze_report') || 'Analyze Report'}
+              {t('ai.analyze_report')}
             </button>
             <button
-              onClick={() => sendMessage(t('ai.default_question_top_items') || 'What are the top selling items?')}
+              onClick={() => sendMessage(t('ai.default_question_top_items'))}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-violet-700 text-xs font-medium rounded-full border border-violet-200 hover:bg-violet-100 transition-colors disabled:opacity-50"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              {t('ai.top_selling') || 'Top Items'}
+              {t('ai.top_selling')}
             </button>
             <button
-              onClick={() => sendMessage(t('ai.default_question_trends') || 'What trends do you see?')}
+              onClick={() => sendMessage(t('ai.default_question_trends'))}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-violet-700 text-xs font-medium rounded-full border border-violet-200 hover:bg-violet-100 transition-colors disabled:opacity-50"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              {t('ai.trends') || 'Trends'}
+              {t('ai.trends')}
             </button>
           </div>
         </div>
@@ -132,7 +132,7 @@ const AIInsightsPanel = () => {
           <div className="flex flex-col items-center justify-center h-full text-gray-400 py-8">
             <Sparkles className="w-8 h-8 mb-2" />
             <p className="text-sm text-center">
-              {t('ai.empty_state') || 'Ask anything about your report data'}
+              {t('ai.empty_state')}
             </p>
           </div>
         )}
@@ -188,7 +188,7 @@ const AIInsightsPanel = () => {
         {loading && (
           <div className="flex items-center gap-2 text-violet-600 text-sm py-2">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>{t('ai.thinking') || 'Thinking...'}</span>
+            <span>{t('ai.thinking')}</span>
           </div>
         )}
 
@@ -211,7 +211,7 @@ const AIInsightsPanel = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t('ai.input_placeholder') || 'Ask about your reports...'}
+            placeholder={t('ai.input_placeholder')}
             disabled={loading}
             className="flex-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           />
@@ -229,7 +229,7 @@ const AIInsightsPanel = () => {
           </button>
         </div>
         <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-          {t('ai.disclaimer') || 'AI insights are suggestions — always verify with actual data'}
+          {t('ai.disclaimer')}
         </p>
       </div>
     </div>

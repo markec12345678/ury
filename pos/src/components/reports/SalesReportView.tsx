@@ -31,7 +31,7 @@ const SalesReportView = () => {
   if (!salesReport) {
     return (
       <div className="text-center py-12 text-gray-400">
-        {t('reports.sales.noData') || 'Select a period to generate a sales report'}
+        {t('reports.sales.noData')}
       </div>
     );
   }
@@ -54,37 +54,37 @@ const SalesReportView = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <SummaryCard
-          title={t('reports.sales.totalRevenue') || 'Total Revenue'}
+          title={t('reports.sales.totalRevenue')}
           value={formatCurrency(summary.total_revenue)}
           color="blue"
           change={changes?.total_revenue}
         />
         <SummaryCard
-          title={t('reports.sales.totalOrders') || 'Total Orders'}
+          title={t('reports.sales.totalOrders')}
           value={`${summary.total_orders}`}
           color="emerald"
           change={changes?.total_orders}
         />
         <SummaryCard
-          title={t('reports.sales.avgOrderValue') || 'Avg Order Value'}
+          title={t('reports.sales.avgOrderValue')}
           value={formatCurrency(summary.avg_order_value)}
           color="purple"
           change={changes?.avg_order_value}
         />
         <SummaryCard
-          title={t('reports.sales.netRevenue') || 'Net Revenue'}
+          title={t('reports.sales.netRevenue')}
           value={formatCurrency(summary.net_revenue)}
           color="blue"
           change={changes?.net_revenue}
         />
         <SummaryCard
-          title={t('reports.sales.totalTax') || 'Total Tax'}
+          title={t('reports.sales.totalTax')}
           value={formatCurrency(summary.total_tax)}
           color="amber"
           change={changes?.total_tax}
         />
         <SummaryCard
-          title={t('reports.sales.uniqueCustomers') || 'Unique Customers'}
+          title={t('reports.sales.uniqueCustomers')}
           value={`${summary.unique_customers}`}
           color="emerald"
           change={changes?.unique_customers}
@@ -99,10 +99,10 @@ const SalesReportView = () => {
           </div>
           <div>
             <p className="text-sm font-medium text-red-800">
-              {cancelled_orders.count} {t('reports.sales.cancelledOrders') || 'cancelled orders'}
+              {cancelled_orders.count} {t('reports.sales.cancelledOrders')}
             </p>
             <p className="text-xs text-red-600">
-              {t('reports.sales.cancelledAmount') || 'Cancelled amount'}: {formatCurrency(cancelled_orders.amount)}
+              {t('reports.sales.cancelledAmount')}: {formatCurrency(cancelled_orders.amount)}
             </p>
           </div>
         </div>
@@ -112,7 +112,7 @@ const SalesReportView = () => {
       {hourlyChartData.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">
-            {t('reports.sales.hourlyDistribution') || 'Hourly Sales Distribution'}
+            {t('reports.sales.hourlyDistribution')}
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -135,15 +135,15 @@ const SalesReportView = () => {
       {order_type_sales.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            {t('reports.sales.orderTypeBreakdown') || 'Order Type Breakdown'}
+            {t('reports.sales.orderTypeBreakdown')}
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.sales.type') || 'Type'}</th>
-                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.orders') || 'Orders'}</th>
-                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.revenue') || 'Revenue'}</th>
+                  <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.sales.type')}</th>
+                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.orders')}</th>
+                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.revenue')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,16 +164,16 @@ const SalesReportView = () => {
       {item_sales.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            {t('reports.sales.itemWiseSales') || 'Item-wise Sales'}
+            {t('reports.sales.itemWiseSales')}
           </h3>
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="border-b border-gray-200">
-                  <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.sales.item') || 'Item'}</th>
-                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.qty') || 'Qty'}</th>
-                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.avgRate') || 'Avg Rate'}</th>
-                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.total') || 'Total'}</th>
+                  <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.sales.item')}</th>
+                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.qty')}</th>
+                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.avgRate')}</th>
+                  <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.sales.total')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,7 +195,7 @@ const SalesReportView = () => {
       {top_customers.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            {t('reports.sales.topCustomers') || 'Top Customers'}
+            {t('reports.sales.topCustomers')}
           </h3>
           <div className="space-y-2">
             {top_customers.slice(0, 10).map((c, idx) => (
@@ -211,7 +211,7 @@ const SalesReportView = () => {
                 </div>
                 <div className="text-end">
                   <p className="text-sm font-medium">{formatCurrency(c.total_spent)}</p>
-                  <p className="text-xs text-gray-400">{c.order_count} {t('reports.sales.orders') || 'orders'}</p>
+                  <p className="text-xs text-gray-400">{c.order_count} {t('reports.sales.orders')}</p>
                 </div>
               </div>
             ))}
@@ -272,13 +272,13 @@ const SummaryCard = ({
           )}>
             {change.direction === 'up' ? '+' : '-'}{change.percent.toFixed(1)}%
           </span>
-          <span className="text-xs text-gray-400">{t('reports.sales.vsPrevious') || 'vs prev'}</span>
+          <span className="text-xs text-gray-400">{t('reports.sales.vsPrevious')}</span>
         </div>
       )}
       {change && change.direction === 'neutral' && (
         <div className="flex items-center gap-1 mt-1">
           <Minus className="w-3 h-3 text-gray-400" />
-          <span className="text-xs text-gray-400">{t('reports.sales.noChange') || 'No change'}</span>
+          <span className="text-xs text-gray-400">{t('reports.sales.noChange')}</span>
         </div>
       )}
     </div>

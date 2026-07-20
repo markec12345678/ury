@@ -132,7 +132,7 @@ const Header = () => {
         <div
           className="px-4 py-2 flex-1 flex items-center max-w-2xl mx-8  bg-gray-50 hover:bg-gray-100 border border-input rounded-md"
           role="search"
-          aria-label={t('header.search') || 'Search'}
+          aria-label={t('header.search')}
         >
           <Input
             ref={searchInputRef}

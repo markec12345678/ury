@@ -1,7 +1,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import now
+from frappe.utils import now, getdate
 from frappe.model.document import Document
 from ury.ury.api.utils import _get_user_branch
 
@@ -107,6 +107,10 @@ def get_pos_invoices(start, end, pos_profile, user):
     user_branch = _get_user_branch()
     if branch != user_branch:
         frappe.throw(_("You can only view invoices from your branch"), frappe.PermissionError)
+    # R50-FIX: Cap date range to prevent excessively heavy queries
+    start_dt, end_dt = getdate(start), getdate(end)
+    if (end_dt - start_dt).days > 90:
+        frappe.throw(_("Date range cannot exceed 90 days"), frappe.ValidationError)
     # Filter by date range in SQL instead of Python (M9)
     data = frappe.db.sql(
         """

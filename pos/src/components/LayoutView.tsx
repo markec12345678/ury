@@ -267,6 +267,10 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
 
     setSelectedTable(table.name);
 
+    // R50-FIX: Clear selectedTableOrder immediately to prevent brief flash of
+    // stale data from the previously selected table.
+    setSelectedTableOrder(null);
+
     if (table.occupied) {
       // R40-FIX: Use requestIdRef to discard stale getTableOrder responses
       // if the user clicks a different table before the promise resolves.

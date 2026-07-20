@@ -14,6 +14,10 @@ import {
 import { showToast } from '../components/ui/toast';
 import { t } from '../i18n';
 import jsPDF from 'jspdf';
+
+// R50-FIX: Sequence counter to discard stale fetch results when concurrent
+// fetchSalesReport/fetchExpenseReport/fetchProfitLossReport calls overlap.
+let _fetchReportSeq = 0;
 import autoTable from 'jspdf-autotable';
 
 // ---- Inventory Types ----
@@ -101,34 +105,43 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
     comparePeriods: false,
 
     fetchSalesReport: async (period, fromDate, toDate) => {
+      const seq = ++_fetchReportSeq;
       try {
         set({ loading: true, error: null });
         const p = period || get().selectedPeriod;
         const report = await getSalesReport(p, fromDate, toDate);
+        if (seq !== _fetchReportSeq) return; // stale, discard
         set({ salesReport: report, loading: false });
       } catch {
+        if (seq !== _fetchReportSeq) return; // stale, discard
         set({ error: t('reports.failed_load_sales'), loading: false });
         showToast.error(t('reports.failed_load_sales'));
       }
     },
 
     fetchExpenseReport: async (fromDate, toDate) => {
+      const seq = ++_fetchReportSeq;
       try {
         set({ loading: true, error: null });
         const report = await getExpenseReport(fromDate, toDate);
+        if (seq !== _fetchReportSeq) return; // stale, discard
         set({ expenseReport: report, loading: false });
       } catch {
+        if (seq !== _fetchReportSeq) return; // stale, discard
         set({ error: t('reports.failed_load_expense'), loading: false });
         showToast.error(t('reports.failed_load_expense'));
       }
     },
 
     fetchProfitLossReport: async (fromDate, toDate) => {
+      const seq = ++_fetchReportSeq;
       try {
         set({ loading: true, error: null });
         const report = await getProfitLossReport(fromDate, toDate);
+        if (seq !== _fetchReportSeq) return; // stale, discard
         set({ profitLossReport: report, loading: false });
       } catch {
+        if (seq !== _fetchReportSeq) return; // stale, discard
         set({ error: t('reports.failed_load_profit_loss'), loading: false });
         showToast.error(t('reports.failed_load_profit_loss'));
       }

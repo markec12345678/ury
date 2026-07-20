@@ -5,29 +5,29 @@ import { t } from '../i18n';
 
 const Footer = () => {
   const navItems = [
-    { icon: LayoutGrid, label: t('footer.pos') || 'POS', path: '/', testId: 'nav-pos' },
-    { icon: Table, label: t('footer.table') || 'Table', path: '/table', testId: 'nav-table' },
+    { icon: LayoutGrid, label: t('footer.pos'), path: '/', testId: 'nav-pos' },
+    { icon: Table, label: t('footer.table'), path: '/table', testId: 'nav-table' },
     {
       icon: ClipboardList,
-      label: t('footer.orders') || 'Orders',
+      label: t('footer.orders'),
       path: '/orders',
       testId: 'nav-orders',
     },
     {
       icon: BarChart3,
-      label: t('footer.dashboard') || 'Dashboard',
+      label: t('footer.dashboard'),
       path: '/dashboard',
       testId: 'nav-dashboard',
     },
     {
       icon: ChefHat,
-      label: t('footer.menu') || 'Menu',
+      label: t('footer.menu'),
       path: '/menu-management',
       testId: 'nav-menu-management',
     },
     {
       icon: FileText,
-      label: t('footer.reports') || 'Reports',
+      label: t('footer.reports'),
       path: '/reports',
       testId: 'nav-reports',
     },
@@ -38,7 +38,7 @@ const Footer = () => {
       <nav
         className="max-w-screen-xl mx-auto px-4"
         role="navigation"
-        aria-label={t('footer.navigation') || 'Main navigation'}
+        aria-label={t('footer.navigation')}
       >
         <div className="flex justify-center items-center gap-1 sm:gap-2">
           {navItems.map((item) => (

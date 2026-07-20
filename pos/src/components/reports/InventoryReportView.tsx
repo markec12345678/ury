@@ -20,10 +20,10 @@ const InventoryReportView = () => {
       <div className="flex flex-col items-center justify-center py-16 text-gray-400">
         <Package className="w-12 h-12 mb-3 text-gray-300" />
         <p className="text-lg font-medium text-gray-500">
-          {t('reports.inventory.noData') || 'No Inventory Data'}
+          {t('reports.inventory.noData')}
         </p>
         <p className="text-sm mt-1">
-          {t('reports.inventory.noDataHint') || 'Select a period to generate an inventory report'}
+          {t('reports.inventory.noDataHint')}
         </p>
       </div>
     );
@@ -62,25 +62,25 @@ const InventoryReportView = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
-          title={t('reports.inventory.totalItems') || 'Total Items'}
+          title={t('reports.inventory.totalItems')}
           value={`${summary.total_items}`}
           icon={<Package className="w-5 h-5 text-blue-600" />}
           color="blue"
         />
         <SummaryCard
-          title={t('reports.inventory.lowStock') || 'Low Stock Items'}
+          title={t('reports.inventory.lowStock')}
           value={`${summary.low_stock_items}`}
           icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
           color="amber"
         />
         <SummaryCard
-          title={t('reports.inventory.outOfStock') || 'Out of Stock'}
+          title={t('reports.inventory.outOfStock')}
           value={`${summary.out_of_stock_items}`}
           icon={<XCircle className="w-5 h-5 text-red-600" />}
           color="red"
         />
         <SummaryCard
-          title={t('reports.inventory.totalValue') || 'Total Stock Value'}
+          title={t('reports.inventory.totalValue')}
           value={formatCurrency(summary.total_stock_value)}
           icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
           color="emerald"
@@ -96,15 +96,15 @@ const InventoryReportView = () => {
           <div>
             <p className="text-sm font-medium text-amber-800">
               {summary.out_of_stock_items > 0 && (
-                <>{summary.out_of_stock_items} {t('reports.inventory.outOfStockAlert') || 'items out of stock'}</>
+                <>{summary.out_of_stock_items} {t('reports.inventory.outOfStockAlert')}</>
               )}
               {summary.out_of_stock_items > 0 && summary.low_stock_items > 0 && ' • '}
               {summary.low_stock_items > 0 && (
-                <>{summary.low_stock_items} {t('reports.inventory.lowStockAlert') || 'items running low'}</>
+                <>{summary.low_stock_items} {t('reports.inventory.lowStockAlert')}</>
               )}
             </p>
             <p className="text-xs text-amber-600">
-              {t('reports.inventory.reorderNote') || 'Consider reordering to maintain adequate stock levels'}
+              {t('reports.inventory.reorderNote')}
             </p>
           </div>
         </div>
@@ -113,18 +113,18 @@ const InventoryReportView = () => {
       {/* Inventory Table */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">
-          {t('reports.inventory.stockLevels') || 'Current Stock Levels'}
+          {t('reports.inventory.stockLevels')}
         </h3>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-white z-10">
               <tr className="border-b border-gray-200">
-                <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.item') || 'Item'}</th>
-                <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.currentStock') || 'Current Stock'}</th>
-                <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.reorderLevel') || 'Reorder Level'}</th>
-                <th className="text-center py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.status') || 'Status'}</th>
-                <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.unit') || 'Unit'}</th>
-                <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.value') || 'Value'}</th>
+                <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.item')}</th>
+                <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.currentStock')}</th>
+                <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.reorderLevel')}</th>
+                <th className="text-center py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.status')}</th>
+                <th className="text-start py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.unit')}</th>
+                <th className="text-end py-2 px-3 text-gray-500 font-medium">{t('reports.inventory.value')}</th>
               </tr>
             </thead>
             <tbody>

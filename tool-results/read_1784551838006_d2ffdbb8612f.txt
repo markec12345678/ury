@@ -1,0 +1,1140 @@
+     1→     1→import { create } from 'zustand';
+     2→     2→import { logger } from '../lib/logger';
+     3→     3→import {
+     4→     4→  getSalesReport,
+     5→     5→  getExpenseReport,
+     6→     6→  getProfitLossReport,
+     7→     7→  exportReportPdf,
+     8→     8→  SalesReport,
+     9→     9→  ExpenseReport,
+    10→    10→  ProfitLossReport,
+    11→    11→  ReportPeriod,
+    12→    12→  ReportType,
+    13→    13→} from '../lib/reports-api';
+    14→    14→import { showToast } from '../components/ui/toast';
+    15→    15→import { t } from '../i18n';
+    16→    16→import jsPDF from 'jspdf';
+    17→    17→import autoTable from 'jspdf-autotable';
+    18→    18→
+    19→    19→// ---- Inventory Types ----
+    20→    20→
+    21→    21→export interface InventoryItem {
+    22→    22→  item_code: string;
+    23→    23→  item_name: string;
+    24→    24→  current_stock: number;
+    25→    25→  reorder_level: number;
+    26→    26→  stock_uom: string;
+    27→    27→  valuation_rate: number;
+    28→    28→  stock_value: number;
+    29→    29→  status: 'OK' | 'Low' | 'Out of Stock';
+    30→    30→}
+    31→    31→
+    32→    32→export interface ExpenseItem {
+    33→    33→  name: string;
+    34→    34→  expense_type: string;
+    35→    35→  description: string;
+    36→    36→  amount: number;
+    37→    37→  date?: string;
+    38→    38→}
+    39→    39→
+    40→    40→export interface InventoryReport {
+    41→    41→  from_date: string;
+    42→    42→  to_date: string;
+    43→    43→  summary: {
+    44→    44→    total_items: number;
+    45→    45→    low_stock_items: number;
+    46→    46→    out_of_stock_items: number;
+    47→    47→    total_stock_value: number;
+    48→    48→  };
+    49→    49→  items: InventoryItem[];
+    50→    50→}
+    51→    51→
+    52→    52→// ---- State Interface ----
+    53→    53→
+    54→    54→interface ReportsState {
+    55→    55→  salesReport: SalesReport | null;
+    56→    56→  expenseReport: ExpenseReport | null;
+    57→    57→  profitLossReport: ProfitLossReport | null;
+    58→    58→  inventoryReport: InventoryReport | null;
+    59→    59→  previousSalesReport: SalesReport | null;
+    60→    60→  selectedReportType: ReportType;
+    61→    61→  selectedPeriod: ReportPeriod;
+    62→    62→  customFromDate: string | null;
+    63→    63→  customToDate: string | null;
+    64→    64→  loading: boolean;
+    65→    65→  exporting: boolean;
+    66→    66→  error: string | null;
+    67→    67→  comparePeriods: boolean;
+    68→    68→}
+    69→    69→
+    70→    70→// ---- Actions Interface ----
+    71→    71→
+    72→    72→interface ReportsActions {
+    73→    73→  fetchSalesReport: (period?: ReportPeriod, fromDate?: string, toDate?: string) => Promise<void>;
+    74→    74→  fetchExpenseReport: (fromDate?: string, toDate?: string) => Promise<void>;
+    75→    75→  fetchProfitLossReport: (fromDate?: string, toDate?: string) => Promise<void>;
+    76→    76→  fetchCurrentReport: () => Promise<void>;
+    77→    77→  fetchPreviousSalesReport: () => Promise<void>;
+    78→    78→  exportToPdf: () => Promise<void>;
+    79→    79→  exportToCsv: () => void;
+    80→    80→  setSelectedReportType: (type: ReportType) => void;
+    81→    81→  setSelectedPeriod: (period: ReportPeriod) => void;
+    82→    82→  setCustomDateRange: (fromDate: string, toDate: string) => void;
+    83→    83→  setComparePeriods: (compare: boolean) => void;
+    84→    84→  clearReports: () => void;
+    85→    85→}
+    86→    86→
+    87→    87→export const useReportsStore = create<ReportsState & ReportsActions>(
+    88→    88→  (set, get) => ({
+    89→    89→    salesReport: null,
+    90→    90→    expenseReport: null,
+    91→    91→    profitLossReport: null,
+    92→    92→    inventoryReport: null,
+    93→    93→    previousSalesReport: null,
+    94→    94→    selectedReportType: 'sales',
+    95→    95→    selectedPeriod: 'daily',
+    96→    96→    customFromDate: null,
+    97→    97→    customToDate: null,
+    98→    98→    loading: false,
+    99→    99→    exporting: false,
+   100→   100→    error: null,
+   101→   101→    comparePeriods: false,
+   102→   102→
+   103→   103→    fetchSalesReport: async (period, fromDate, toDate) => {
+   104→   104→      try {
+   105→   105→        set({ loading: true, error: null });
+   106→   106→        const p = period || get().selectedPeriod;
+   107→   107→        const report = await getSalesReport(p, fromDate, toDate);
+   108→   108→        set({ salesReport: report, loading: false });
+   109→   109→      } catch {
+   110→   110→        set({ error: t('reports.failed_load_sales'), loading: false });
+   111→   111→        showToast.error(t('reports.failed_load_sales'));
+   112→   112→      }
+   113→   113→    },
+   114→   114→
+   115→   115→    fetchExpenseReport: async (fromDate, toDate) => {
+   116→   116→      try {
+   117→   117→        set({ loading: true, error: null });
+   118→   118→        const report = await getExpenseReport(fromDate, toDate);
+   119→   119→        set({ expenseReport: report, loading: false });
+   120→   120→      } catch {
+   121→   121→        set({ error: t('reports.failed_load_expense'), loading: false });
+   122→   122→        showToast.error(t('reports.failed_load_expense'));
+   123→   123→      }
+   124→   124→    },
+   125→   125→
+   126→   126→    fetchProfitLossReport: async (fromDate, toDate) => {
+   127→   127→      try {
+   128→   128→        set({ loading: true, error: null });
+   129→   129→        const report = await getProfitLossReport(fromDate, toDate);
+   130→   130→        set({ profitLossReport: report, loading: false });
+   131→   131→      } catch {
+   132→   132→        set({ error: t('reports.failed_load_profit_loss'), loading: false });
+   133→   133→        showToast.error(t('reports.failed_load_profit_loss'));
+   134→   134→      }
+   135→   135→    },
+   136→   136→
+   137→   137→    fetchCurrentReport: async () => {
+   138→   138→      const { selectedReportType, selectedPeriod, customFromDate, customToDate, comparePeriods } = get();
+   139→   139→      switch (selectedReportType) {
+   140→   140→        case 'sales':
+   141→   141→          await get().fetchSalesReport(selectedPeriod, customFromDate || undefined, customToDate || undefined);
+   142→   142→          if (comparePeriods) {
+   143→   143→            await get().fetchPreviousSalesReport();
+   144→   144→          }
+   145→   145→          break;
+   146→   146→        case 'expense':
+   147→   147→          await get().fetchExpenseReport(customFromDate || undefined, customToDate || undefined);
+   148→   148→          break;
+   149→   149→        case 'profit_loss':
+   150→   150→          await get().fetchProfitLossReport(customFromDate || undefined, customToDate || undefined);
+   151→   151→          break;
+   152→   152→        case 'inventory':
+   153→   153→          // Inventory report backend endpoint is not yet available.
+   154→   154→          // Show a "coming soon" message by keeping inventoryReport null.
+   155→   155→          set({ loading: false, inventoryReport: null });
+   156→   156→          showToast.info(t('reports.inventory.coming_soon'));
+   157→   157→          break;
+   158→   158→      }
+   159→   159→    },
+   160→   160→
+   161→   161→    fetchPreviousSalesReport: async () => {
+   162→   162→      try {
+   163→   163→        const { selectedPeriod, customFromDate, customToDate } = get();
+   164→   164→        const { prevFrom, prevTo } = getPreviousPeriodDates(selectedPeriod, customFromDate, customToDate);
+   165→   165→        // R37-FIX: Pass 'daily' as the period parameter for previous-period fetches
+   166→   166→        // instead of selectedPeriod. The server may override custom date ranges when
+   167→   167→        // it receives a named period like 'last_month' — passing 'daily' ensures the
+   168→   168→        // API respects the explicit from/to dates we calculated for the previous period.
+   169→   169→        const report = await getSalesReport('daily', prevFrom, prevTo);
+   170→   170→        set({ previousSalesReport: report });
+   171→   171→      } catch (err) {
+   172→   172→        // Don't show error toast for previous period - it's optional
+   173→   173→        logger.warn('Could not load previous period data:', err);
+   174→   174→      }
+   175→   175→    },
+   176→   176→
+   177→   177→    exportToPdf: async () => {
+   178→   178→      const { selectedReportType, salesReport, expenseReport, profitLossReport, inventoryReport } = get();
+   179→   179→
+   180→   180→      try {
+   181→   181→        set({ exporting: true });
+   182→   182→
+   183→   183→        // Try server-side PDF first
+   184→   184→        try {
+   185→   185→          const { selectedPeriod, customFromDate, customToDate } = get();
+   186→   186→          const pdfUrl = await exportReportPdf(
+   187→   187→            selectedReportType,
+   188→   188→            selectedPeriod,
+   189→   189→            customFromDate || undefined,
+   190→   190→            customToDate || undefined
+   191→   191→          );
+   192→   192→          if (pdfUrl) {
+   193→   193→            window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+   194→   194→            set({ exporting: false });
+   195→   195→            showToast.success(t('reports.pdf_report_generated'));
+   196→   196→            return;
+   197→   197→          }
+   198→   198→        } catch {
+   199→   199→          // Server-side failed, fall back to client-side
+   200→   200→        }
+   201→   201→
+   202→   202→        // Client-side PDF generation using jsPDF
+   203→   203→        const doc = new jsPDF();
+   204→   204→
+   205→   205→        // Add common header to all reports
+   206→   206→        addReportHeader(doc, selectedReportType);
+   207→   207→
+   208→   208→        if (selectedReportType === 'sales' && salesReport) {
+   209→   209→          _generateSalesPdf(doc, salesReport);
+   210→   210→        } else if (selectedReportType === 'expense' && expenseReport) {
+   211→   211→          _generateExpensePdf(doc, expenseReport);
+   212→   212→        } else if (selectedReportType === 'profit_loss' && profitLossReport) {
+   213→   213→          _generatePLPdf(doc, profitLossReport);
+   214→   214→        } else if (selectedReportType === 'inventory' && inventoryReport) {
+   215→   215→          _generateInventoryPdf(doc, inventoryReport);
+   216→   216→        }
+   217→   217→
+   218→   218→        // Add footer to all pages
+   219→   219→        addReportFooter(doc);
+   220→   220→
+   221→   221→        doc.save(
+   222→   222→          `${selectedReportType}_report_${new Date().toISOString().split('T')[0]}.pdf`
+   223→   223→        );
+   224→   224→        set({ exporting: false });
+   225→   225→        showToast.success(t('reports.pdf_report_downloaded'));
+   226→   226→      } catch {
+   227→   227→        set({ exporting: false });
+   228→   228→        showToast.error(t('reports.failed_export_pdf'));
+   229→   229→      }
+   230→   230→    },
+   231→   231→
+   232→   232→    exportToCsv: () => {
+   233→   233→      const { selectedReportType, salesReport, expenseReport, profitLossReport, inventoryReport } = get();
+   234→   234→
+   235→   235→      let csvContent = '';
+   236→   236→      let filename = '';
+   237→   237→
+   238→   238→      try {
+   239→   239→        switch (selectedReportType) {
+   240→   240→          case 'sales':
+   241→   241→            if (!salesReport) {
+   242→   242→              showToast.error(t('reports.no_sales_data_export'));
+   243→   243→              return;
+   244→   244→            }
+   245→   245→            csvContent = generateSalesCsv(salesReport);
+   246→   246→            filename = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
+   247→   247→            break;
+   248→   248→          case 'expense':
+   249→   249→            if (!expenseReport) {
+   250→   250→              showToast.error(t('reports.no_expense_data_export'));
+   251→   251→              return;
+   252→   252→            }
+   253→   253→            csvContent = generateExpenseCsv(expenseReport);
+   254→   254→            filename = `expense_report_${new Date().toISOString().split('T')[0]}.csv`;
+   255→   255→            break;
+   256→   256→          case 'profit_loss':
+   257→   257→            if (!profitLossReport) {
+   258→   258→              showToast.error(t('reports.no_profit_loss_data_export'));
+   259→   259→              return;
+   260→   260→            }
+   261→   261→            csvContent = generatePLCsv(profitLossReport);
+   262→   262→            filename = `profit_loss_report_${new Date().toISOString().split('T')[0]}.csv`;
+   263→   263→            break;
+   264→   264→          case 'inventory':
+   265→   265→            if (!inventoryReport) {
+   266→   266→              showToast.error(t('reports.no_inventory_data_export'));
+   267→   267→              return;
+   268→   268→            }
+   269→   269→            csvContent = generateInventoryCsv(inventoryReport);
+   270→   270→            filename = `inventory_report_${new Date().toISOString().split('T')[0]}.csv`;
+   271→   271→            break;
+   272→   272→        }
+   273→   273→
+   274→   274→        if (csvContent) {
+   275→   275→          downloadCsv(csvContent, filename);
+   276→   276→          showToast.success(t('reports.csv_exported'));
+   277→   277→        }
+   278→   278→      } catch {
+   279→   279→        showToast.error(t('reports.failed_export_csv'));
+   280→   280→      }
+   281→   281→    },
+   282→   282→
+   283→   283→    setSelectedReportType: (type) => {
+   284→   284→      set({ selectedReportType: type });
+   285→   285→      // R44-FIX: Catch unhandled promise rejection
+   286→   286→      get().fetchCurrentReport().catch(() => { /* error set in fetch methods */ });
+   287→   287→    },
+   288→   288→
+   289→   289→    setSelectedPeriod: (period) => {
+   290→   290→      set({ selectedPeriod: period });
+   291→   291→      get().fetchCurrentReport().catch(() => { /* error set in fetch methods */ });
+   292→   292→    },
+   293→   293→
+   294→   294→    setCustomDateRange: (fromDate, toDate) => {
+   295→   295→      set({ customFromDate: fromDate, customToDate: toDate });
+   296→   296→      get().fetchCurrentReport().catch(() => { /* error set in fetch methods */ });
+   297→   297→    },
+   298→   298→
+   299→   299→    setComparePeriods: (compare) => {
+   300→   300→      set({ comparePeriods: compare });
+   301→   301→      if (compare && get().selectedReportType === 'sales') {
+   302→   302→        get().fetchPreviousSalesReport().catch(() => { /* error handled in method */ });
+   303→   303→      }
+   304→   304→    },
+   305→   305→
+   306→   306→    clearReports: () => {
+   307→   307→      set({
+   308→   308→        salesReport: null,
+   309→   309→        expenseReport: null,
+   310→   310→        profitLossReport: null,
+   311→   311→        inventoryReport: null,
+   312→   312→        previousSalesReport: null,
+   313→   313→        error: null,
+   314→   314→      });
+   315→   315→    },
+   316→   316→  })
+   317→   317→);
+   318→   318→
+   319→   319→// ---- Period Helpers ----
+   320→   320→
+   321→   321→function getPreviousPeriodDates(
+   322→   322→  period: ReportPeriod,
+   323→   323→  customFromDate?: string | null,
+   324→   324→  customToDate?: string | null
+   325→   325→): { prevFrom: string; prevTo: string } {
+   326→   326→  const today = new Date();
+   327→   327→
+   328→   328→  // If custom date range, calculate the previous equivalent period
+   329→   329→  if (customFromDate && customToDate) {
+   330→   330→    const from = new Date(customFromDate);
+   331→   331→    const to = new Date(customToDate);
+   332→   332→    const diffMs = to.getTime() - from.getTime();
+   333→   333→    const prevTo = new Date(from.getTime() - 1); // Day before from
+   334→   334→    const prevFrom = new Date(prevTo.getTime() - diffMs);
+   335→   335→    return {
+   336→   336→      prevFrom: prevFrom.toISOString().split('T')[0],
+   337→   337→      prevTo: prevTo.toISOString().split('T')[0],
+   338→   338→    };
+   339→   339→  }
+   340→   340→
+   341→   341→  switch (period) {
+   342→   342→    case 'daily':
+   343→   343→    case 'yesterday': {
+   344→   344→      // Previous day
+   345→   345→      const prev = new Date(today);
+   346→   346→      prev.setDate(prev.getDate() - 1);
+   347→   347→      const dateStr = prev.toISOString().split('T')[0];
+   348→   348→      return { prevFrom: dateStr, prevTo: dateStr };
+   349→   349→    }
+   350→   350→    case 'weekly': {
+   351→   351→      // Previous week (same day range)
+   352→   352→      const prevWeekStart = new Date(today);
+   353→   353→      prevWeekStart.setDate(prevWeekStart.getDate() - 7 - prevWeekStart.getDay());
+   354→   354→      const prevWeekEnd = new Date(prevWeekStart);
+   355→   355→      prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
+   356→   356→      return {
+   357→   357→        prevFrom: prevWeekStart.toISOString().split('T')[0],
+   358→   358→        prevTo: prevWeekEnd.toISOString().split('T')[0],
+   359→   359→      };
+   360→   360→    }
+   361→   361→    case 'monthly': {
+   362→   362→      // Previous month
+   363→   363→      const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+   364→   364→      const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+   365→   365→      return {
+   366→   366→        prevFrom: prevMonth.toISOString().split('T')[0],
+   367→   367→        prevTo: prevMonthEnd.toISOString().split('T')[0],
+   368→   368→      };
+   369→   369→    }
+   370→   370→    case 'last_month': {
+   371→   371→      // Two months ago
+   372→   372→      const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+   373→   373→      const twoMonthsAgoEnd = new Date(today.getFullYear(), today.getMonth() - 1, 0);
+   374→   374→      return {
+   375→   375→        prevFrom: twoMonthsAgo.toISOString().split('T')[0],
+   376→   376→        prevTo: twoMonthsAgoEnd.toISOString().split('T')[0],
+   377→   377→      };
+   378→   378→    }
+   379→   379→    case 'last_7_days': {
+   380→   380→      const prevEnd = new Date(today);
+   381→   381→      prevEnd.setDate(prevEnd.getDate() - 8);
+   382→   382→      const prevStart = new Date(prevEnd);
+   383→   383→      prevStart.setDate(prevStart.getDate() - 6);
+   384→   384→      return {
+   385→   385→        prevFrom: prevStart.toISOString().split('T')[0],
+   386→   386→        prevTo: prevEnd.toISOString().split('T')[0],
+   387→   387→      };
+   388→   388→    }
+   389→   389→    case 'last_30_days': {
+   390→   390→      const prevEnd = new Date(today);
+   391→   391→      prevEnd.setDate(prevEnd.getDate() - 31);
+   392→   392→      const prevStart = new Date(prevEnd);
+   393→   393→      prevStart.setDate(prevStart.getDate() - 29);
+   394→   394→      return {
+   395→   395→        prevFrom: prevStart.toISOString().split('T')[0],
+   396→   396→        prevTo: prevEnd.toISOString().split('T')[0],
+   397→   397→      };
+   398→   398→    }
+   399→   399→    default: {
+   400→   400→      const prev = new Date(today);
+   401→   401→      prev.setDate(prev.getDate() - 1);
+   402→   402→      const dateStr = prev.toISOString().split('T')[0];
+   403→   403→      return { prevFrom: dateStr, prevTo: dateStr };
+   404→   404→    }
+   405→   405→  }
+   406→   406→}
+   407→   407→
+   408→   408→// ---- CSV Generation Helpers ----
+   409→   409→
+   410→   410→function escapeCsvField(field: string | number): string {
+   411→   411→  const str = String(field);
+   412→   412→  if (str.startsWith('=') || str.startsWith('+') || str.startsWith('-') || str.startsWith('@') || str.startsWith('\t') || str.startsWith('\r')) {
+   413→   413→    return `"'${str.replace(/"/g, '""')}"`;
+   414→   414→  }
+   415→   415→  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+   416→   416→    return `"${str.replace(/"/g, '""')}"`;
+   417→   417→  }
+   418→   418→  return str;
+   419→   419→}
+   420→   420→
+   421→   421→function csvRow(...fields: (string | number)[]): string {
+   422→   422→  return fields.map(escapeCsvField).join(',');
+   423→   423→}
+   424→   424→
+   425→   425→function downloadCsv(content: string, filename: string): void {
+   426→   426→  const BOM = '\uFEFF'; // UTF-8 BOM for Excel compatibility
+   427→   427→  const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' });
+   428→   428→  const url = URL.createObjectURL(blob);
+   429→   429→  const link = document.createElement('a');
+   430→   430→  link.setAttribute('href', url);
+   431→   431→  link.setAttribute('download', filename);
+   432→   432→  document.body.appendChild(link);
+   433→   433→  link.click();
+   434→   434→  document.body.removeChild(link);
+   435→   435→  URL.revokeObjectURL(url);
+   436→   436→}
+   437→   437→
+   438→   438→function generateSalesCsv(report: SalesReport): string {
+   439→   439→  const lines: string[] = [];
+   440→   440→
+   441→   441→  // Header
+   442→   442→  lines.push(csvRow('URY Restaurant - Sales Report'));
+   443→   443→  lines.push(csvRow('Period', `${report.from_date} to ${report.to_date}`));
+   444→   444→  lines.push(csvRow('Generated', new Date().toLocaleString()));
+   445→   445→  lines.push('');
+   446→   446→
+   447→   447→  // Summary
+   448→   448→  lines.push(csvRow('--- Summary ---'));
+   449→   449→  lines.push(csvRow('Metric', 'Value'));
+   450→   450→  lines.push(csvRow('Total Revenue', report.summary.total_revenue.toFixed(2)));
+   451→   451→  lines.push(csvRow('Total Orders', report.summary.total_orders));
+   452→   452→  lines.push(csvRow('Avg Order Value', report.summary.avg_order_value.toFixed(2)));
+   453→   453→  lines.push(csvRow('Net Revenue', report.summary.net_revenue.toFixed(2)));
+   454→   454→  lines.push(csvRow('Total Tax', report.summary.total_tax.toFixed(2)));
+   455→   455→  lines.push(csvRow('Unique Customers', report.summary.unique_customers));
+   456→   456→  lines.push('');
+   457→   457→
+   458→   458→  // Item Sales
+   459→   459→  if (report.item_sales.length > 0) {
+   460→   460→    lines.push(csvRow('--- Item-wise Sales ---'));
+   461→   461→    lines.push(csvRow('Item', 'Qty', 'Avg Rate', 'Total Amount'));
+   462→   462→    report.item_sales.forEach((item) => {
+   463→   463→      lines.push(csvRow(item.item_name, item.total_qty, item.avg_rate.toFixed(2), item.total_amount.toFixed(2)));
+   464→   464→    });
+   465→   465→    lines.push('');
+   466→   466→  }
+   467→   467→
+   468→   468→  // Order Type Sales
+   469→   469→  if (report.order_type_sales.length > 0) {
+   470→   470→    lines.push(csvRow('--- Order Type Breakdown ---'));
+   471→   471→    lines.push(csvRow('Order Type', 'Orders', 'Revenue'));
+   472→   472→    report.order_type_sales.forEach((ot) => {
+   473→   473→      lines.push(csvRow(ot.order_type, ot.order_count, ot.revenue.toFixed(2)));
+   474→   474→    });
+   475→   475→    lines.push('');
+   476→   476→  }
+   477→   477→
+   478→   478→  // Cancelled Orders
+   479→   479→  if (report.cancelled_orders.count > 0) {
+   480→   480→    lines.push(csvRow('--- Cancelled Orders ---'));
+   481→   481→    lines.push(csvRow('Count', 'Amount'));
+   482→   482→    lines.push(csvRow(report.cancelled_orders.count, report.cancelled_orders.amount.toFixed(2)));
+   483→   483→    lines.push('');
+   484→   484→  }
+   485→   485→
+   486→   486→  return lines.join('\n');
+   487→   487→}
+   488→   488→
+   489→   489→function generateExpenseCsv(report: ExpenseReport): string {
+   490→   490→  const lines: string[] = [];
+   491→   491→
+   492→   492→  lines.push(csvRow('URY Restaurant - Expense Report'));
+   493→   493→  lines.push(csvRow('Period', `${report.from_date} to ${report.to_date}`));
+   494→   494→  lines.push(csvRow('Generated', new Date().toLocaleString()));
+   495→   495→  lines.push('');
+   496→   496→
+   497→   497→  // Summary
+   498→   498→  lines.push(csvRow('--- Summary ---'));
+   499→   499→  lines.push(csvRow('Category', 'Amount'));
+   500→   500→  lines.push(csvRow('Fixed Expenses', report.total_fixed.toFixed(2)));
+   501→   501→  lines.push(csvRow('Variable Expenses', report.total_variable.toFixed(2)));
+   502→   502→  lines.push(csvRow('Total Expenses', report.total_expenses.toFixed(2)));
+   503→   503→  lines.push('');
+   504→   504→
+   505→   505→  // Fixed Expenses
+   506→   506→  if (report.fixed_expenses.length > 0) {
+   507→   507→    lines.push(csvRow('--- Fixed Expenses ---'));
+   508→   508→    lines.push(csvRow('Type', 'Description', 'Amount'));
+   509→   509→    report.fixed_expenses.forEach((exp: ExpenseItem) => {
+   510→   510→      lines.push(csvRow(exp.expense_type, exp.description || '', exp.amount.toFixed(2)));
+   511→   511→    });
+   512→   512→    lines.push('');
+   513→   513→  }
+   514→   514→
+   515→   515→  // Variable Expenses
+   516→   516→  if (report.variable_expenses.length > 0) {
+   517→   517→    lines.push(csvRow('--- Variable Expenses ---'));
+   518→   518→    lines.push(csvRow('Date', 'Type', 'Description', 'Amount'));
+   519→   519→    report.variable_expenses.forEach((exp: ExpenseItem) => {
+   520→   520→      lines.push(csvRow(exp.date || '', exp.expense_type, exp.description || '', exp.amount.toFixed(2)));
+   521→   521→    });
+   522→   522→    lines.push('');
+   523→   523→  }
+   524→   524→
+   525→   525→  return lines.join('\n');
+   526→   526→}
+   527→   527→
+   528→   528→function generatePLCsv(report: ProfitLossReport): string {
+   529→   529→  const lines: string[] = [];
+   530→   530→
+   531→   531→  lines.push(csvRow('URY Restaurant - Profit & Loss Report'));
+   532→   532→  lines.push(csvRow('Period', `${report.from_date} to ${report.to_date}`));
+   533→   533→  lines.push(csvRow('Generated', new Date().toLocaleString()));
+   534→   534→  lines.push('');
+   535→   535→
+   536→   536→  lines.push(csvRow('Item', 'Amount'));
+   537→   537→  lines.push(csvRow('Total Revenue', report.total_revenue.toFixed(2)));
+   538→   538→  lines.push(csvRow('Cost of Goods', (-report.cost_of_goods).toFixed(2)));
+   539→   539→  lines.push(csvRow('Gross Profit', report.gross_profit.toFixed(2)));
+   540→   540→  lines.push(csvRow('Fixed Expenses', (-report.fixed_expenses).toFixed(2)));
+   541→   541→  lines.push(csvRow('Variable Expenses', (-report.variable_expenses).toFixed(2)));
+   542→   542→  lines.push(csvRow('Total Expenses', (-report.total_expenses).toFixed(2)));
+   543→   543→  lines.push(csvRow('Net Profit', report.net_profit.toFixed(2)));
+   544→   544→  lines.push(csvRow('Profit Margin', `${report.profit_margin}%`));
+   545→   545→
+   546→   546→  return lines.join('\n');
+   547→   547→}
+   548→   548→
+   549→   549→function generateInventoryCsv(report: InventoryReport): string {
+   550→   550→  const lines: string[] = [];
+   551→   551→
+   552→   552→  lines.push(csvRow('URY Restaurant - Inventory Report'));
+   553→   553→  lines.push(csvRow('As of', `${report.from_date} to ${report.to_date}`));
+   554→   554→  lines.push(csvRow('Generated', new Date().toLocaleString()));
+   555→   555→  lines.push('');
+   556→   556→
+   557→   557→  // Summary
+   558→   558→  lines.push(csvRow('--- Summary ---'));
+   559→   559→  lines.push(csvRow('Metric', 'Value'));
+   560→   560→  lines.push(csvRow('Total Items', report.summary.total_items));
+   561→   561→  lines.push(csvRow('Low Stock Items', report.summary.low_stock_items));
+   562→   562→  lines.push(csvRow('Out of Stock Items', report.summary.out_of_stock_items));
+   563→   563→  lines.push(csvRow('Total Stock Value', report.summary.total_stock_value.toFixed(2)));
+   564→   564→  lines.push('');
+   565→   565→
+   566→   566→  // Items
+   567→   567→  lines.push(csvRow('--- Stock Levels ---'));
+   568→   568→  lines.push(csvRow('Item', 'Code', 'Current Stock', 'Reorder Level', 'Unit', 'Valuation Rate', 'Stock Value', 'Status'));
+   569→   569→  report.items.forEach((item) => {
+   570→   570→    lines.push(csvRow(
+   571→   571→      item.item_name,
+   572→   572→      item.item_code,
+   573→   573→      item.current_stock,
+   574→   574→      item.reorder_level,
+   575→   575→      item.stock_uom,
+   576→   576→      item.valuation_rate.toFixed(2),
+   577→   577→      item.stock_value.toFixed(2),
+   578→   578→      item.status
+   579→   579→    ));
+   580→   580→  });
+   581→   581→
+   582→   582→  return lines.join('\n');
+   583→   583→}
+   584→   584→
+   585→   585→// ---- PDF Helpers ----
+   586→   586→
+   587→   587→// Helper to get the Y position after the last autoTable
+   588→   588→function getLastTableY(doc: jsPDF): number {
+   589→   589→  // R41-FIX: Use module augmentation (vite-env.d.ts) instead of `as any`.
+   590→   590→  // jspdf-autotable adds `lastAutoTable` to jsPDF instances at runtime.
+   591→   591→  return doc.lastAutoTable?.finalY ?? 80;
+   592→   592→}
+   593→   593→
+   594→   594→function addReportHeader(doc: jsPDF, reportType: ReportType): void {
+   595→   595→  const companyName = 'URY Restaurant';
+   596→   596→  const now = new Date();
+   597→   597→  const timestamp = now.toLocaleString();
+   598→   598→
+   599→   599→  // Company header
+   600→   600→  doc.setFontSize(16);
+   601→   601→  doc.setTextColor(17, 24, 39);
+   602→   602→  doc.setFont('helvetica', 'bold');
+   603→   603→  doc.text(companyName, 14, 16);
+   604→   604→
+   605→   605→  // Report title
+   606→   606→  const titleMap: Record<ReportType, string> = {
+   607→   607→    sales: 'Sales Report',
+   608→   608→    expense: 'Expense Report',
+   609→   609→    profit_loss: 'Profit & Loss Report',
+   610→   610→    inventory: 'Inventory Report',
+   611→   611→  };
+   612→   612→
+   613→   613→  const colorMap: Record<ReportType, [number, number, number]> = {
+   614→   614→    sales: [26, 86, 219],
+   615→   615→    expense: [220, 38, 38],
+   616→   616→    profit_loss: [5, 150, 105],
+   617→   617→    inventory: [124, 58, 237],
+   618→   618→  };
+   619→   619→
+   620→   620→  doc.setFontSize(20);
+   621→   621→  doc.setTextColor(...(colorMap[reportType] || [26, 86, 219]));
+   622→   622→  doc.setFont('helvetica', 'bold');
+   623→   623→  doc.text(titleMap[reportType] || 'Report', 14, 28);
+   624→   624→
+   625→   625→  // Generation timestamp
+   626→   626→  doc.setFontSize(8);
+   627→   627→  doc.setTextColor(156, 163, 175);
+   628→   628→  doc.setFont('helvetica', 'normal');
+   629→   629→  doc.text(`Generated: ${timestamp}`, 14, 34);
+   630→   630→
+   631→   631→  // Separator line
+   632→   632→  doc.setDrawColor(229, 231, 235);
+   633→   633→  doc.setLineWidth(0.5);
+   634→   634→  doc.line(14, 37, 196, 37);
+   635→   635→}
+   636→   636→
+   637→   637→function addReportFooter(doc: jsPDF): void {
+   638→   638→  const pageCount = doc.getNumberOfPages();
+   639→   639→
+   640→   640→  for (let i = 1; i <= pageCount; i++) {
+   641→   641→    doc.setPage(i);
+   642→   642→
+   643→   643→    // Footer line
+   644→   644→    doc.setDrawColor(229, 231, 235);
+   645→   645→    doc.setLineWidth(0.3);
+   646→   646→    doc.line(14, 282, 196, 282);
+   647→   647→
+   648→   648→    // Page number
+   649→   649→    doc.setFontSize(8);
+   650→   650→    doc.setTextColor(156, 163, 175);
+   651→   651→    doc.setFont('helvetica', 'normal');
+   652→   652→    doc.text(`Page ${i} of ${pageCount}`, 14, 288);
+   653→   653→
+   654→   654→    // Generated by
+   655→   655→    doc.text('Generated by URY POS', 196, 288, { align: 'right' });
+   656→   656→  }
+   657→   657→}
+   658→   658→
+   659→   659→function addSummarySection(
+   660→   660→  doc: jsPDF,
+   661→   661→  startY: number,
+   662→   662→  title: string,
+   663→   663→  data: [string, string][],
+   664→   664→  accentColor: [number, number, number]
+   665→   665→): number {
+   666→   666→  // Summary section title with colored bar
+   667→   667→  doc.setFillColor(...accentColor);
+   668→   668→  doc.rect(14, startY, 3, 8, 'F');
+   669→   669→
+   670→   670→  doc.setFontSize(13);
+   671→   671→  doc.setTextColor(17, 24, 39);
+   672→   672→  doc.setFont('helvetica', 'bold');
+   673→   673→  doc.text(title, 20, startY + 6.5);
+   674→   674→
+   675→   675→  // Summary metrics with large bold numbers
+   676→   676→  autoTable(doc, {
+   677→   677→    startY: startY + 12,
+   678→   678→    head: [['Metric', 'Value']],
+   679→   679→    body: data,
+   680→   680→    theme: 'grid',
+   681→   681→    headStyles: {
+   682→   682→      fillColor: accentColor,
+   683→   683→      fontStyle: 'bold',
+   684→   684→      fontSize: 10,
+   685→   685→    },
+   686→   686→    bodyStyles: {
+   687→   687→      fontSize: 10,
+   688→   688→    },
+   689→   689→    alternateRowStyles: {
+   690→   690→      fillColor: [249, 250, 251],
+   691→   691→    },
+   692→   692→    columnStyles: {
+   693→   693→      0: { fontStyle: 'bold', cellWidth: 80 },
+   694→   694→      1: { halign: 'right', fontStyle: 'bold', fontSize: 11 },
+   695→   695→    },
+   696→   696→    margin: { left: 14 },
+   697→   697→  });
+   698→   698→
+   699→   699→  return getLastTableY(doc);
+   700→   700→}
+   701→   701→
+   702→   702→// ---- Client-side PDF generators ----
+   703→   703→
+   704→   704→function _generateSalesPdf(doc: jsPDF, report: SalesReport) {
+   705→   705→  const accentColor: [number, number, number] = [26, 86, 219];
+   706→   706→
+   707→   707→  // Period info
+   708→   708→  doc.setFontSize(10);
+   709→   709→  doc.setTextColor(107, 114, 128);
+   710→   710→  doc.setFont('helvetica', 'normal');
+   711→   711→  doc.text(`Period: ${report.from_date} - ${report.to_date}`, 14, 42);
+   712→   712→
+   713→   713→  // Summary section
+   714→   714→  const summaryY = addSummarySection(doc, 48, 'Summary', [
+   715→   715→    ['Total Revenue', `${report.summary.total_revenue.toFixed(2)}`],
+   716→   716→    ['Total Orders', `${report.summary.total_orders}`],
+   717→   717→    ['Avg Order Value', `${report.summary.avg_order_value.toFixed(2)}`],
+   718→   718→    ['Net Revenue', `${report.summary.net_revenue.toFixed(2)}`],
+   719→   719→    ['Total Tax', `${report.summary.total_tax.toFixed(2)}`],
+   720→   720→    ['Unique Customers', `${report.summary.unique_customers}`],
+   721→   721→  ], accentColor);
+   722→   722→
+   723→   723→  // Cancelled orders note
+   724→   724→  if (report.cancelled_orders.count > 0) {
+   725→   725→    let currentY = summaryY + 8;
+   726→   726→    if (currentY > 260) {
+   727→   727→      doc.addPage();
+   728→   728→      currentY = 20;
+   729→   729→    }
+   730→   730→    doc.setFontSize(10);
+   731→   731→    doc.setTextColor(220, 38, 38);
+   732→   732→    doc.text(`⚠ ${report.cancelled_orders.count} cancelled orders (${report.cancelled_orders.amount.toFixed(2)} amount)`, 14, currentY);
+   733→   733→  }
+   734→   734→
+   735→   735→  // Item-wise sales table
+   736→   736→  if (report.item_sales.length > 0) {
+   737→   737→    let currentY = getLastTableY(doc);
+   738→   738→    if (currentY > 240) {
+   739→   739→      doc.addPage();
+   740→   740→      currentY = 20;
+   741→   741→    }
+   742→   742→
+   743→   743→    // Section header
+   744→   744→    doc.setFillColor(...accentColor);
+   745→   745→    doc.rect(14, currentY + 8, 3, 8, 'F');
+   746→   746→    doc.setFontSize(13);
+   747→   747→    doc.setTextColor(17, 24, 39);
+   748→   748→    doc.setFont('helvetica', 'bold');
+   749→   749→    doc.text('Item-wise Sales', 20, currentY + 14.5);
+   750→   750→
+   751→   751→    autoTable(doc, {
+   752→   752→      startY: currentY + 20,
+   753→   753→      head: [['Item', 'Qty', 'Avg Rate', 'Total']],
+   754→   754→      body: report.item_sales.map((item) => [
+   755→   755→        item.item_name,
+   756→   756→        item.total_qty,
+   757→   757→        item.avg_rate.toFixed(2),
+   758→   758→        item.total_amount.toFixed(2),
+   759→   759→      ]),
+   760→   760→      theme: 'striped',
+   761→   761→      headStyles: { fillColor: accentColor, fontStyle: 'bold' },
+   762→   762→      bodyStyles: { fontSize: 9 },
+   763→   763→      alternateRowStyles: { fillColor: [249, 250, 251] },
+   764→   764→      margin: { left: 14 },
+   765→   765→      columnStyles: {
+   766→   766→        2: { halign: 'right' },
+   767→   767→        3: { halign: 'right', fontStyle: 'bold' },
+   768→   768→      },
+   769→   769→    });
+   770→   770→  }
+   771→   771→
+   772→   772→  // Order type breakdown
+   773→   773→  if (report.order_type_sales.length > 0) {
+   774→   774→    let currentY = getLastTableY(doc);
+   775→   775→    if (currentY > 240) {
+   776→   776→      doc.addPage();
+   777→   777→      currentY = 20;
+   778→   778→    }
+   779→   779→
+   780→   780→    doc.setFillColor(...accentColor);
+   781→   781→    doc.rect(14, currentY + 8, 3, 8, 'F');
+   782→   782→    doc.setFontSize(13);
+   783→   783→    doc.setTextColor(17, 24, 39);
+   784→   784→    doc.setFont('helvetica', 'bold');
+   785→   785→    doc.text('Order Type Breakdown', 20, currentY + 14.5);
+   786→   786→
+   787→   787→    autoTable(doc, {
+   788→   788→      startY: currentY + 20,
+   789→   789→      head: [['Order Type', 'Orders', 'Revenue']],
+   790→   790→      body: report.order_type_sales.map((o) => [
+   791→   791→        o.order_type,
+   792→   792→        o.order_count,
+   793→   793→        o.revenue.toFixed(2),
+   794→   794→      ]),
+   795→   795→      theme: 'striped',
+   796→   796→      headStyles: { fillColor: accentColor, fontStyle: 'bold' },
+   797→   797→      bodyStyles: { fontSize: 9 },
+   798→   798→      alternateRowStyles: { fillColor: [249, 250, 251] },
+   799→   799→      margin: { left: 14 },
+   800→   800→      columnStyles: {
+   801→   801→        1: { halign: 'right' },
+   802→   802→        2: { halign: 'right', fontStyle: 'bold' },
+   803→   803→      },
+   804→   804→    });
+   805→   805→  }
+   806→   806→
+   807→   807→  // Top Customers
+   808→   808→  if (report.top_customers.length > 0) {
+   809→   809→    let currentY = getLastTableY(doc);
+   810→   810→    if (currentY > 240) {
+   811→   811→      doc.addPage();
+   812→   812→      currentY = 20;
+   813→   813→    }
+   814→   814→
+   815→   815→    doc.setFillColor(...accentColor);
+   816→   816→    doc.rect(14, currentY + 8, 3, 8, 'F');
+   817→   817→    doc.setFontSize(13);
+   818→   818→    doc.setTextColor(17, 24, 39);
+   819→   819→    doc.setFont('helvetica', 'bold');
+   820→   820→    doc.text('Top Customers', 20, currentY + 14.5);
+   821→   821→
+   822→   822→    autoTable(doc, {
+   823→   823→      startY: currentY + 20,
+   824→   824→      head: [['#', 'Customer', 'Orders', 'Total Spent']],
+   825→   825→      body: report.top_customers.slice(0, 15).map((c, idx) => [
+   826→   826→        idx + 1,
+   827→   827→        c.customer_name,
+   828→   828→        c.order_count,
+   829→   829→        c.total_spent.toFixed(2),
+   830→   830→      ]),
+   831→   831→      theme: 'striped',
+   832→   832→      headStyles: { fillColor: accentColor, fontStyle: 'bold' },
+   833→   833→      bodyStyles: { fontSize: 9 },
+   834→   834→      alternateRowStyles: { fillColor: [249, 250, 251] },
+   835→   835→      margin: { left: 14 },
+   836→   836→      columnStyles: {
+   837→   837→        0: { cellWidth: 12 },
+   838→   838→        2: { halign: 'right' },
+   839→   839→        3: { halign: 'right', fontStyle: 'bold' },
+   840→   840→      },
+   841→   841→    });
+   842→   842→  }
+   843→   843→}
+   844→   844→
+   845→   845→function _generateExpensePdf(doc: jsPDF, report: ExpenseReport) {
+   846→   846→  const accentColor: [number, number, number] = [220, 38, 38];
+   847→   847→
+   848→   848→  // Period info
+   849→   849→  doc.setFontSize(10);
+   850→   850→  doc.setTextColor(107, 114, 128);
+   851→   851→  doc.setFont('helvetica', 'normal');
+   852→   852→  doc.text(`Period: ${report.from_date} - ${report.to_date}`, 14, 42);
+   853→   853→
+   854→   854→  // Summary section
+   855→   855→  const summaryY = addSummarySection(doc, 48, 'Summary', [
+   856→   856→    ['Fixed Expenses', `${report.total_fixed.toFixed(2)}`],
+   857→   857→    ['Variable Expenses', `${report.total_variable.toFixed(2)}`],
+   858→   858→    ['Total Expenses', `${report.total_expenses.toFixed(2)}`],
+   859→   859→  ], accentColor);
+   860→   860→
+   861→   861→  // Fixed Expenses table
+   862→   862→  if (report.fixed_expenses.length > 0) {
+   863→   863→    let currentY = summaryY + 8;
+   864→   864→    if (currentY > 240) {
+   865→   865→      doc.addPage();
+   866→   866→      currentY = 20;
+   867→   867→    }
+   868→   868→
+   869→   869→    doc.setFillColor(...accentColor);
+   870→   870→    doc.rect(14, currentY + 8, 3, 8, 'F');
+   871→   871→    doc.setFontSize(13);
+   872→   872→    doc.setTextColor(17, 24, 39);
+   873→   873→    doc.setFont('helvetica', 'bold');
+   874→   874→    doc.text('Fixed Expenses', 20, currentY + 14.5);
+   875→   875→
+   876→   876→    autoTable(doc, {
+   877→   877→      startY: currentY + 20,
+   878→   878→      head: [['Type', 'Description', 'Amount']],
+   879→   879→      body: report.fixed_expenses.map((exp: ExpenseItem) => [
+   880→   880→        exp.expense_type,
+   881→   881→        exp.description || '—',
+   882→   882→        exp.amount.toFixed(2),
+   883→   883→      ]),
+   884→   884→      theme: 'striped',
+   885→   885→      headStyles: { fillColor: accentColor, fontStyle: 'bold' },
+   886→   886→      bodyStyles: { fontSize: 9 },
+   887→   887→      alternateRowStyles: { fillColor: [249, 250, 251] },
+   888→   888→      margin: { left: 14 },
+   889→   889→      columnStyles: {
+   890→   890→        2: { halign: 'right', fontStyle: 'bold' },
+   891→   891→      },
+   892→   892→    });
+   893→   893→  }
+   894→   894→
+   895→   895→  // Variable Expenses table
+   896→   896→  if (report.variable_expenses.length > 0) {
+   897→   897→    let currentY = getLastTableY(doc);
+   898→   898→    if (currentY > 240) {
+   899→   899→      doc.addPage();
+   900→   900→      currentY = 20;
+   901→   901→    }
+   902→   902→
+   903→   903→    doc.setFillColor(...accentColor);
+   904→   904→    doc.rect(14, currentY + 8, 3, 8, 'F');
+   905→   905→    doc.setFontSize(13);
+   906→   906→    doc.setTextColor(17, 24, 39);
+   907→   907→    doc.setFont('helvetica', 'bold');
+   908→   908→    doc.text('Variable Expenses', 20, currentY + 14.5);
+   909→   909→
+   910→   910→    autoTable(doc, {
+   911→   911→      startY: currentY + 20,
+   912→   912→      head: [['Date', 'Type', 'Description', 'Amount']],
+   913→   913→      body: report.variable_expenses.map((exp: ExpenseItem) => [
+   914→   914→        exp.date || '',
+   915→   915→        exp.expense_type,
+   916→   916→        exp.description || '—',
+   917→   917→        exp.amount.toFixed(2),
+   918→   918→      ]),
+   919→   919→      theme: 'striped',
+   920→   920→      headStyles: { fillColor: accentColor, fontStyle: 'bold' },
+   921→   921→      bodyStyles: { fontSize: 9 },
+   922→   922→      alternateRowStyles: { fillColor: [249, 250, 251] },
+   923→   923→      margin: { left: 14 },
+   924→   924→      columnStyles: {
+   925→   925→        3: { halign: 'right', fontStyle: 'bold' },
+   926→   926→      },
+   927→   927→    });
+   928→   928→  }
+   929→   929→}
+   930→   930→
+   931→   931→function _generatePLPdf(doc: jsPDF, report: ProfitLossReport) {
+   932→   932→
+   933→   933→  // Period info
+   934→   934→  doc.setFontSize(10);
+   935→   935→  doc.setTextColor(107, 114, 128);
+   936→   936→  doc.setFont('helvetica', 'normal');
+   937→   937→  doc.text(`Period: ${report.from_date} - ${report.to_date}`, 14, 42);
+   938→   938→
+   939→   939→  // Revenue section
+   940→   940→  let currentY = 48;
+   941→   941→  doc.setFillColor(5, 150, 105);
+   942→   942→  doc.rect(14, currentY, 3, 8, 'F');
+   943→   943→  doc.setFontSize(13);
+   944→   944→  doc.setTextColor(17, 24, 39);
+   945→   945→  doc.setFont('helvetica', 'bold');
+   946→   946→  doc.text('Revenue', 20, currentY + 6.5);
+   947→   947→
+   948→   948→  autoTable(doc, {
+   949→   949→    startY: currentY + 12,
+   950→   950→    head: [['Item', 'Amount']],
+   951→   951→    body: [
+   952→   952→      ['Total Revenue', `${report.total_revenue.toFixed(2)}`],
+   953→   953→      ['Net Revenue', `${report.net_revenue.toFixed(2)}`],
+   954→   954→      ['Total Tax', `${report.total_tax.toFixed(2)}`],
+   955→   955→    ],
+   956→   956→    theme: 'grid',
+   957→   957→    headStyles: { fillColor: [5, 150, 105], fontStyle: 'bold' },
+   958→   958→    bodyStyles: { fontSize: 10 },
+   959→   959→    alternateRowStyles: { fillColor: [249, 250, 251] },
+   960→   960→    margin: { left: 14 },
+   961→   961→    columnStyles: {
+   962→   962→      0: { fontStyle: 'bold' },
+   963→   963→      1: { halign: 'right', fontStyle: 'bold', fontSize: 11 },
+   964→   964→    },
+   965→   965→  });
+   966→   966→
+   967→   967→  // Cost section
+   968→   968→  currentY = getLastTableY(doc) + 8;
+   969→   969→  if (currentY > 240) {
+   970→   970→    doc.addPage();
+   971→   971→    currentY = 20;
+   972→   972→  }
+   973→   973→
+   974→   974→  doc.setFillColor(220, 38, 38);
+   975→   975→  doc.rect(14, currentY, 3, 8, 'F');
+   976→   976→  doc.setFontSize(13);
+   977→   977→  doc.setTextColor(17, 24, 39);
+   978→   978→  doc.setFont('helvetica', 'bold');
+   979→   979→  doc.text('Cost of Goods', 20, currentY + 6.5);
+   980→   980→
+   981→   981→  autoTable(doc, {
+   982→   982→    startY: currentY + 12,
+   983→   983→    head: [['Item', 'Amount']],
+   984→   984→    body: [
+   985→   985→      ['Cost of Goods', `-${report.cost_of_goods.toFixed(2)}`],
+   986→   986→      ['Gross Profit', `${report.gross_profit.toFixed(2)}`],
+   987→   987→    ],
+   988→   988→    theme: 'grid',
+   989→   989→    headStyles: { fillColor: [220, 38, 38], fontStyle: 'bold' },
+   990→   990→    bodyStyles: { fontSize: 10 },
+   991→   991→    alternateRowStyles: { fillColor: [249, 250, 251] },
+   992→   992→    margin: { left: 14 },
+   993→   993→    columnStyles: {
+   994→   994→      0: { fontStyle: 'bold' },
+   995→   995→      1: { halign: 'right', fontStyle: 'bold', fontSize: 11 },
+   996→   996→    },
+   997→   997→  });
+   998→   998→
+   999→   999→  // Expenses section
+  1000→  1000→  currentY = getLastTableY(doc) + 8;
+  1001→  1001→  if (currentY > 240) {
+  1002→  1002→    doc.addPage();
+  1003→  1003→    currentY = 20;
+  1004→  1004→  }
+  1005→  1005→
+  1006→  1006→  doc.setFillColor(234, 88, 12);
+  1007→  1007→  doc.rect(14, currentY, 3, 8, 'F');
+  1008→  1008→  doc.setFontSize(13);
+  1009→  1009→  doc.setTextColor(17, 24, 39);
+  1010→  1010→  doc.setFont('helvetica', 'bold');
+  1011→  1011→  doc.text('Operating Expenses', 20, currentY + 6.5);
+  1012→  1012→
+  1013→  1013→  autoTable(doc, {
+  1014→  1014→    startY: currentY + 12,
+  1015→  1015→    head: [['Item', 'Amount']],
+  1016→  1016→    body: [
+  1017→  1017→      ['Fixed Expenses', `-${report.fixed_expenses.toFixed(2)}`],
+  1018→  1018→      ['Variable Expenses', `-${report.variable_expenses.toFixed(2)}`],
+  1019→  1019→      ['Total Expenses', `-${report.total_expenses.toFixed(2)}`],
+  1020→  1020→    ],
+  1021→  1021→    theme: 'grid',
+  1022→  1022→    headStyles: { fillColor: [234, 88, 12], fontStyle: 'bold' },
+  1023→  1023→    bodyStyles: { fontSize: 10 },
+  1024→  1024→    alternateRowStyles: { fillColor: [249, 250, 251] },
+  1025→  1025→    margin: { left: 14 },
+  1026→  1026→    columnStyles: {
+  1027→  1027→      0: { fontStyle: 'bold' },
+  1028→  1028→      1: { halign: 'right', fontStyle: 'bold', fontSize: 11 },
+  1029→  1029→    },
+  1030→  1030→  });
+  1031→  1031→
+  1032→  1032→  // Net Profit section
+  1033→  1033→  currentY = getLastTableY(doc) + 8;
+  1034→  1034→  if (currentY > 240) {
+  1035→  1035→    doc.addPage();
+  1036→  1036→    currentY = 20;
+  1037→  1037→  }
+  1038→  1038→
+  1039→  1039→  const isProfit = report.net_profit >= 0;
+  1040→  1040→  const profitColor: [number, number, number] = isProfit ? [5, 150, 105] : [220, 38, 38];
+  1041→  1041→
+  1042→  1042→  doc.setFillColor(...profitColor);
+  1043→  1043→  doc.rect(14, currentY, 3, 8, 'F');
+  1044→  1044→  doc.setFontSize(13);
+  1045→  1045→  doc.setTextColor(17, 24, 39);
+  1046→  1046→  doc.setFont('helvetica', 'bold');
+  1047→  1047→  doc.text('Net Result', 20, currentY + 6.5);
+  1048→  1048→
+  1049→  1049→  autoTable(doc, {
+  1050→  1050→    startY: currentY + 12,
+  1051→  1051→    head: [['Item', 'Amount']],
+  1052→  1052→    body: [
+  1053→  1053→      ['Net Profit', `${report.net_profit.toFixed(2)}`],
+  1054→  1054→      ['Profit Margin', `${report.profit_margin}%`],
+  1055→  1055→    ],
+  1056→  1056→    theme: 'grid',
+  1057→  1057→    headStyles: { fillColor: profitColor, fontStyle: 'bold' },
+  1058→  1058→    bodyStyles: { fontSize: 11 },
+  1059→  1059→    alternateRowStyles: { fillColor: [249, 250, 251] },
+  1060→  1060→    margin: { left: 14 },
+  1061→  1061→    columnStyles: {
+  1062→  1062→      0: { fontStyle: 'bold' },
+  1063→  1063→      1: { halign: 'right', fontStyle: 'bold', fontSize: 12 },
+  1064→  1064→    },
+  1065→  1065→  });
+  1066→  1066→}
+  1067→  1067→
+  1068→  1068→function _generateInventoryPdf(doc: jsPDF, report: InventoryReport) {
+  1069→  1069→  const accentColor: [number, number, number] = [124, 58, 237];
+  1070→  1070→
+  1071→  1071→  // Period info
+  1072→  1072→  doc.setFontSize(10);
+  1073→  1073→  doc.setTextColor(107, 114, 128);
+  1074→  1074→  doc.setFont('helvetica', 'normal');
+  1075→  1075→  doc.text(`As of: ${report.from_date} - ${report.to_date}`, 14, 42);
+  1076→  1076→
+  1077→  1077→  // Summary section
+  1078→  1078→  const summaryY = addSummarySection(doc, 48, 'Inventory Summary', [
+  1079→  1079→    ['Total Items', `${report.summary.total_items}`],
+  1080→  1080→    ['Low Stock Items', `${report.summary.low_stock_items}`],
+  1081→  1081→    ['Out of Stock Items', `${report.summary.out_of_stock_items}`],
+  1082→  1082→    ['Total Stock Value', `${report.summary.total_stock_value.toFixed(2)}`],
+  1083→  1083→  ], accentColor);
+  1084→  1084→
+  1085→  1085→  // Inventory table
+  1086→  1086→  if (report.items.length > 0) {
+  1087→  1087→    let currentY = summaryY + 8;
+  1088→  1088→    if (currentY > 240) {
+  1089→  1089→      doc.addPage();
+  1090→  1090→      currentY = 20;
+  1091→  1091→    }
+  1092→  1092→
+  1093→  1093→    doc.setFillColor(...accentColor);
+  1094→  1094→    doc.rect(14, currentY + 8, 3, 8, 'F');
+  1095→  1095→    doc.setFontSize(13);
+  1096→  1096→    doc.setTextColor(17, 24, 39);
+  1097→  1097→    doc.setFont('helvetica', 'bold');
+  1098→  1098→    doc.text('Stock Levels', 20, currentY + 14.5);
+  1099→  1099→
+  1100→  1100→    autoTable(doc, {
+  1101→  1101→      startY: currentY + 20,
+  1102→  1102→      head: [['Item', 'Current Stock', 'Reorder Level', 'Unit', 'Value', 'Status']],
+  1103→  1103→      body: report.items.map((item) => [
+  1104→  1104→        item.item_name,
+  1105→  1105→        item.current_stock,
+  1106→  1106→        item.reorder_level,
+  1107→  1107→        item.stock_uom,
+  1108→  1108→        item.stock_value.toFixed(2),
+  1109→  1109→        item.status,
+  1110→  1110→      ]),
+  1111→  1111→      theme: 'striped',
+  1112→  1112→      headStyles: { fillColor: accentColor, fontStyle: 'bold' },
+  1113→  1113→      bodyStyles: { fontSize: 8 },
+  1114→  1114→      alternateRowStyles: { fillColor: [249, 250, 251] },
+  1115→  1115→      margin: { left: 14 },
+  1116→  1116→      columnStyles: {
+  1117→  1117→        0: { cellWidth: 50 },
+  1118→  1118→        1: { halign: 'right' },
+  1119→  1119→        2: { halign: 'right' },
+  1120→  1120→        4: { halign: 'right', fontStyle: 'bold' },
+  1121→  1121→        5: { cellWidth: 25 },
+  1122→  1122→      },
+  1123→  1123→      didParseCell: (data: { section: string; column: { index: number }; cell: { raw: string; styles: { textColor: number[]; fontStyle: string } } }) => {
+  1124→  1124→        if (data.section === 'body' && data.column.index === 5) {
+  1125→  1125→          const status = data.cell.raw;
+  1126→  1126→          if (status === 'Out of Stock') {
+  1127→  1127→            data.cell.styles.textColor = [220, 38, 38];
+  1128→  1128→            data.cell.styles.fontStyle = 'bold';
+  1129→  1129→          } else if (status === 'Low') {
+  1130→  1130→            data.cell.styles.textColor = [217, 119, 6];
+  1131→  1131→            data.cell.styles.fontStyle = 'bold';
+  1132→  1132→          } else if (status === 'OK') {
+  1133→  1133→            data.cell.styles.textColor = [5, 150, 105];
+  1134→  1134→          }
+  1135→  1135→        }
+  1136→  1136→      },
+  1137→  1137→    });
+  1138→  1138→  }
+  1139→  1139→}
+  1140→  1140→

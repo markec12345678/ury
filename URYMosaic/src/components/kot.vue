@@ -219,6 +219,9 @@
     >
       {{ statusMessage }}
     </div>
+    <div class="sr-only" aria-live="polite" aria-atomic="true">
+      {{ visibleKots.length }} order{{ visibleKots.length !== 1 ? 's' : '' }} displayed
+    </div>
   </div>
 </template>
 
@@ -288,7 +291,7 @@ async function initializeSocket(signal) {
         });
         return sock;
     } else {
-        console.error('Site name is not set. Socket cannot be initialized.');
+        if (import.meta.env?.DEV) console.error('Site name is not set. Socket cannot be initialized.');
         return null;
     }
 }
@@ -330,7 +333,7 @@ export default {
   // rendering error (unlikely but possible), we'd re-enter errorCaptured
   // and trigger another fetchKOTWithRetry, potentially infinitely.
   errorCaptured(err, instance, info) {
-    console.error('KDS rendering error:', err, info);
+    if (import.meta.env?.DEV) console.error('KDS rendering error:', err, info);
     if (!this._errorCapturedRecovering) {
       this._errorCapturedRecovering = true;
       this.setStatusMessage('Display error — refreshing...');
@@ -410,9 +413,7 @@ export default {
     auth() {
       return frappe.auth().getLoggedInUser()
         .then((user) => {
-          // R49-FIX (L1): Store as non-reactive property instead of reactive data.
-          // loggeduser is never referenced in the template — no need for reactivity.
-          this._loggedUser = user;
+          // R50-FIX (L1): Removed dead _loggedUser assignment — never read anywhere.
           // Update shared auth state so route guard works
           if (this.authState) {
             this.authState.isLoggedIn = true;
@@ -549,7 +550,7 @@ export default {
               }));
               this.updateQtyColorTable();
               this.updateTimeRemaining();
-              this.masonryLoading(true);
+              this.masonryLoading();
               resolve();
             })
             .catch((error) => {
@@ -596,24 +597,29 @@ export default {
       kot.isRotated = !kot.isRotated;
     },
     confirmOrder(kot) {
-      // R41-FIX: Prevent duplicate concurrent requests for the same KOT.
-      // Without this, rapid clicks send multiple POST requests, the second
-      // of which may error (already processed) and misleadingly show
-      // "Action failed" even though the first succeeded.
       if (this._inflightOps && this._inflightOps.has(kot.name)) return;
-      // R40-FIX: Clear pending cancel timeout — the user has already confirmed,
-      // so the scheduled re-fetch would be redundant and wasteful.
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+      if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
-      const confirmPromise = this.call
-        .post("ury.ury.api.ury_kot_display.confirm_cancel_kot", {
-          name: kot.name,
-        });
-      const timeoutPromise = new Promise((_, reject) => {
-        this._confirmTimeout = setTimeout(() => reject(new Error('Request timed out')), 15000);
-      });
-      Promise.race([confirmPromise, timeoutPromise])
-        .then((result) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      fetch('/api/method/ury.ury.api.ury_kot_display.confirm_cancel_kot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': window.csrf_token || '' },
+        credentials: 'same-origin',
+        signal: controller.signal,
+        body: JSON.stringify({ name: kot.name }),
+      })
+        .then(response => {
+          if (!response.ok) {
+            const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+            err.httpStatus = response.status;
+            throw err;
+          }
+          return response.json();
+        })
+        .then(() => {
+          clearTimeout(timeoutId);
           if (!this._isMounted) return;
           const idx = this.kot.findIndex(k => k.name === kot.name);
           if (idx !== -1) this.kot.splice(idx, 1);
@@ -623,26 +629,35 @@ export default {
           this.masonryLoading();
         })
         .catch((error) => {
+          clearTimeout(timeoutId);
           this._handleFetchError(error, "Action failed. Please try again.");
         })
-        .finally(() => { clearTimeout(this._confirmTimeout); this._clearInflight(kot.name); });
+        .finally(() => { this._clearInflight(kot.name); });
     },
     serveOrder(kot) {
-      // R41-FIX: Prevent duplicate concurrent requests for the same KOT.
       if (this._inflightOps && this._inflightOps.has(kot.name)) return;
-      // R40-FIX: Clear pending cancel timeout — the user has already served,
-      // so the scheduled re-fetch would be redundant and wasteful.
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+      if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
-      const servePromise = this.call
-        .post("ury.ury.api.ury_kot_display.serve_kot", {
-          name: kot.name,
-        });
-      const serveTimeoutPromise = new Promise((_, reject) => {
-        this._serveTimeout = setTimeout(() => reject(new Error('Request timed out')), 15000);
-      });
-      Promise.race([servePromise, serveTimeoutPromise])
-        .then((result) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      fetch('/api/method/ury.ury.api.ury_kot_display.serve_kot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': window.csrf_token || '' },
+        credentials: 'same-origin',
+        signal: controller.signal,
+        body: JSON.stringify({ name: kot.name }),
+      })
+        .then(response => {
+          if (!response.ok) {
+            const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+            err.httpStatus = response.status;
+            throw err;
+          }
+          return response.json();
+        })
+        .then(() => {
+          clearTimeout(timeoutId);
           if (!this._isMounted) return;
           const idx = this.kot.findIndex(k => k.name === kot.name);
           if (idx !== -1) this.kot.splice(idx, 1);
@@ -652,9 +667,10 @@ export default {
           this.masonryLoading();
         })
         .catch((error) => {
+          clearTimeout(timeoutId);
           this._handleFetchError(error, "Action failed. Please try again.");
         })
-        .finally(() => { clearTimeout(this._serveTimeout); this._clearInflight(kot.name); });
+        .finally(() => { this._clearInflight(kot.name); });
     },
 
     // R42-FIX: Return the promise so callers can chain on success/failure.
@@ -943,11 +959,13 @@ export default {
         if (!this.$el) return;
         const grid = this.$el.querySelector(".grid");
         if (!grid) return;
-        this._masonry = markRaw(new Masonry(grid, {
-          itemSelector: ".masonry-item",
-          gutter: 28,
-        }));
-        this._masonry.layout();
+        try {
+          this._masonry = markRaw(new Masonry(grid, { itemSelector: ".masonry-item", gutter: 28 }));
+          this._masonry.layout();
+        } catch (e) {
+          if (import.meta.env?.DEV) console.error('Masonry init failed:', e);
+          this._masonry = null;
+        }
       });
     },
     // R45-FIX: Extract auth error detection into reusable method. Previously
@@ -1117,7 +1135,7 @@ export default {
         // R43-FIX: Removed redundant masonryLoading() — fetchKOT() already calls
         // masonryLoading(true) on success.
       }).catch((e) => {
-        console.error("KOT fetch failed:", e);
+        if (import.meta.env?.DEV) console.error("KOT fetch failed:", e);
         if (this._isMounted) {
           this.setStatusMessage("Back online but data refresh failed. Click Refresh.");
           this.hideStatusMessageAfterDelay();
@@ -1307,7 +1325,7 @@ export default {
         });
         this._socket.on('disconnect', (reason) => {
           if (!this._isMounted) return;
-          console.warn("Socket disconnected:", reason);
+          if (import.meta.env?.DEV) console.warn("Socket disconnected:", reason);
           // R42-FIX: Skip reactive assignment if message is already showing
           // the same text — avoids unnecessary Vue re-renders during flapping.
           if (this.statusMessage !== "Connection lost. Reconnecting...") {
@@ -1317,6 +1335,13 @@ export default {
         this._socket.on('connect', () => {
           if (!this._isMounted) return;
           this._disconnectedSince = null;
+          // R50-FIX: Abort in-flight fetch and invalidate to prevent stale data after server restart
+          if (this._fetchAbortController) {
+            this._fetchAbortController.abort();
+            this._fetchAbortController = null;
+          }
+          this._fetchId++;
+          this._fetchInProgress = null;
           this.setStatusMessage("Reconnected");
           this.hideStatusMessageAfterDelay();
           // R38-FIX: Re-fetch KOT data after reconnect to sync any missed updates
@@ -1357,7 +1382,7 @@ export default {
         }
       })
       .catch((error) => {
-        console.error("Initialization or authentication error:", error);
+        if (import.meta.env?.DEV) console.error("Initialization or authentication error:", error);
         // R40-FIX: this._socket is now stored early, so beforeUnmount will
         // disconnect it. No need for manual cleanup here.
         if (this._isMounted) {
@@ -1378,6 +1403,18 @@ export default {
     // R49-FIX: Use _timer prefix for naming consistency with other
     // non-reactive instance properties (_masonry, _socket, _fetchInProgress, etc.)
     this._timer = setInterval(this.updateTimeRemaining, 60000);
+    // R50-FIX (L2): Pause timer when tab is hidden to avoid unnecessary work
+    this._visibilityHandler = () => {
+      if (document.hidden) {
+        if (this._timer) { clearInterval(this._timer); this._timer = null; }
+      } else {
+        if (!this._timer) {
+          this._timer = setInterval(this.updateTimeRemaining, 60000);
+          this.updateTimeRemaining();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', this._visibilityHandler);
   },
   beforeUnmount() {
     this._isMounted = false;
@@ -1386,6 +1423,11 @@ export default {
     document.removeEventListener("click", this.hideAudioAlertMessage);
     window.removeEventListener("resize", this._resizeHandler);
     if (this._pageshowHandler) window.removeEventListener('pageshow', this._pageshowHandler);
+    // R50-FIX (L2): Clean up visibilitychange listener
+    if (this._visibilityHandler) {
+      document.removeEventListener('visibilitychange', this._visibilityHandler);
+      this._visibilityHandler = null;
+    }
     if (this.socketHandler && this._socket) {
       this._socket.off(this.kot_channel, this.socketHandler);
     }

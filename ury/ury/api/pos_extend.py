@@ -14,7 +14,7 @@ def validate_search_input(search_term):
     if len(search_term) > 100:
         frappe.throw(_("Search term too long (max 100 characters)"))
 
-    if not re.match(r'^[a-zA-Z0-9\s\-_@.]+$', search_term):
+    if not re.match(r'^[a-zA-Z0-9\s\-_@.\/#()]+$', search_term):
         frappe.throw(_("Invalid characters in search term"))
 
     return search_term

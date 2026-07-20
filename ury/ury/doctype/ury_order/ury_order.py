@@ -641,6 +641,10 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
     user_roles = frappe.get_roles(newCaptain)
     if not set(user_roles).intersection({"Restaurant Manager", "Restaurant User", "Cashier"}):
         frappe.throw(_("User {0} does not have a restaurant role").format(newCaptain))
+    # R50-FIX: Validate captain belongs to user's branch even in single-cashier mode
+    captain_branch = frappe.db.get_value("URY User", {"user": newCaptain}, "parent")
+    if captain_branch and captain_branch != user_branch:
+        frappe.throw(_("Captain does not belong to your branch"), frappe.PermissionError)
     pos_profile=frappe.get_value("POS Invoice", invoice,"pos_profile")
     multiple_cashier = frappe.db.get_value("POS Profile",pos_profile,"custom_enable_multiple_cashier")
     branch=frappe.get_value("POS Invoice", invoice,"branch")
@@ -728,7 +732,7 @@ def cancel_order(invoice_id, reason):
             cancel_kot(invoice_id)
         except Exception as e:
             frappe.log_error(f"Failed to create cancellation KOT for {invoice_id}: {frappe.get_traceback()}", "Cancel KOT Error")
-            frappe.publish_realtime("order_cancelled", {"invoice": invoice_id})
+            frappe.publish_realtime("order_cancelled_{}".format(user_branch), {"invoice": invoice_id})
             frappe.msgprint(
                 title=_("KOT Cancellation Failed"),
                 indicator="orange",

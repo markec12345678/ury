@@ -238,6 +238,8 @@ def qz_certificate():
 @frappe.whitelist()
 def sign_message(message):
     """Sign a message with the QZ private key server-side. Never expose the key."""
+    if len(str(message)) > 10000:
+        frappe.throw(_("Message too long for signing (max 10000 characters)"), frappe.ValidationError)
     frappe.only_for("System Manager")
     site_config = frappe.get_site_config()
     private_key_pem = site_config.get("qz_private_key")

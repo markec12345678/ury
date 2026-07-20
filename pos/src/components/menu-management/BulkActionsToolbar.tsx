@@ -24,7 +24,7 @@ const BulkActionsToolbar = ({
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg mb-2">
       <span className="text-sm font-medium text-amber-800 me-2">
-        {t('common.selected_count', { count: String(selectedCount) }) || `${selectedCount} selected`}
+        {t('common.selected_count', { count: String(selectedCount) })}
       </span>
 
       <Button
@@ -34,7 +34,7 @@ const BulkActionsToolbar = ({
         className="flex items-center gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
       >
         <CheckSquare className="w-3.5 h-3.5" />
-        {t('menu_management.enable_selected') || 'Enable'}
+        {t('menu_management.enable_selected')}
       </Button>
 
       <Button
@@ -44,7 +44,7 @@ const BulkActionsToolbar = ({
         className="flex items-center gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-50"
       >
         <XSquare className="w-3.5 h-3.5" />
-        {t('menu_management.disable_selected') || 'Disable'}
+        {t('menu_management.disable_selected')}
       </Button>
 
       <Button
@@ -54,7 +54,7 @@ const BulkActionsToolbar = ({
         className="flex items-center gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-50"
       >
         <DollarSign className="w-3.5 h-3.5" />
-        {t('menu_management.batch_update_prices') || 'Batch Prices'}
+        {t('menu_management.batch_update_prices')}
       </Button>
 
       <Button
@@ -64,7 +64,7 @@ const BulkActionsToolbar = ({
         className="flex items-center gap-1.5 text-red-700 border-red-300 hover:bg-red-50"
       >
         <Trash2 className="w-3.5 h-3.5" />
-        {t('menu_management.delete_selected') || 'Delete'}
+        {t('menu_management.delete_selected')}
       </Button>
 
       <div className="ms-auto">
@@ -75,7 +75,7 @@ const BulkActionsToolbar = ({
           className="text-gray-500"
         >
           <X className="w-4 h-4 me-1" />
-          {t('common.deselect_all') || 'Clear'}
+          {t('common.deselect_all')}
         </Button>
       </div>
     </div>

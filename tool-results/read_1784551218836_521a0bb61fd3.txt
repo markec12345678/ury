@@ -1,0 +1,1528 @@
+     1→<template>
+     2→  <div class="mx-auto p-6 mb-16 relative">
+     3→    <!-- Alert Modal div start-->
+     4→    <div
+     5→      v-if="showModal"
+     6→      ref="authModal"
+     7→      tabindex="-1"
+     8→      class="fixed inset-0 z-[60] overflow-y-auto modal-overlay"
+     9→      role="dialog"
+    10→      aria-modal="true"
+    11→      aria-labelledby="modal-title"
+    12→      aria-describedby="modal-description"
+    13→      @keydown="handleModalKeydown"
+    14→    >
+    15→      <div class="flex items-center justify-center">
+    16→        <div class="w-full rounded-lg bg-white p-6 shadow-lg md:max-w-md">
+    17→          <p
+    18→            id="modal-title"
+    19→            class="block text-left text-xl font-medium text-gray-700 dark:text-gray-300"
+    20→          >
+    21→            <span
+    22→              class="w-3 h-3 rounded-full inline-block mr-1 bg-red-500"
+    23→            ></span>
+    24→            {{ modalTitle }}
+    25→          </p>
+    26→          <hr class="border-gray-200" />
+    27→
+    28→          <p id="modal-description" class="text-left text-xl mt-6 font-medium text-gray-500">
+    29→            {{ modalMessage }}
+    30→          </p>
+    31→
+    32→          <div class="flex justify-center">
+    33→            <button
+    34→              @click="
+    35→                showModal = false;
+    36→                redirectToLogin();
+    37→              "
+    38→              class="mt-8 rounded bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
+    39→            >
+    40→              Login
+    41→            </button>
+    42→          </div>
+    43→        </div>
+    44→      </div>
+    45→    </div>
+    46→    <!-- Alert Modal div end-->
+    47→
+    48→    <div
+    49→      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    50→    >
+    51→      <div v-for="kot in visibleKots" :key="kot.name">
+    52→        <div
+    53→          :class="[kot.color]"
+    54→          class="shadow-lg gap-4 p-3 rounded-2xl max-w-80 w-full h-auto masonry-item mt-7"
+    55→          role="group"
+    56→          :aria-label="`${kot.tableortakeaway}, Order ${kot.order_no || (kot.invoice ? String(kot.invoice).slice(-4) : '—')}, ${kot.timeRemaining} elapsed`"
+    57→        >
+    58→          <div class="w-64">
+    59→            <div
+    60→              :class="[{ hidden: !kot.isRotated }]"
+    61→              @click="rotateCard(kot)"
+    62→              @keydown.enter="rotateCard(kot)"
+    63→              @keydown.space.prevent="rotateCard(kot)"
+    64→              role="button"
+    65→              tabindex="0"
+    66→              :aria-label="kot.isRotated ? 'Hide order actions' : 'Show order actions'"
+    67→              class="absolute inset-0 bg-white z-50 opacity-80 rounded-2xl flex flex-col justify-center items-center"
+    68→            >
+    69→              <button
+    70→                @click.stop="
+    71→                  kot.type === 'Cancelled' || kot.type === 'Partially cancelled'
+    72→                    ? confirmOrder(kot)
+    73→                    : serveOrder(kot)
+    74→                "
+    75→                :class="[{ hidden: !kot.isRotated }]"
+    76→                class="py-2 px-6 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 ease-in-out"
+    77→              >
+    78→                {{
+    79→                  kot.type === "Cancelled" || kot.type === "Partially cancelled"
+    80→                    ? "Confirm"
+    81→                    : "Serve"
+    82→                }}
+    83→              </button>
+    84→            </div>
+    85→
+    86→              <!-- Card Header: Table Name and Order Number -->
+    87→              <div class="flex justify-between" @click="rotateCard(kot)" @keydown.enter="rotateCard(kot)" @keydown.space.prevent="rotateCard(kot)" role="button" :tabindex="kot.isRotated ? -1 : 0" aria-label="Toggle order actions">
+    88→                <div class="text-sm w-48">
+    89→                  <span
+    90→                    v-if="kot.tableortakeaway !== 'Takeaway'"
+    91→                    class="text-sm font-medium text-[#6B7280]"
+    92→                    >Table
+    93→                  </span>
+    94→                  <span class="text-gray-900 font-semibold">
+    95→                    {{ kot.tableortakeaway }}
+    96→                    <!-- R42-FIX: Guard against null/undefined user — prevents "( )" display -->
+    97→                    <span v-if="kot.user" class="text-sm font-medium text-[#6B7280]"
+    98→                      >( {{ kot.user }} )</span
+    99→                    ></span
+   100→                  ><br />
+   101→                  <span v-if="kot.is_aggregator" class="text-sm font-medium text-[#6B7280]">Aggregator</span>
+   102→                  <span v-if="kot.is_aggregator" class="text-gray-900 ml-2 font-semibold"
+   103→                    >{{ kot.customer_name }}
+   104→                  </span><br v-if="kot.is_aggregator" />
+   105→                  <span v-if="kot.is_aggregator" class="text-sm font-medium text-[#6B7280]">Aggregator ID</span>
+   106→                  <span v-if="kot.is_aggregator" class="text-gray-900 ml-2 font-semibold"
+   107→                    >{{ kot.aggregator_id }}
+   108→                  </span><br v-if="kot.is_aggregator"/>
+   109→                  <span class="text-sm font-medium text-[#6B7280]">Order</span>
+   110→                  <span class="text-gray-900 ml-2 font-semibold"
+   111→                    >{{ Number(daily_order_number) === 1 ? kot.order_no : (kot.invoice ? String(kot.invoice).slice(-4) : '—') }}
+   112→                    
+   113→                  </span>
+   114→                  <span
+   115→                    class="text-gray-900 ml-2 font-semibold"
+   116→                    v-if="
+   117→                      kot.type === 'Partially cancelled' ||
+   118→                      kot.type === 'Cancelled'
+   119→                    "
+   120→                  >
+   121→                    ( {{ kot.type }} )</span
+   122→                  >
+   123→                </div>
+   124→                <div
+   125→                  :class="kot.timecolor"
+   126→                  class="font-semibold text-2xl leading-10"
+   127→                >
+   128→                  {{ kot.timeRemaining }}
+   129→                </div>
+   130→              </div>
+   131→              <div
+   132→                v-if="kot.type === 'Duplicate'"
+   133→                class="text-[#DC0000] font-medium"
+   134→              >
+   135→                ( Duplicate KOT ( CHECK WITH CAPTAIN ) )
+   136→              </div>
+   137→              <div v-if="kot.comments" class="text-[#6B7280] font-medium">
+   138→                ( {{ kot.comments }} )
+   139→              </div>
+   140→              <div>
+   141→                <div
+   142→                  class="font-semibold justify-between items-center mt-2"
+   143→                  v-for="kotitem in sortedKotItems(kot)"
+   144→                  :key="kotitem.name"
+   145→                >
+   146→                  <div
+   147→                    @click="toggleItemStrikeThrough(kotitem, kot)"
+   148→                    @keydown.enter="toggleItemStrikeThrough(kotitem, kot)"
+   149→                    @keydown.space.prevent="toggleItemStrikeThrough(kotitem, kot)"
+   150→                    :class="{
+   151→                      'line-through text-green-700': kotitem.striked,
+   152→                    }"
+   153→                    role="button"
+   154→                    tabindex="0"
+   155→                    :aria-label="kotitem.striked ? `Unmark ${kotitem.item_name}` : `Mark ${kotitem.item_name} done`"
+   156→                    class="flex font-semibold justify-between items-center"
+   157→                  >
+   158→                    <div>
+   159→                      <span class="ml-2 text-gray-900">{{
+   160→                        kotitem.item_name
+   161→                      }}<span v-show="kotitem.indicate_course" class="text-sm text-gray-500 ml-1"> ( {{kotitem.course}} )</span>
+   162→                      </span
+   163→                      ><br />
+   164→                      <span
+   165→                        class="ml-2 text-gray-900"
+   166→                        v-if="
+   167→                          kot.type === 'Partially cancelled' ||
+   168→                          kot.type === 'Cancelled'
+   169→                        "
+   170→                        >[Old Qty = {{ kotitem.quantity }}]</span
+   171→                      >
+   172→                    </div>
+   173→                    <div>
+   174→                      <span class="ml-2 text-gray-900">{{ kotitem.qty }}</span>
+   175→                    </div>
+   176→                  </div>
+   177→                  <div>
+   178→                    <p
+   179→                      v-if="kotitem.comments"
+   180→                      class="ml-2 text-[#6B7280] font-medium"
+   181→                    >
+   182→                      {{ kotitem.comments }}
+   183→                    </p>
+   184→                    <hr class="my-1 border-gray-200 mt-2" />
+   185→                  </div>
+   186→                </div>
+   187→              </div>
+   188→            
+   189→          </div>
+   190→        </div>
+   191→      </div>
+   192→    </div>
+   193→
+   194→    <!-- Audio Alert Message -->
+   195→    <div
+   196→      v-if="showAudioAlertMessage"
+   197→      role="alert"
+   198→      class="absolute top-1 left-1/2 transform -translate-x-1/2 p-2 font-bold text-2xl text-red-500 text-center"
+   199→    >
+   200→      Audio notifications disabled. Click anywhere to enable.
+   201→    </div>
+   202→
+   203→    <div
+   204→      v-if="statusMessage"
+   205→      :class="[
+   206→        'fixed',
+   207→        'bottom-10',
+   208→        'right-10',
+   209→        'p-4',
+   210→        'rounded',
+   211→        'text-white',
+   212→        {
+   213→          'bg-green-500': isOnline,
+   214→          'bg-red-500': !isOnline,
+   215→        },
+   216→      ]"
+   217→      role="status"
+   218→      aria-live="polite"
+   219→    >
+   220→      {{ statusMessage }}
+   221→    </div>
+   222→  </div>
+   223→</template>
+   224→
+   225→<script>
+   226→import { FrappeApp } from "frappe-js-sdk";
+   227→import Masonry from "masonry-layout";
+   228→import io from "socket.io-client";
+   229→import { markRaw } from "vue";
+   230→
+   231→let host = window.location.hostname;
+   232→let port = window.location.port;
+   233→let protocol = window.location.protocol;
+   234→let url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
+   235→// R37-REMOVED: module-level siteName and alertAudio — siteName was shared mutable state (race condition risk),
+   236→// alertAudio was unused after R36 moved to instance-level this._alertAudio
+   237→
+   238→// R41-FIX: Add cancel() method to debounce return value so pending timers
+   239→// can be cleaned up on component unmount, preventing post-unmount masonry calls.
+   240→function debounce(fn, delay) {
+   241→    let timer = null;
+   242→    const debounced = function(...args) {
+   243→        clearTimeout(timer);
+   244→        timer = setTimeout(() => fn.apply(this, args), delay);
+   245→    };
+   246→    debounced.cancel = () => { clearTimeout(timer); timer = null; };
+   247→    return debounced;
+   248→}
+   249→
+   250→// R37-FIX: fetchAndSetSiteName now returns siteName instead of mutating module-level state
+   251→// R49-FIX: Accept optional AbortSignal so callers can cancel the fetch
+   252→// on component unmount. Without this, the network request continues
+   253→// consuming resources even after the component is destroyed.
+   254→async function fetchSiteName(signal) {
+   255→    try {
+   256→        const response = await fetch('/api/method/ury.ury.api.ury_kot_display.get_site_name', {
+   257→            method: 'GET',
+   258→            headers: {
+   259→                'Content-Type': 'application/json'
+   260→            },
+   261→            ...(signal ? { signal } : {})
+   262→        });
+   263→        if (!response.ok) {
+   264→            if (import.meta.env?.DEV) console.error('fetchSiteName: response not ok, status', response.status);
+   265→            return '';
+   266→        }
+   267→        const data = await response.json();
+   268→        return data?.message?.site_name || '';
+   269→    } catch (error) {
+   270→        if (import.meta.env?.DEV) console.error('Failed to fetch site name:', error);
+   271→        return '';
+   272→    }
+   273→}
+   274→
+   275→// R49-FIX: Accept optional AbortSignal to pass through to fetchSiteName
+   276→// and abort socket init on component unmount.
+   277→async function initializeSocket(signal) {
+   278→    // R37-FIX: Use local variable instead of module-level shared state
+   279→    const siteName = await fetchSiteName(signal);
+   280→    if (siteName) {
+   281→        let site_url = `${url}/${siteName}`;
+   282→        const sock = io(site_url, {
+   283→          withCredentials: true,
+   284→          reconnection: true,
+   285→          reconnectionAttempts: Infinity,
+   286→          reconnectionDelay: 1000,
+   287→          reconnectionDelayMax: 5000,
+   288→        });
+   289→        return sock;
+   290→    } else {
+   291→        console.error('Site name is not set. Socket cannot be initialized.');
+   292→        return null;
+   293→    }
+   294→}
+   295→
+   296→
+   297→
+   298→
+   299→const frappe = new FrappeApp(url);
+   300→export default {
+   301→  inject: ['authState'],
+   302→  data() {
+   303→    return {
+   304→      kot: [],
+   305→      production: "",
+   306→      branch: "",
+   307→      kot_channel: "",
+   308→      // R49-FIX (L1): Removed loggeduser from reactive data — it was set
+   309→      // from auth() but never used in the template or any method output.
+   310→      // Keeping it as a reactive property incurred unnecessary Proxy overhead
+   311→      // and made the data() return value misleading.
+   312→      showModal: false,
+   313→      // R41-FIX: Dynamic modal content — differentiates auth errors from
+   314→      // network/server errors instead of always showing "Not Permitted".
+   315→      modalTitle: "Connection Error",
+   316→      modalMessage: "Unable to reach the server. Please check your connection and try again.",
+   317→      kot_alert_time: "",
+   318→      showAudioAlertMessage: false,
+   319→      audio_alert: 0,
+   320→      isOnline: navigator.onLine,
+   321→      statusMessage: "",
+   322→      daily_order_number:0,
+   323→      // R37-FIX: socketHandler moved to created() as non-reactive to avoid Proxy overhead
+   324→    };
+   325→  },
+   326→  // R39-FIX: Error boundary — catches rendering errors from child components
+   327→  // or template expressions, logs them, and shows a user-friendly message
+   328→  // instead of crashing the entire KDS display.
+   329→  // R40-FIX: Added recursion guard — if fetchKOTWithRetry itself causes a
+   330→  // rendering error (unlikely but possible), we'd re-enter errorCaptured
+   331→  // and trigger another fetchKOTWithRetry, potentially infinitely.
+   332→  errorCaptured(err, instance, info) {
+   333→    console.error('KDS rendering error:', err, info);
+   334→    if (!this._errorCapturedRecovering) {
+   335→      this._errorCapturedRecovering = true;
+   336→      this.setStatusMessage('Display error — refreshing...');
+   337→      this.hideStatusMessageAfterDelay();
+   338→      // Attempt recovery by re-fetching KOT data (with retry for transient errors)
+   339→      // R43-FIX: Remove redundant .then(() => masonryLoading()) — fetchKOT()
+   340→      // already calls masonryLoading(true) on success.
+   341→      this.fetchKOTWithRetry().catch(() => {}).finally(() => {
+   342→        this._errorCapturedRecovering = false;
+   343→      });
+   344→    }
+   345→    // Return false to prevent the error from propagating further up
+   346→    return false;
+   347→  },
+   348→  methods: {
+   349→    // M1-FIX: Focus trap for auth modal — cycles focus within the dialog on Tab/Shift+Tab
+   350→    handleModalKeydown(e) {
+   351→      // R49-FIX: Allow Escape to dismiss the auth modal.
+   352→      // Per ARIA dialog pattern and WCAG 2.1.2, dialogs must be
+   353→      // dismissible via Escape key. Without this, keyboard-only users
+   354→      // are trapped — the only close path was the Login button.
+   355→      if (e.key === 'Escape') {
+   356→        e.preventDefault();
+   357→        this.showModal = false;
+   358→        this.redirectToLogin();
+   359→        return;
+   360→      }
+   361→      if (e.key !== 'Tab') return;
+   362→      const modal = e.currentTarget;
+   363→      const focusable = modal.querySelectorAll(
+   364→        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+   365→      );
+   366→      if (focusable.length === 0) { e.preventDefault(); return; }
+   367→      const first = focusable[0];
+   368→      const last = focusable[focusable.length - 1];
+   369→      if (e.shiftKey) {
+   370→        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+   371→      } else {
+   372→        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+   373→      }
+   374→    },
+   375→    playAlertSound(path) {
+   376→      if (!path) return; // R37-FIX: Guard against null/undefined audio path
+   377→      const currentDomain = window.location.origin;
+   378→      const audio_path = currentDomain + path;
+   379→      // R36-FIX: Use instance-level audio to avoid cross-instance conflicts
+   380→      if (!this._alertAudio) {
+   381→        this._alertAudio = new Audio(audio_path);
+   382→      } else {
+   383→        // R41-FIX: If same source is already playing, just restart from beginning.
+   384→        // Setting .src to the same value causes an unnecessary load delay and can
+   385→        // trigger AbortError in some browsers when the pending play() is interrupted.
+   386→        if (this._alertAudio.src !== audio_path) {
+   387→          this._alertAudio.src = audio_path;
+   388→        }
+   389→      }
+   390→      // R41-FIX: Reset to start so rapid alerts replay the sound from the top
+   391→      this._alertAudio.currentTime = 0;
+   392→      this._alertAudio.play().catch((err) => {
+   393→        // R41-FIX: AbortError means a new play() interrupted an ongoing one —
+   394→        // audio IS working, so don't show the "disabled" message.
+   395→        // NotAllowedError is the real autoplay restriction.
+   396→        if (err && err.name === 'AbortError') return;
+   397→        // R36-FIX: Show UI fallback when audio fails — kitchen staff need to know
+   398→        if (!this._isMounted) return; // R37-FIX: Guard against post-unmount
+   399→        if (err && err.name === 'NotAllowedError') {
+   400→          this.showAudioAlertMessage = true;
+   401→        } else {
+   402→          this.setStatusMessage("Audio alert unavailable. Check sound settings.");
+   403→          this.hideStatusMessageAfterDelay();
+   404→        }
+   405→      });
+   406→    },
+   407→    // R40-FIX: Removed unnecessary new Promise() wrapper — frappe.auth().getLoggedInUser()
+   408→    // already returns a Promise. The old pattern was an anti-pattern that added nesting
+   409→    // and lost stack traces on rejection.
+   410→    auth() {
+   411→      return frappe.auth().getLoggedInUser()
+   412→        .then((user) => {
+   413→          // R49-FIX (L1): Store as non-reactive property instead of reactive data.
+   414→          // loggeduser is never referenced in the template — no need for reactivity.
+   415→          this._loggedUser = user;
+   416→          // Update shared auth state so route guard works
+   417→          if (this.authState) {
+   418→            this.authState.isLoggedIn = true;
+   419→          }
+   420→        })
+   421→        .catch((error) => {
+   422→          if (import.meta.env?.DEV) console.error(error);
+   423→          // R41-FIX: Mark auth as failed so the route guard doesn't trap
+   424→          // the user in a loop (Home → modal "Login" → Login page →
+   425→          // guard redirects back to Home because isLoggedIn is still true).
+   426→          if (this.authState) {
+   427→            this.authState.isLoggedIn = false;
+   428→          }
+   429→          throw error; // Re-throw so callers can catch
+   430→        });
+   431→    },
+   432→    fetchKOT() {
+   433→      // Deduplicate concurrent fetchKOT calls to prevent state corruption
+   434→      if (this._fetchInProgress) return this._fetchInProgress;
+   435→      // R47-FIX (H2): Capture fetch generation to detect if a newer fetch
+   436→      // was started while this one was in-flight. If so, discard results.
+   437→      const fetchId = this._fetchId;
+   438→      // R46-FIX (H1): Capture current production so we can detect if the
+   439→      // station changed while the network request was in-flight. If it did,
+   440→      // the response belongs to the old station and must be discarded.
+   441→      const currentProduction = this.production;
+   442→      // M7-FIX: AbortController with 15-second timeout for API requests
+   443→      // R47-FIX (H1): Use native fetch() instead of Frappe SDK so the
+   444→      // AbortController signal is actually connected to the network request.
+   445→      // The SDK's .get() does not accept a signal parameter, making the
+   446→      // timeout dead code. Raw fetch() with signal enables real cancellation.
+   447→      // R48-FIX (M1): Abort any previous in-flight fetch before starting a new one.
+   448→      // Without this, station changes and reconnects leave stale fetches running —
+   449→      // their responses may arrive after the new station's data is already displayed,
+   450→      // overwriting it with old-station data or triggering redundant re-renders.
+   451→      if (this._fetchAbortController) {
+   452→        this._fetchAbortController.abort();
+   453→      }
+   454→      const controller = new AbortController();
+   455→      this._fetchAbortController = controller;
+   456→      const timeoutId = setTimeout(() => controller.abort(), 15000);
+   457→      const promise = new Promise((resolve, reject) => {
+   458→        try {
+   459→          fetch('/api/method/ury.ury.api.ury_kot_display.kot_list', {
+   460→            method: 'GET',
+   461→            headers: { 'Content-Type': 'application/json' },
+   462→            credentials: 'same-origin',
+   463→            signal: controller.signal,
+   464→          })
+   465→            .then(response => {
+   466→              if (!response.ok) {
+   467→                const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+   468→                err.httpStatus = response.status;
+   469→                throw err;
+   470→              }
+   471→              return response.json();
+   472→            })
+   473→            .then((result) => {
+   474→              clearTimeout(timeoutId);
+   475→              // R47-FIX (H2): A newer fetch started while this one was in-flight — discard
+   476→              if (this._fetchId !== fetchId) { resolve(); return; }
+   477→              if (!this._isMounted) { resolve(); return; }
+   478→              // R46-FIX (H1): Station changed while fetch was in-flight — discard stale data
+   479→              if (this.production !== currentProduction) { resolve(); return; }
+   480→              // R37-FIX: Null-check result.message to prevent TypeError crash
+   481→              const msg = result?.message;
+   482→              if (!msg) { resolve(); return; }
+   483→              if (!Array.isArray(msg.KOT)) {
+   484→                if (import.meta.env?.DEV) console.error('Unexpected kot_list response:', msg);
+   485→                resolve();
+   486→                return;
+   487→              }
+   488→              this.branch = msg.Branch;
+   489→              this.kot_alert_time = msg.kot_alert_time;
+   490→              this.audio_alert = msg.audio_alert;
+   491→              this.daily_order_number = msg.daily_order_number;
+   492→              // R39-FIX: Clean up notifiedKots entries for KOTs that no longer exist.
+   493→              // Previously this was .clear(), which caused a notification flood on reconnect
+   494→              // — every KOT at the alert threshold would re-trigger orderDelayNotify.
+   495→              // Now we only prune entries whose KOTs have been removed, preserving
+   496→              // the "already notified" state for KOTs that still exist.
+   497→              const activeKotNames = new Set((msg.KOT || []).map(k => k.name));
+   498→              for (const name of [...this.notifiedKots]) {
+   499→                if (!activeKotNames.has(name)) {
+   500→                  this.notifiedKots.delete(name);
+   501→                }
+   502→              }
+   503→              // R43-FIX: Clean up orphaned localStorage strike-through keys.
+   504→              // When KOTs are removed server-side (served/cancelled without going
+   505→              // through the KDS UI), their _strike keys accumulate in localStorage
+   506→              // indefinitely. Over time this causes updateQtyColorTable's full-scan
+   507→              // to slow down and wastes storage. Only keep keys for current KOTs.
+   508→              try {
+   509→                const validStrikeKeys = new Set();
+   510→                (Array.isArray(msg.KOT) ? msg.KOT : []).forEach(k => {
+   511→                  if (k.kot_items) {
+   512→                    k.kot_items.forEach(item => {
+   513→                      validStrikeKeys.add(`${k.name}_${item.name}_strike`);
+   514→                    });
+   515→                  }
+   516→                });
+   517→                const keysToRemove = [];
+   518→                for (let i = 0; i < localStorage.length; i++) {
+   519→                  const key = localStorage.key(i);
+   520→                  if (key && key.endsWith('_strike') && !validStrikeKeys.has(key)) {
+   521→                    keysToRemove.push(key);
+   522→                  }
+   523→                }
+   524→                keysToRemove.forEach(key => {
+   525→                  try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+   526→                });
+   527→              } catch (e) {
+   528→                if (import.meta.env?.DEV) console.error('localStorage cleanup failed:', e);
+   529→              }
+   530→              const newChannel = `kot_update_${this.branch}_${this.production}`;
+   531→              // R38-FIX: Always remove old listener before adding to prevent duplicate registrations.
+   532→              // Previously, off() only ran when channel changed, so repeated fetchKOT() calls
+   533→              // with the same channel accumulated duplicate listeners, causing N executions per event.
+   534→              if (this.kot_channel && this._socket && this.socketHandler) {
+   535→                this._socket.off(this.kot_channel, this.socketHandler);
+   536→              }
+   537→              this.kot_channel = newChannel;
+   538→              if (this._socket && this.socketHandler) {
+   539→                this._socket.on(this.kot_channel, this.socketHandler);
+   540→              }
+   541→              // R37-FIX: Invalidate sorted items cache on full refresh
+   542→              this._sortedItemsCache.clear();
+   543→              // R39-FIX: Removed showDiv: false — it was always false (dead code)
+   544→              // and needlessly added a reactive property to every KOT object.
+   545→              // R43-FIX: Guard against non-array msg.KOT — if the server returns
+   546→              // a non-array truthy value (e.g., an error object), .map() would throw.
+   547→              this.kot = (Array.isArray(msg.KOT) ? msg.KOT : []).map(k => ({
+   548→                isRotated: false, timecolor: 'text-black', timeRemaining: '— : —', ...k
+   549→              }));
+   550→              this.updateQtyColorTable();
+   551→              this.updateTimeRemaining();
+   552→              this.masonryLoading(true);
+   553→              resolve();
+   554→            })
+   555→            .catch((error) => {
+   556→              clearTimeout(timeoutId);
+   557→              if (import.meta.env?.DEV) console.error(error);
+   558→              // M7-FIX: Convert abort errors to timeout errors for clearer messaging
+   559→              // R47-FIX (H1): Native fetch throws DOMException with name 'AbortError'
+   560→              // when the signal fires. The SDK's ERR_CANCELED (axios) is no longer
+   561→              // possible since we bypass the SDK for this call.
+   562→              if (error.name === 'AbortError') {
+   563→                reject(new Error('Request timed out after 15 seconds'));
+   564→              } else {
+   565→                reject(error);
+   566→              }
+   567→            });
+   568→        } catch (error) {
+   569→          clearTimeout(timeoutId);
+   570→          reject(error);
+   571→        }
+   572→      }).finally(() => {
+   573→        clearTimeout(timeoutId);
+   574→        // R47-FIX (H2): Only clear _fetchInProgress if it still refers to
+   575→        // THIS promise. A newer concurrent fetch may have set its own promise,
+   576→        // and unconditionally clearing would wipe the newer fetch's guard.
+   577→        if (this._fetchInProgress === promise) {
+   578→          this._fetchInProgress = null;
+   579→        }
+   580→        // R49-FIX (L2): Null out _fetchAbortController after the fetch
+   581→        // completes so handleOnline/beforeUnmount don't attempt to abort
+   582→        // an already-settled request (harmless but wasteful), and so the
+   583→        // GC can reclaim the controller sooner.
+   584→        if (this._fetchAbortController === controller) {
+   585→          this._fetchAbortController = null;
+   586→        }
+   587→      });
+   588→      this._fetchInProgress = promise;
+   589→      return promise;
+   590→    },
+   591→    rotateCard(kot) {
+   592→      // R39-FIX: Removed masonryLoading() call — the card overlay is
+   593→      // position:absolute and doesn't change the card's dimensions, so
+   594→      // a full masonry re-layout is unnecessary and caused layout thrashing
+   595→      // on every card click.
+   596→      kot.isRotated = !kot.isRotated;
+   597→    },
+   598→    confirmOrder(kot) {
+   599→      // R41-FIX: Prevent duplicate concurrent requests for the same KOT.
+   600→      // Without this, rapid clicks send multiple POST requests, the second
+   601→      // of which may error (already processed) and misleadingly show
+   602→      // "Action failed" even though the first succeeded.
+   603→      if (this._inflightOps && this._inflightOps.has(kot.name)) return;
+   604→      // R40-FIX: Clear pending cancel timeout — the user has already confirmed,
+   605→      // so the scheduled re-fetch would be redundant and wasteful.
+   606→      if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+   607→      this._markInflight(kot.name);
+   608→      const confirmPromise = this.call
+   609→        .post("ury.ury.api.ury_kot_display.confirm_cancel_kot", {
+   610→          name: kot.name,
+   611→        });
+   612→      const timeoutPromise = new Promise((_, reject) => {
+   613→        this._confirmTimeout = setTimeout(() => reject(new Error('Request timed out')), 15000);
+   614→      });
+   615→      Promise.race([confirmPromise, timeoutPromise])
+   616→        .then((result) => {
+   617→          if (!this._isMounted) return;
+   618→          const idx = this.kot.findIndex(k => k.name === kot.name);
+   619→          if (idx !== -1) this.kot.splice(idx, 1);
+   620→          this.removeAllItemsFromLocalStorage(kot);
+   621→          this.notifiedKots.delete(kot.name);
+   622→          this._sortedItemsCache.delete(kot.name);
+   623→          this.masonryLoading();
+   624→        })
+   625→        .catch((error) => {
+   626→          this._handleFetchError(error, "Action failed. Please try again.");
+   627→        })
+   628→        .finally(() => { clearTimeout(this._confirmTimeout); this._clearInflight(kot.name); });
+   629→    },
+   630→    serveOrder(kot) {
+   631→      // R41-FIX: Prevent duplicate concurrent requests for the same KOT.
+   632→      if (this._inflightOps && this._inflightOps.has(kot.name)) return;
+   633→      // R40-FIX: Clear pending cancel timeout — the user has already served,
+   634→      // so the scheduled re-fetch would be redundant and wasteful.
+   635→      if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+   636→      this._markInflight(kot.name);
+   637→      const servePromise = this.call
+   638→        .post("ury.ury.api.ury_kot_display.serve_kot", {
+   639→          name: kot.name,
+   640→        });
+   641→      const serveTimeoutPromise = new Promise((_, reject) => {
+   642→        this._serveTimeout = setTimeout(() => reject(new Error('Request timed out')), 15000);
+   643→      });
+   644→      Promise.race([servePromise, serveTimeoutPromise])
+   645→        .then((result) => {
+   646→          if (!this._isMounted) return;
+   647→          const idx = this.kot.findIndex(k => k.name === kot.name);
+   648→          if (idx !== -1) this.kot.splice(idx, 1);
+   649→          this.removeAllItemsFromLocalStorage(kot);
+   650→          this.notifiedKots.delete(kot.name);
+   651→          this._sortedItemsCache.delete(kot.name);
+   652→          this.masonryLoading();
+   653→        })
+   654→        .catch((error) => {
+   655→          this._handleFetchError(error, "Action failed. Please try again.");
+   656→        })
+   657→        .finally(() => { clearTimeout(this._serveTimeout); this._clearInflight(kot.name); });
+   658→    },
+   659→
+   660→    // R42-FIX: Return the promise so callers can chain on success/failure.
+   661→    // Previously, the .catch() swallowed the error and returned undefined,
+   662→    // making it impossible for callers to know whether the notification succeeded.
+   663→    orderDelayNotify(kot) {
+   664→      return this.call
+   665→        .post(
+   666→          "ury.ury.api.ury_kot_notification.order_delay_notification",
+   667→          {
+   668→            id: kot.name,
+   669→          }
+   670→        )
+   671→        .catch((error) => {
+   672→          if (import.meta.env?.DEV) console.error(error);
+   673→          throw error; // Re-throw so caller knows it failed
+   674→        });
+   675→    },
+   676→    toggleItemStrikeThrough(kotitem, kot) {
+   677→      // R41-FIX: Guard against null/undefined names — if kot.name or
+   678→      // kotitem.name is null, the localStorage key would be "null_undefined_strike",
+   679→      // which is corrupt and would never be cleaned up by removeAllItemsFromLocalStorage.
+   680→      if (!kot.name || !kotitem.name) return;
+   681→      kotitem.striked = !kotitem.striked;
+   682→      try {
+   683→        localStorage.setItem(
+   684→          `${kot.name}_${kotitem.name}_strike`,
+   685→          JSON.stringify(kotitem.striked)
+   686→        );
+   687→      } catch (e) {
+   688→        if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+   689→      }
+   690→    },
+   691→
+   692→    updateColorandTable(kot, restaurant_table, type, table_takeaway) {
+   693→      if (restaurant_table === undefined) {
+   694→        kot.tableortakeaway = "Takeaway";
+   695→      } else {
+   696→        if (Number(table_takeaway) === 1) {
+   697→          kot.tableortakeaway = "Takeaway";
+   698→        } else {
+   699→          kot.tableortakeaway = restaurant_table;
+   700→        }
+   701→      }
+   702→      if (type === "Order Modified") {
+   703→        kot.color = "bg-[#FFD493] border border-[#FFC700]";
+   704→      } else if (type === "Partially cancelled" || type === "Cancelled") {
+   705→        kot.color = "bg-[#FFD2D2] border border-[#FAA7A7]";
+   706→      } else if (restaurant_table === undefined || Number(table_takeaway) === 1) {
+   707→        kot.color = "bg-blue-100 border border-blue-200";
+   708→      } else {
+   709→        kot.color = "bg-white";
+   710→      }
+   711→    },
+   712→    updateQtyColorTable() {
+   713→      // R43-FIX: Read only relevant localStorage keys instead of iterating ALL
+   714→      // localStorage keys. The old approach scanned every key in localStorage
+   715→      // (including unrelated Frappe keys), which was O(localStorage.length) and
+   716→      // slowed down as orphaned _strike keys accumulated. Now we read only the
+   717→      // keys for current KOT items: O(kots * items) getItem calls, which is
+   718→      // typically 50-500 vs potentially thousands of localStorage keys.
+   719→      this.kot.forEach((kot) => {
+   720→        this._updateSingleKotQtyColor(kot);
+   721→      });
+   722→    },
+   723→    // R44-FIX: Extract single-KOT processing from updateQtyColorTable so the
+   724→    // incremental socket path can update just the affected KOT in O(1) instead
+   725→    // of re-processing ALL KOTs in O(n) on every socket event.
+   726→    _updateSingleKotQtyColor(kot) {
+   727→      this.updateColorandTable(
+   728→        kot,
+   729→        kot.restaurant_table,
+   730→        kot.type,
+   731→        kot.table_takeaway
+   732→      );
+   733→
+   734→      // R37-FIX: Null-check kot_items before forEach
+   735→      if (!kot.kot_items) return;
+   736→      kot.kot_items.forEach((kotitem) => {
+   737→        const key = `${kot.name}_${kotitem.name}_strike`;
+   738→        try {
+   739→          const savedState = localStorage.getItem(key);
+   740→          if (savedState !== null) {
+   741→            try {
+   742→              kotitem.striked = JSON.parse(savedState);
+   743→            } catch (e) {
+   744→              kotitem.striked = false;
+   745→            }
+   746→          }
+   747→        } catch (e) {
+   748→          // localStorage access can fail in private browsing mode
+   749→        }
+   750→        this.calculateQty(
+   751→          kotitem,
+   752→          kotitem.quantity,
+   753→          kot.type,
+   754→          kotitem.cancelled_qty
+   755→        );
+   756→      });
+   757→    },
+   758→    // R39-FIX: Moved from computed (which returned a function) to method.
+   759→    // As a method, the function identity is stable and the manual
+   760→    // _sortedItemsCache still provides memoization per KOT.
+   761→    sortedKotItems(kot) {
+   762→      const items = kot.kot_items || [];
+   763→      const key = `${kot.name}:${items.length}:${items.map(i => i.name).join(',')}`;
+   764→      const cached = this._sortedItemsCache.get(kot.name);
+   765→      if (cached && cached.key === key) {
+   766→        return cached.items;
+   767→      }
+   768→      const sorted = [...items].sort((a, b) => (a.serve_priority || 0) - (b.serve_priority || 0));
+   769→      this._sortedItemsCache.set(kot.name, { key, items: sorted });
+   770→      return sorted;
+   771→    },
+   772→    calculateQty(kotitem, qty, type, cancelled_qty) {
+   773→      // R37-FIX: Guard against negative quantities from cancelled_qty > qty
+   774→      if (type === "Partially cancelled" || type === "Cancelled") {
+   775→        kotitem.qty = Math.max(0, qty - cancelled_qty);
+   776→      } else {
+   777→        kotitem.qty = qty;
+   778→      }
+   779→    },
+   780→    removeAllItemsFromLocalStorage(kot) {
+   781→      // R38-FIX: Remove strike-state keys for this KOT's items by known key pattern
+   782→      // instead of iterating ALL localStorage keys (which may include unrelated Frappe keys).
+   783→      if (!kot.kot_items) return;
+   784→      kot.kot_items.forEach((kotitem) => {
+   785→        try {
+   786→          localStorage.removeItem(`${kot.name}_${kotitem.name}_strike`);
+   787→        } catch (e) {
+   788→          if (import.meta.env?.DEV) console.error('localStorage removeItem failed:', e);
+   789→        }
+   790→      });
+   791→    },
+   792→
+   793→    updateTimeRemaining() {
+   794→      this.visibleKots.forEach((kot) => {
+   795→        this._updateSingleKotTimeRemaining(kot);
+   796→      });
+   797→    },
+   798→    // R44-FIX: Extract single-KOT time processing from updateTimeRemaining so
+   799→    // the incremental socket path can update just the affected KOT in O(1)
+   800→    // instead of re-processing ALL KOTs in O(n) on every socket event.
+   801→    _updateSingleKotTimeRemaining(kot) {
+   802→      kot.timeRemaining = this.calculateTimeRemaining(kot.time);
+   803→
+   804→      const timeRemaining = kot.timeRemaining.split(":");
+   805→      const minutes =
+   806→        parseInt(timeRemaining[0], 10) * 60 + parseInt(timeRemaining[1], 10);
+   807→
+   808→      // R47-FIX (L3): Skip delay notifications when time is invalid.
+   809→      // When calculateTimeRemaining returns '— : —' (missing/malformed time),
+   810→      // parseInt produces NaN → Infinity, which falsely passes the >= threshold check.
+   811→      const hasValidTime = !isNaN(minutes);
+   812→
+   813→      // R36-FIX: Handle NaN from invalid time format — treat as elapsed time exceeded
+   814→      const validMinutes = isNaN(minutes) ? Infinity : minutes;
+   815→
+   816→      if (
+   817→        // R41-FIX: Use >= instead of === for alert threshold comparison.
+   818→        hasValidTime &&
+   819→        validMinutes >= Number(this.kot_alert_time) &&
+   820→        kot.type !== "Cancelled" &&
+   821→        kot.type !== "Partially cancelled" &&
+   822→        !this.notifiedKots.has(kot.name) &&
+   823→        this.isOnline && // R45-FIX: Skip delay notification when offline — avoids wasteful
+   824→                     // failed API calls every minute for each KOT past the alert threshold.
+   825→        !this._notificationCooldown // R46-FIX (H2): Skip during 30s post-mount cooldown
+   826→      ) {
+   827→        // R42-FIX: Mark as notified AFTER the API call succeeds, not before.
+   828→        const kotName = kot.name;
+   829→        this.orderDelayNotify(kot).then(() => {
+   830→          // R48-FIX (L1): Guard against post-unmount state mutation
+   831→          if (!this._isMounted) return;
+   832→          this.notifiedKots.add(kotName);
+   833→        }).catch(() => {
+   834→          // Notification failed — don't add to notifiedKots so it retries
+   835→          if (import.meta.env?.DEV) console.warn('orderDelayNotify failed, will retry on next tick:', kotName);
+   836→        });
+   837→      }
+   838→      // R38-FIX: Guard against empty/falsy kot_alert_time.
+   839→      // R49-FIX (H1): Also guard with hasValidTime — when calculateTimeRemaining
+   840→      // returns '— : —', validMinutes is Infinity, which always passes the >=
+   841→      // threshold check, causing KOTs with missing/malformed times to show red.
+   842→      // The notification path already skips invalid times (hasValidTime guard),
+   843→      // but the color path did not, giving a false visual alert.
+   844→      const alertThreshold = Number(this.kot_alert_time);
+   845→      if (hasValidTime && alertThreshold > 0 && validMinutes >= alertThreshold) {
+   846→        kot.timecolor = "text-[#DC0000]";
+   847→      } else {
+   848→        kot.timecolor = "text-black";
+   849→      }
+   850→    },
+   851→    calculateTimeRemaining(targetTime) {
+   852→      if (!targetTime || !targetTime.includes(":")) return '— : —';
+   853→      const currentTime = new Date();
+   854→      // R39-FIX: Guard against malformed time strings with fewer than 3 parts.
+   855→      // Previously, "HH:MM" without seconds would set targetSeconds=undefined,
+   856→      // which Date() treats as NaN → Invalid Date → NaN propagation.
+   857→      const parts = targetTime.split(":");
+   858→      const targetHours = parseInt(parts[0], 10);
+   859→      const targetMinutes = parseInt(parts[1], 10);
+   860→      const targetSeconds = parseInt(parts[2] || '0', 10);
+   861→      if (isNaN(targetHours) || isNaN(targetMinutes) || isNaN(targetSeconds)) return '— : —';
+   862→      let targetDate = new Date(
+   863→        currentTime.getFullYear(),
+   864→        currentTime.getMonth(),
+   865→        currentTime.getDate(),
+   866→        targetHours,
+   867→        targetMinutes,
+   868→        targetSeconds
+   869→      );
+   870→      // Handle cross-midnight KOTs: if target is in the future, it was created yesterday
+   871→      if (targetDate > currentTime) {
+   872→        targetDate = new Date(targetDate.getTime() - 86400000);
+   873→      }
+   874→
+   875→      const timeDifference = Math.max(0, currentTime - targetDate);
+   876→      const hoursRemaining = Math.floor(timeDifference / 3600000);
+   877→      const minutesRemaining = Math.floor((timeDifference % 3600000) / 60000);
+   878→
+   879→      return `${hoursRemaining} : ${String(minutesRemaining).padStart(2, '0')}`;
+   880→    },
+   881→    // R39-FIX: Retry wrapper for fetchKOT with exponential backoff.
+   882→    // Without this, a transient server error leaves the KDS showing stale
+   883→    // data indefinitely — the only recovery was a manual page reload.
+   884→    fetchKOTWithRetry(maxRetries = 3, initialDelay = 2000) {
+   885→      // R41-FIX: Clear any pending retry timer before starting a new retry chain.
+   886→      // Without this, calling fetchKOTWithRetry() while a previous retry timer is
+   887→      // pending would leave the old timer running, potentially causing duplicate
+   888→      // fetchKOT calls when both timers fire.
+   889→      if (this._fetchRetryTimer) { clearTimeout(this._fetchRetryTimer); this._fetchRetryTimer = null; }
+   890→      // R42-FIX: Bump generation counter so any still-running retry chain from
+   891→      // a previous fetchKOTWithRetry call knows it's been superseded. Without
+   892→      // this, clearing the timer orphans the old promise — its resolve/reject
+   893→      // callbacks are never called, leaking the promise and its closures.
+   894→      const generation = ++this._fetchGeneration;
+   895→      const attempt = (retriesLeft, delay) => {
+   896→        // If a newer fetchKOTWithRetry has started, abort this chain
+   897→        if (generation !== this._fetchGeneration) {
+   898→          return Promise.reject(new Error('Superseded by newer fetchKOTWithRetry call'));
+   899→        }
+   900→        return this.fetchKOT().catch(err => {
+   901→          if (retriesLeft <= 0 || !this._isMounted || generation !== this._fetchGeneration) throw err;
+   902→          if (import.meta.env?.DEV) console.warn(`fetchKOT failed, retrying in ${delay}ms...`, err);
+   903→          return new Promise((resolve, reject) => {
+   904→            this._fetchRetryTimer = setTimeout(() => {
+   905→              if (!this._isMounted || generation !== this._fetchGeneration) { reject(err); return; }
+   906→              attempt(retriesLeft - 1, Math.min(delay * 2, 30000)).then(resolve).catch(reject);
+   907→            }, delay);
+   908→          });
+   909→        });
+   910→      };
+   911→      return attempt(maxRetries, initialDelay);
+   912→    },
+   913→    redirectToLogin() {
+   914→      // R38-FIX: Use Vue Router instead of window.location.href to avoid full page reload
+   915→      // and preserve app state. The previous approach caused a hard navigation that
+   916→      // lost all Vue state and required a full re-initialization.
+   917→      this.$router.push({ name: 'Login', query: { route: this.$route.path } });
+   918→    },
+   919→    masonryLoading(forceRecreate = false) {
+   920→      // R40-FIX: Early return if unmounted — prevents post-unmount masonry
+   921→      // operations from debounced callbacks, $nextTick, and delayed socket events.
+   922→      if (!this._isMounted) return;
+   923→      // R39-FIX: Use non-reactive _masonry instead of reactive masonry from data()
+   924→      if (this._masonry && !forceRecreate) {
+   925→        this.$nextTick(() => {
+   926→          // R43-FIX: Re-check _isMounted inside $nextTick callback — component
+   927→          // could unmount between the outer _isMounted check and this callback.
+   928→          if (!this._isMounted) return;
+   929→          if (this._masonry) {
+   930→            this._masonry.reloadItems?.();
+   931→            this._masonry.layout();
+   932→          }
+   933→        });
+   934→        return;
+   935→      }
+   936→      if (this._masonry) {
+   937→        this._masonry.destroy();
+   938→        this._masonry = null;
+   939→      }
+   940→      this.$nextTick(() => {
+   941→        // R43-FIX: Re-check _isMounted inside $nextTick callback
+   942→        if (!this._isMounted) return;
+   943→        if (!this.$el) return;
+   944→        const grid = this.$el.querySelector(".grid");
+   945→        if (!grid) return;
+   946→        this._masonry = markRaw(new Masonry(grid, {
+   947→          itemSelector: ".masonry-item",
+   948→          gutter: 28,
+   949→        }));
+   950→        this._masonry.layout();
+   951→      });
+   952→    },
+   953→    // R45-FIX: Extract auth error detection into reusable method. Previously
+   954→    // this logic was duplicated in the socket init chain's .catch() and would
+   955→    // be needed again in the connect handler and station watcher.
+   956→    _isAuthError(error) {
+   957→      return error && (
+   958→        error.httpStatus === 401 ||
+   959→        error.httpStatus === 403 ||
+   960→        /(?:session|csrf|token).*expir|unauthorized|not permitted|authentication_failed/i.test(String(error.message || ''))
+   961→      );
+   962→    },
+   963→    // R45-FIX: Centralized fetch error handler for fetchKOTWithRetry failures.
+   964→    // Detects auth expiry (shows login modal) vs other errors (shows status message).
+   965→    // Prevents the common pattern of .catch(() => {}) silently swallowing errors,
+   966→    // which left users with "Reconnected" message but stale/empty data.
+   967→    _handleFetchError(error, fallbackMessage) {
+   968→      if (!this._isMounted) return;
+   969→      if (this._isAuthError(error)) {
+   970→        this.modalTitle = "Session Expired";
+   971→        this.modalMessage = "Your session has expired. Please log in again.";
+   972→        this.showModal = true;
+   973→        if (this.authState) this.authState.isLoggedIn = false;
+   974→      } else {
+   975→        this.setStatusMessage(fallbackMessage || "Data refresh failed. Click Refresh.");
+   976→        this.hideStatusMessageAfterDelay();
+   977→      }
+   978→    },
+   979→    // R49-FIX (H2): Extract socket handler body into a named method so it can
+   980→    // be registered independently of the init-chain fetch result. Previously,
+   981→    // the handler was defined inside a .then() that was skipped when
+   982→    // fetchKOTWithRetry rejected — leaving socketHandler permanently null
+   983→    // and the KDS without real-time updates until a full page refresh.
+   984→    _handleSocketEvent(doc) {
+   985→      if (!this._isMounted) return;
+   986→      // R39-FIX: Guard against null/undefined doc from malformed socket messages
+   987→      if (!doc) return;
+   988→      try {
+   989→        if (Number(this.audio_alert) === 1) {
+   990→          this.playAlertSound(doc.audio_file);
+   991→        }
+   992→        // R36-FIX: Namespace localStorage key per production station to avoid cross-tab collision
+   993→        // R39-FIX: Normalize null kottime from localStorage — if getItem returns null
+   994→        // (no previous value stored) and doc.last_kot_time is also null, they'd be
+   995→        // equal and fall through to the incremental path incorrectly. Treat null
+   996→        // localStorage value as a signal to do a full refresh.
+   997→        let kottime = localStorage.getItem("kot_time_" + this.production);
+   998→        if (doc.last_kot_time !== kottime || kottime === null) {
+   999→          // R43-FIX: Move localStorage sentinel update AFTER fetchKOT succeeds.
+  1000→          this.fetchKOTWithRetry().then(() => {
+  1001→            if (doc.kot && doc.kot.time != null) {
+  1002→              try {
+  1003→                localStorage.setItem("kot_time_" + this.production, doc.last_kot_time);
+  1004→              } catch (e) {
+  1005→                if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+  1006→              }
+  1007→            }
+  1008→          }).catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
+  1009→          return;
+  1010→        }
+  1011→        // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
+  1012→        // R44-FIX: Also guard against non-object doc.kot (e.g., array, string).
+  1013→        if (!doc.kot || typeof doc.kot !== 'object' || Array.isArray(doc.kot) || !doc.kot.name) {
+  1014→          this.fetchKOTWithRetry().catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
+  1015→          return;
+  1016→        }
+  1017→        // Incremental update — deduplicate to avoid duplicate cards
+  1018→        const existingIndex = this.kot.findIndex(k => k.name === doc.kot.name);
+  1019→        let targetKot;
+  1020→        if (existingIndex !== -1) {
+  1021→          targetKot = this.kot[existingIndex];
+  1022→          // R36-FIX: Preserve strikethrough state before Object.assign overwrites kot_items
+  1023→          const strikeMap = new Map(
+  1024→            (targetKot.kot_items || []).map(i => [i.name, i.striked])
+  1025→          );
+  1026→          // R43-FIX: Exclude 'name' from the spread to prevent overwriting the KOT's
+  1027→          // primary key.
+  1028→          const { name: _ignored, ...kotData } = doc.kot;
+  1029→          Object.assign(targetKot, { timecolor: 'text-black', timeRemaining: '— : —', ...kotData });
+  1030→          // Restore strikethrough state after Object.assign
+  1031→          if (targetKot.kot_items) {
+  1032→            targetKot.kot_items.forEach(i => {
+  1033→              if (strikeMap.has(i.name)) i.striked = strikeMap.get(i.name);
+  1034→            });
+  1035→          }
+  1036→          // R37-FIX: Invalidate sorted cache for this KOT since items may have changed
+  1037→          this._sortedItemsCache.delete(doc.kot.name);
+  1038→        } else {
+  1039→          // R39-FIX: Removed showDiv: false — dead code
+  1040→          targetKot = { isRotated: false, timecolor: 'text-black', timeRemaining: '— : —', ...doc.kot };
+  1041→          this.kot.unshift(targetKot);
+  1042→        }
+  1043→        // R44-FIX: Use targeted single-KOT methods instead of processing ALL KOTs.
+  1044→        this._updateSingleKotQtyColor(targetKot);
+  1045→        this._updateSingleKotTimeRemaining(targetKot);
+  1046→        // R40-FIX: Use debounced masonry layout for rapid socket events
+  1047→        this._debouncedMasonryLayout();
+  1048→        // R41-FIX: Cancel timeout and localStorage write are now ONLY in the incremental path.
+  1049→        if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
+  1050→        // R39-FIX: Only schedule cancel re-fetch if the KOT is actually a cancellation.
+  1051→        if (doc.kot.type === "Cancelled") {
+  1052→          this._cancelTimeout = setTimeout(() => {
+  1053→            if (!this._isMounted) return;
+  1054→            this.fetchKOTWithRetry().catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
+  1055→          }, 1500);
+  1056→        }
+  1057→        // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
+  1058→        if (doc.kot.time != null) {
+  1059→          try {
+  1060→            localStorage.setItem("kot_time_" + this.production, doc.last_kot_time);
+  1061→          } catch (e) {
+  1062→            if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
+  1063→          }
+  1064→        }
+  1065→      } catch (err) {
+  1066→        if (import.meta.env?.DEV) console.error("Socket handler error:", err);
+  1067→      }
+  1068→    },
+  1069→    // R41-FIX: In-flight operation tracking for serveOrder/confirmOrder.
+  1070→    // Prevents duplicate POST requests when the user clicks rapidly.
+  1071→    _markInflight(kotName) {
+  1072→      if (!this._inflightOps) this._inflightOps = new Set();
+  1073→      this._inflightOps.add(kotName);
+  1074→    },
+  1075→    _clearInflight(kotName) {
+  1076→      if (this._inflightOps) this._inflightOps.delete(kotName);
+  1077→    },
+  1078→    hideAudioAlertMessage() {
+  1079→      // R44-FIX: Guard against post-unmount state mutation — click events
+  1080→      // queued before listener removal could fire after beforeUnmount runs.
+  1081→      if (!this._isMounted) return;
+  1082→      // R49-FIX (M2): Only replay audio if the alert message was actually
+  1083→      // showing. Previously, this handler fired on EVERY click on the page
+  1084→      // (document.addEventListener), so after an alert sound finished playing
+  1085→      // naturally (paused=true at end), any subsequent click would replay it
+  1086→      // from the end — either inaudibly or restarting the alert sound
+  1087→      // unexpectedly. Now we only replay when the "Click anywhere to enable"
+  1088→      // message was visible, which is the only case where replay makes sense.
+  1089→      const wasShowing = this.showAudioAlertMessage;
+  1090→      this.showAudioAlertMessage = false;
+  1091→      if (wasShowing && this._alertAudio && this._alertAudio.paused) {
+  1092→        this._alertAudio.currentTime = 0;
+  1093→        this._alertAudio.play().catch(() => {});
+  1094→      }
+  1095→    },
+  1096→    handleOnline() {
+  1097→      // R37-FIX: Guard against post-unmount execution
+  1098→      if (!this._isMounted) return;
+  1099→      this.isOnline = true;
+  1100→      this.setStatusMessage("You are online");
+  1101→      this.hideStatusMessageAfterDelay();
+  1102→      // R46-FIX (H1): Invalidate stale fetch promise so reconnect gets fresh data
+  1103→      // R48-FIX (M1): Abort any in-flight fetch before invalidating — prevents
+  1104→      // stale fetch from overwriting data after reconnect.
+  1105→      if (this._fetchAbortController) {
+  1106→        this._fetchAbortController.abort();
+  1107→        this._fetchAbortController = null;
+  1108→      }
+  1109→      // R47-FIX (H2): Increment fetch generation so any in-flight fetch discards its results
+  1110→      this._fetchId++;
+  1111→      this._fetchInProgress = null;
+  1112→      // R39-FIX: Use retry wrapper for transient network errors on reconnect
+  1113→      // R41-FIX: Show error feedback if fetch fails after all retries —
+  1114→      // without this the user sees "You are online" but stale/empty data.
+  1115→      this.fetchKOTWithRetry().then(() => {
+  1116→        if (!this._isMounted) return;
+  1117→        // R43-FIX: Removed redundant masonryLoading() — fetchKOT() already calls
+  1118→        // masonryLoading(true) on success.
+  1119→      }).catch((e) => {
+  1120→        console.error("KOT fetch failed:", e);
+  1121→        if (this._isMounted) {
+  1122→          this.setStatusMessage("Back online but data refresh failed. Click Refresh.");
+  1123→          this.hideStatusMessageAfterDelay();
+  1124→        }
+  1125→      });
+  1126→    },
+  1127→    handleOffline() {
+  1128→      // R37-FIX: Guard against post-unmount execution
+  1129→      if (!this._isMounted) return;
+  1130→      this.isOnline = false;
+  1131→      this.setStatusMessage("You are Offline");
+  1132→    },
+  1133→    setStatusMessage(message) {
+  1134→      this.statusMessage = message;
+  1135→    },
+  1136→    hideStatusMessageAfterDelay() {
+  1137→      if (this._statusTimeout) clearTimeout(this._statusTimeout);
+  1138→      this._statusTimeout = setTimeout(() => {
+  1139→        // R37-FIX: Guard against mutating unmounted component
+  1140→        if (!this._isMounted) return;
+  1141→        this.statusMessage = "";
+  1142→      }, 3000);
+  1143→    },
+  1144→    // R49-FIX: Removed handleTransitionEnd — it was dead code.
+  1145→    // The @transitionend handler never fired because the status message
+  1146→    // div has no CSS transition property (no transition-colors class).
+  1147→    // The R44 intent (clear message on color change) is already handled
+  1148→    // by hideStatusMessageAfterDelay() which runs after setStatusMessage().
+  1149→    // Additionally, clearing the message via v-if would remove the element
+  1150→    // mid-transition, preventing the user from ever seeing the green color.
+  1151→  },
+  1152→  created() {
+  1153→    // R36-FIX: Initialize as non-reactive instance properties (no Proxy overhead)
+  1154→    this._isMounted = false;
+  1155→    this._fetchInProgress = null;
+  1156→    // R47-FIX (H2): Fetch generation counter — incremented before each new fetch
+  1157→    // triggered by station change or reconnect. Enables stale-result detection
+  1158→    // so an old fetch's .then() doesn't overwrite a newer fetch's data.
+  1159→    this._fetchId = 0;
+  1160→    this.notifiedKots = new Set();
+  1161→    // R46-FIX (H2): 30-second cooldown after mount before sending delay
+  1162→    // notifications. notifiedKots is an empty Set on every page refresh,
+  1163→    // so without this cooldown all KOTs past the alert threshold would
+  1164→    // trigger orderDelayNotify() simultaneously on mount.
+  1165→    this._notificationCooldown = true;
+  1166→    this._notificationCooldownTimer = setTimeout(() => { this._notificationCooldown = false; }, 30000);
+  1167→    // API client as non-reactive instance property (avoids Proxy overhead)
+  1168→    this.call = markRaw(frappe.call());
+  1169→    // R37-FIX: socketHandler as non-reactive to avoid unnecessary Proxy overhead
+  1170→    // R49-FIX (H2): Initialize socketHandler immediately instead of null —
+  1171→    // ensures the handler is always available for fetchKOT() to register
+  1172→    // on the channel, even if the init chain's fetchKOTWithRetry rejects.
+  1173→    this.socketHandler = (doc) => this._handleSocketEvent(doc);
+  1174→    // R37-FIX: sortedItems cache map — avoids mutating reactive kot objects in computed
+  1175→    this._sortedItemsCache = new Map();
+  1176→    // R39-FIX: masonry as non-reactive instance property — Masonry objects are large
+  1177→    // and should not be tracked by Vue's reactivity system. Previously in data(),
+  1178→    // it triggered unnecessary Proxy overhead and could cause cascading re-renders
+  1179→    // when the masonry reference changed during reloadItems/layout calls.
+  1180→    this._masonry = null;
+  1181→    // R39-FIX: Track socket init retry timer for cleanup
+  1182→    this._socketRetryTimer = null;
+  1183→    // R40-FIX: Debounced masonry layout for socket events — prevents layout
+  1184→    // thrashing when multiple socket events arrive in rapid succession.
+  1185→    this._debouncedMasonryLayout = debounce(() => { this.masonryLoading(); }, 100);
+  1186→    // R40-FIX: Recursion guard for errorCaptured
+  1187→    this._errorCapturedRecovering = false;
+  1188→    // R41-FIX: In-flight operation set for serveOrder/confirmOrder dedup
+  1189→    this._inflightOps = new Set();
+  1190→    // R42-FIX: Generation counter for fetchKOTWithRetry — prevents orphaned
+  1191→    // promise chains when concurrent calls cancel each other's retry timers.
+  1192→    this._fetchGeneration = 0;
+  1193→    // R45-FIX: Initialize _cancelTimeout for consistency with other cleanup
+  1194→    // properties — previously relied on falsy undefined check in serveOrder/confirmOrder.
+  1195→    this._cancelTimeout = null;
+  1196→    // R48-FIX (M1): AbortController reference for cancelling in-flight fetches
+  1197→    this._fetchAbortController = null;
+  1198→    // R48-FIX (M3): Store previously focused element to restore on modal close
+  1199→    this._preModalFocus = null;
+  1200→  },
+  1201→  mounted() {
+  1202→    this._isMounted = true;
+  1203→    window.addEventListener("online", this.handleOnline);
+  1204→    window.addEventListener("offline", this.handleOffline);
+  1205→    document.addEventListener("click", this.hideAudioAlertMessage);
+  1206→    // R36-FIX: Use route params instead of fragile URL parsing
+  1207→    const production = this.$route?.params?.production || '';
+  1208→    // R42-FIX: decodeURIComponent can throw URIError on malformed input
+  1209→    // (e.g., '%E0%A4%E' — incomplete UTF-8 sequence). Wrap in try-catch
+  1210→    // to prevent the entire component from failing to mount.
+  1211→    let decodedProduction;
+  1212→    try {
+  1213→      decodedProduction = decodeURIComponent(production);
+  1214→    } catch (e) {
+  1215→      if (import.meta.env?.DEV) console.warn('Failed to decode production param:', production, e);
+  1216→      decodedProduction = production; // Use raw value as fallback
+  1217→    }
+  1218→    this.production = decodedProduction;
+  1219→
+  1220→    const debouncedMasonry = debounce(() => { this.masonryLoading(); }, 150);
+  1221→    this._resizeHandler = debouncedMasonry;
+  1222→    window.addEventListener("resize", this._resizeHandler);
+  1223→    this.masonryLoading();
+  1224→
+  1225→    // R39-FIX: Handle bfcache restore — when the browser restores this page from
+  1226→    // back-forward cache, the socket may be stale and timers may not fire.
+  1227→    // Re-initialize socket and re-fetch KOT data on pageshow with persisted=true.
+  1228→    this._pageshowHandler = (event) => {
+  1229→      if (event.persisted) {
+  1230→        // Page was restored from bfcache — re-fetch data and re-init socket
+  1231→        // R39-FIX: Use retry wrapper for bfcache restore re-fetch
+  1232→        this.fetchKOTWithRetry().catch(() => {});
+  1233→        if (this._socket && !this._socket.connected) {
+  1234→          this._socket.connect();
+  1235→        }
+  1236→      }
+  1237→    };
+  1238→    window.addEventListener('pageshow', this._pageshowHandler);
+  1239→
+  1240→    // R39-FIX: Socket init with retry — if fetchSiteName fails (network issue,
+  1241→    // server down), retry with exponential backoff instead of giving up forever.
+  1242→    // Without this, a transient site-name fetch failure would leave the KDS
+  1243→    // without real-time updates until a full page reload.
+  1244→    // R49-FIX: Create AbortController for socket init chain so fetchSiteName
+  1245→    // can be cancelled on component unmount, releasing network resources.
+  1246→    this._socketAbortController = new AbortController();
+  1247→    const socketSignal = this._socketAbortController.signal;
+  1248→    const initSocketWithRetry = (retries = 0) => {
+  1249→      return initializeSocket(socketSignal).then(sock => {
+  1250→        if (sock) return sock;
+  1251→        // initializeSocket returned null (siteName fetch failed) — retry
+  1252→        const delay = Math.min(2000 * Math.pow(2, retries), 30000);
+  1253→        if (!this._isMounted) return null;
+  1254→        return new Promise(resolve => {
+  1255→          this._socketRetryTimer = setTimeout(() => {
+  1256→            if (!this._isMounted) { resolve(null); return; }
+  1257→            resolve(initSocketWithRetry(retries + 1));
+  1258→          }, delay);
+  1259→        });
+  1260→      });
+  1261→    };
+  1262→    // R40-FIX: Run socket init and auth in parallel, but store the socket
+  1263→    // in this._socket as soon as it resolves — even before auth completes.
+  1264→    // Previously, Promise.all meant the socket was only stored after BOTH
+  1265→    // socket init AND auth succeeded. If auth() rejected, the socket was
+  1266→    // orphaned (never stored in this._socket) and thus never disconnected
+  1267→    // in beforeUnmount, causing a connection leak.
+  1268→    const authPromise = this.auth();
+  1269→    this._socketInitPromise = initSocketWithRetry();
+  1270→
+  1271→    // R44-FIX: Start data fetch as soon as auth succeeds, independently of socket
+  1272→    // init. Previously, data only loaded after BOTH socket AND auth completed,
+  1273→    // causing a blank KDS when socket init was slow (siteName fetch + WebSocket
+  1274→    // handshake can take 2-5s). Now the early fetch shows data immediately, and
+  1275→    // the socket chain's fetchKOTWithRetry is skipped if data is already loaded.
+  1276→    authPromise.then(() => {
+  1277→      if (!this._isMounted) return;
+  1278→      this.fetchKOTWithRetry().catch(() => {});
+  1279→    }).catch(() => {});
+  1280→
+  1281→    this._socketInitPromise
+  1282→      .then((sock) => {
+  1283→        // R40-FIX: If component unmounted during socket init, disconnect immediately
+  1284→        if (!this._isMounted) {
+  1285→          if (sock) sock.disconnect();
+  1286→          return null;
+  1287→        }
+  1288→        // R40-FIX: Store socket early so beforeUnmount can always clean it up
+  1289→        this._socket = sock;
+  1290→        // Now wait for auth to complete
+  1291→        return authPromise;
+  1292→      })
+  1293→      .then(() => {
+  1294→        if (!this._isMounted || !this._socket) return;
+  1295→        this._socket.on('connect_error', (err) => {
+  1296→          if (!this._isMounted) return;
+  1297→          // R49-FIX: Escalate message after prolonged disconnection
+  1298→          if (!this._disconnectedSince) this._disconnectedSince = Date.now();
+  1299→          const elapsed = Date.now() - this._disconnectedSince;
+  1300→          const msg = elapsed > 300000
+  1301→            ? "Offline for 5+ minutes. Check network connection."
+  1302→            : "Connection error. Retrying...";
+  1303→          if (this.statusMessage !== msg) {
+  1304→            if (import.meta.env?.DEV) console.error("Socket connection error:", err);
+  1305→            this.setStatusMessage(msg);
+  1306→          }
+  1307→        });
+  1308→        this._socket.on('disconnect', (reason) => {
+  1309→          if (!this._isMounted) return;
+  1310→          console.warn("Socket disconnected:", reason);
+  1311→          // R42-FIX: Skip reactive assignment if message is already showing
+  1312→          // the same text — avoids unnecessary Vue re-renders during flapping.
+  1313→          if (this.statusMessage !== "Connection lost. Reconnecting...") {
+  1314→            this.setStatusMessage("Connection lost. Reconnecting...");
+  1315→          }
+  1316→        });
+  1317→        this._socket.on('connect', () => {
+  1318→          if (!this._isMounted) return;
+  1319→          this._disconnectedSince = null;
+  1320→          this.setStatusMessage("Reconnected");
+  1321→          this.hideStatusMessageAfterDelay();
+  1322→          // R38-FIX: Re-fetch KOT data after reconnect to sync any missed updates
+  1323→          // during disconnection period. Without this, the UI could show stale KOTs.
+  1324→          // R39-FIX: Use retry wrapper for transient errors on reconnect
+  1325→          // R43-FIX: Remove redundant .then(() => masonryLoading()) — fetchKOT()
+  1326→          // already calls masonryLoading(true) on success.
+  1327→          // R45-FIX: Handle fetch failure — previously .catch(() => {}) silently
+  1328→          // swallowed errors. During extended outages, the user's session may have
+  1329→          // expired, so auth errors need to show the login modal. Other errors
+  1330→          // show a status message so the user knows data refresh failed.
+  1331→          this.fetchKOTWithRetry().catch((error) => {
+  1332→            this._handleFetchError(error, "Reconnected but data refresh failed. Click Refresh.");
+  1333→          });
+  1334→        });
+  1335→
+  1336→        // R39-FIX: Use retry wrapper for initial fetch — transient server errors
+  1337→        // should not leave the KDS permanently blank.
+  1338→        // R44-FIX: Skip if early fetch (started after auth) already loaded data.
+  1339→        // This avoids a redundant full refresh when the early fetch succeeded.
+  1340→        if (this.kot.length === 0) {
+  1341→          return this.fetchKOTWithRetry();
+  1342→        }
+  1343→      })
+  1344→      .then(() => {
+  1345→        if (!this._isMounted || !this._socket) return;
+  1346→        if (Number(this.audio_alert) === 1) {
+  1347→          this.showAudioAlertMessage = true;
+  1348→        }
+  1349→        // R49-FIX (H2): socketHandler is now defined in created() via
+  1350→        // _handleSocketEvent, so we only need to register it on the
+  1351→        // channel here. Previously, the handler was defined inline, which
+  1352→        // meant it was never created if the init chain's fetchKOTWithRetry
+  1353→        // rejected — leaving socketHandler permanently null and the KDS
+  1354→        // without real-time updates until a full page refresh.
+  1355→        if (this._socket && this.socketHandler && this.kot_channel) {
+  1356→          this._socket.on(this.kot_channel, this.socketHandler);
+  1357→        }
+  1358→      })
+  1359→      .catch((error) => {
+  1360→        console.error("Initialization or authentication error:", error);
+  1361→        // R40-FIX: this._socket is now stored early, so beforeUnmount will
+  1362→        // disconnect it. No need for manual cleanup here.
+  1363→        if (this._isMounted) {
+  1364→          // R41-FIX: Differentiate auth errors from network/server errors.
+  1365→          // Auth failure → "Not Permitted" with login prompt.
+  1366→          // Network/server failure → "Connection Error" with retry guidance.
+  1367→          // R45-FIX: Use centralized _isAuthError instead of duplicated inline check
+  1368→          if (this._isAuthError(error)) {
+  1369→            this.modalTitle = "Not Permitted";
+  1370→            this.modalMessage = "Log in to access this page.";
+  1371→          } else {
+  1372→            this.modalTitle = "Connection Error";
+  1373→            this.modalMessage = "Unable to reach the server. Please check your connection and try again.";
+  1374→          }
+  1375→          this.showModal = true;
+  1376→        }
+  1377→      });
+  1378→    // R49-FIX: Use _timer prefix for naming consistency with other
+  1379→    // non-reactive instance properties (_masonry, _socket, _fetchInProgress, etc.)
+  1380→    this._timer = setInterval(this.updateTimeRemaining, 60000);
+  1381→  },
+  1382→  beforeUnmount() {
+  1383→    this._isMounted = false;
+  1384→    window.removeEventListener("online", this.handleOnline);
+  1385→    window.removeEventListener("offline", this.handleOffline);
+  1386→    document.removeEventListener("click", this.hideAudioAlertMessage);
+  1387→    window.removeEventListener("resize", this._resizeHandler);
+  1388→    if (this._pageshowHandler) window.removeEventListener('pageshow', this._pageshowHandler);
+  1389→    if (this.socketHandler && this._socket) {
+  1390→      this._socket.off(this.kot_channel, this.socketHandler);
+  1391→    }
+  1392→    if (this._socket) {
+  1393→      this._socket.off('connect_error');
+  1394→      this._socket.off('disconnect');
+  1395→      this._socket.off('connect');
+  1396→      this._socket.disconnect();
+  1397→    }
+  1398→    this._socketInitPromise = null;
+  1399→    if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
+  1400→    if (this._statusTimeout) clearTimeout(this._statusTimeout);
+  1401→    if (this._socketRetryTimer) clearTimeout(this._socketRetryTimer);
+  1402→    if (this._fetchRetryTimer) clearTimeout(this._fetchRetryTimer);
+  1403→    if (this._notificationCooldownTimer) clearTimeout(this._notificationCooldownTimer);
+  1404→    // R48-FIX (M1): Abort any in-flight fetch on unmount
+  1405→    if (this._fetchAbortController) {
+  1406→      this._fetchAbortController.abort();
+  1407→      this._fetchAbortController = null;
+  1408→    }
+  1409→    // R49-FIX: Abort socket init fetch on unmount
+  1410→    if (this._socketAbortController) {
+  1411→      this._socketAbortController.abort();
+  1412→      this._socketAbortController = null;
+  1413→    }
+  1414→    // R47-FIX (M4): Restore body scroll in case modal was open at unmount time
+  1415→    document.body.style.overflow = '';
+  1416→    // R41-FIX: Cancel pending debounced masonry calls on unmount.
+  1417→    // Without this, a debounced masonryLayout could fire after unmount,
+  1418→    // attempting DOM operations on a detached element tree.
+  1419→    if (this._debouncedMasonryLayout) this._debouncedMasonryLayout.cancel();
+  1420→    if (this._resizeHandler) this._resizeHandler.cancel?.();
+  1421→    if (this._timer) clearInterval(this._timer);
+  1422→    // R42-FIX: Clear src and call load() after pause() to release the audio
+  1423→    // resource. Without this, some browsers keep the network connection open
+  1424→    // even after pause(), leaking the audio file's network resources.
+  1425→    if (this._alertAudio) {
+  1426→      this._alertAudio.pause();
+  1427→      this._alertAudio.src = '';
+  1428→      this._alertAudio.load();
+  1429→      this._alertAudio = null;
+  1430→    }
+  1431→    // R39-FIX: Destroy non-reactive masonry instance on unmount
+  1432→    if (this._masonry) {
+  1433→      this._masonry.destroy();
+  1434→      this._masonry = null;
+  1435→    }
+  1436→  },
+  1437→  computed: {
+  1438→    // R39-FIX: sortedKotItems moved from computed (which returned a function) to
+  1439→    // a method. Previously, the computed returned a new function object every time
+  1440→    // its reactive dependencies (this.kot) changed, which happened every minute
+  1441→    // via updateTimeRemaining. Each new function object was unnecessary churn.
+  1442→    // As a method, the function identity is stable and the manual _sortedItemsCache
+  1443→    // still provides memoization. The template call `sortedKotItems(kot)` works
+  1444→    // identically for both computed-returning-function and method.
+  1445→    visibleKots() {
+  1446→      // R39-FIX: Removed !kot.showDiv filter — showDiv was always false (dead code).
+  1447→      // When production is empty (root route "/"), show ALL KOTs instead of filtering
+  1448→      // by empty string which would exclude KOTs that have a station assigned.
+  1449→      if (!this.production) {
+  1450→        return this.kot;
+  1451→      }
+  1452→      return this.kot.filter(kot => kot.production === this.production);
+  1453→    },
+  1454→  },
+  1455→  watch: {
+  1456→    // R47-FIX (M4): Prevent background scrolling when auth modal is open
+  1457→    // R48-FIX (M2): Auto-focus first focusable element when modal opens.
+  1458→    // R48-FIX (M3): Return focus to previously active element on close.
+  1459→    showModal(val) {
+  1460→      document.body.style.overflow = val ? 'hidden' : '';
+  1461→      if (val) {
+  1462→        // R48-FIX (M3): Capture the element that had focus before modal opened
+  1463→        this._preModalFocus = document.activeElement;
+  1464→        // R48-FIX (M2): Auto-focus the modal or first focusable child
+  1465→        this.$nextTick(() => {
+  1466→          const modal = this.$refs.authModal;
+  1467→          if (modal) {
+  1468→            const first = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  1469→            (first || modal).focus();
+  1470→          }
+  1471→        });
+  1472→      } else {
+  1473→        // R48-FIX (M3): Restore focus to the element that was active before modal opened
+  1474→        if (this._preModalFocus && typeof this._preModalFocus.focus === 'function' && document.contains(this._preModalFocus)) {
+  1475→          this.$nextTick(() => {
+  1476→            if (this._preModalFocus) this._preModalFocus.focus();
+  1477→            this._preModalFocus = null;
+  1478→          });
+  1479→        }
+  1480→      }
+  1481→    },
+  1482→    // R41-FIX: Vue reuses component instances when navigating between routes
+  1483→    // that use the same component (Home). Without this watcher, navigating
+  1484→    // from /station/kitchen to /station/bar would NOT re-mount the KOT
+  1485→    // component, so this.production would still be "kitchen" and the KDS
+  1486→    // would filter for the wrong station.
+  1487→    '$route.params.production'(newVal) {
+  1488→      // R42-FIX: decodeURIComponent can throw URIError on malformed input
+  1489→      let decoded;
+  1490→      try {
+  1491→        decoded = decodeURIComponent(newVal || '');
+  1492→      } catch (e) {
+  1493→        if (import.meta.env?.DEV) console.warn('Failed to decode production param:', newVal, e);
+  1494→        decoded = newVal || '';
+  1495→      }
+  1496→      if (decoded === this.production) return;
+  1497→      this.production = decoded;
+  1498→      // Re-register socket handler on the new channel
+  1499→      if (this.kot_channel && this._socket && this.socketHandler) {
+  1500→        this._socket.off(this.kot_channel, this.socketHandler);
+  1501→      }
+  1502→      // R48-FIX (M1): Abort any in-flight fetch for the old station before switching.
+  1503→      if (this._fetchAbortController) {
+  1504→        this._fetchAbortController.abort();
+  1505→        this._fetchAbortController = null;
+  1506→      }
+  1507→      // R46-FIX (H1): Invalidate stale fetch promise so a fresh one is created
+  1508→      // for the new station. Without this, fetchKOT() returns the in-flight
+  1509→      // promise for the OLD station, resulting in wrong data + wrong socket channel.
+  1510→      // R47-FIX (H2): Increment fetch generation so the old fetch's .then() discards results
+  1511→      this._fetchId++;
+  1512→      this._fetchInProgress = null;
+  1513→      // fetchKOT will set the new kot_channel and re-register the handler
+  1514→      // R45-FIX: Handle fetch failure on station change — previously .catch(() => {})
+  1515→      // silently swallowed errors, leaving the user with an empty KDS and no feedback.
+  1516→      this.fetchKOTWithRetry().catch((error) => {
+  1517→        this._handleFetchError(error, "Failed to load station data. Click Refresh.");
+  1518→      });
+  1519→    },
+  1520→  },
+  1521→};
+  1522→</script>
+  1523→<style scoped>
+  1524→.modal-overlay {
+  1525→  background-color: rgba(0, 0, 0, 0.2);
+  1526→}
+  1527→</style>
+  1528→

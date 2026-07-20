@@ -167,7 +167,7 @@ const MenuManagement = () => {
       }
     }
     if (failures > 0) {
-      showToast.error(t('menu_management.bulk_action_failed') || `Failed to update ${failures} item(s)`);
+      showToast.error(t('menu_management.bulk_action_failed'));
     }
     setSelectedItems(new Set());
   };
@@ -186,7 +186,7 @@ const MenuManagement = () => {
       }
     }
     if (failures > 0) {
-      showToast.error(t('menu_management.bulk_action_failed') || `Failed to update ${failures} item(s)`);
+      showToast.error(t('menu_management.bulk_action_failed'));
     }
     setSelectedItems(new Set());
   };
@@ -205,7 +205,7 @@ const MenuManagement = () => {
       }
     }
     if (failures > 0) {
-      showToast.error(t('menu_management.bulk_action_failed') || `Failed to delete ${failures} item(s)`);
+      showToast.error(t('menu_management.bulk_action_failed'));
     }
     setSelectedItems(new Set());
   };
@@ -223,10 +223,10 @@ const MenuManagement = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <ChefHat className="w-7 h-7 text-blue-600" />
-              {t('menu_management.title') || 'Menu Management'}
+              {t('menu_management.title')}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {t('menu_management.subtitle') || 'Manage your restaurant menus, items, and categories'}
+              {t('menu_management.subtitle')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -236,7 +236,7 @@ const MenuManagement = () => {
               className="flex items-center gap-2"
             >
               <Tag className="w-4 h-4" />
-              {t('menu_management.manage_courses') || 'Manage Courses'}
+              {t('menu_management.manage_courses')}
             </Button>
           </div>
         </div>
@@ -252,7 +252,7 @@ const MenuManagement = () => {
             )}
             onClick={() => setActiveTab('items')}
           >
-            {t('menu_management.menus_tab') || 'Menus'}
+            {t('menu_management.menus_tab')}
           </button>
           <button
             className={cn(
@@ -263,7 +263,7 @@ const MenuManagement = () => {
             )}
             onClick={() => setActiveTab('courses')}
           >
-            {t('menu_management.courses_tab') || 'Courses / Categories'}
+            {t('menu_management.courses_tab')}
           </button>
         </div>
 
@@ -276,7 +276,7 @@ const MenuManagement = () => {
             ) : menus.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <ChefHat className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">{t('menu_management.no_menus') || 'No menus found'}</p>
+                <p className="text-gray-500">{t('menu_management.no_menus')}</p>
               </div>
             ) : (
               menus.map((menu) => (
@@ -332,7 +332,7 @@ const MenuManagement = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="course-manager-dialog-title">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4">
               <div className="flex items-center justify-between p-4 border-b">
-                <h2 id="course-manager-dialog-title" className="text-lg font-semibold">{t('menu_management.manage_courses') || 'Manage Courses'}</h2>
+                <h2 id="course-manager-dialog-title" className="text-lg font-semibold">{t('menu_management.manage_courses')}</h2>
                 <Button variant="ghost" onClick={() => setShowCourseManager(false)}>
                   <X className="w-5 h-5" />
                 </Button>
@@ -370,14 +370,14 @@ const MenuManagement = () => {
             className="flex items-center gap-2"
           >
             <DollarSign className="w-4 h-4" />
-            {t('menu_management.batch_update_prices') || 'Batch Update Prices'}
+            {t('menu_management.batch_update_prices')}
           </Button>
           <Button
             onClick={() => setShowAddItemDialog(true)}
             className="flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            {t('menu_management.add_item') || 'Add Item'}
+            {t('menu_management.add_item')}
           </Button>
         </div>
       </div>
@@ -387,7 +387,7 @@ const MenuManagement = () => {
         <div className="flex-1 relative">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder={t('menu_management.search_items') || 'Search items...'}
+            placeholder={t('menu_management.search_items')}
             className="ps-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -400,7 +400,7 @@ const MenuManagement = () => {
             value={selectedCourseFilter}
             onChange={(e) => setSelectedCourseFilter(e.target.value)}
           >
-            <option value="">{t('menu_management.all_courses') || 'All Courses'}</option>
+            <option value="">{t('menu_management.all_courses')}</option>
             {courses.map((course) => (
               <option key={course.name} value={course.name}>
                 {course.course}
@@ -427,8 +427,8 @@ const MenuManagement = () => {
             <ChefHat className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">
               {searchQuery
-                ? t('menu_management.no_search_results') || 'No items match your search'
-                : t('menu_management.no_items') || 'No items in this menu'}
+                ? t('menu_management.no_search_results')
+                : t('menu_management.no_items')}
             </p>
           </div>
         </div>

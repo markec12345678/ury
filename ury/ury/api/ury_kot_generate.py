@@ -417,6 +417,15 @@ def kot_execute(
     current_items = load_json(current_items or [])
     previous_items = load_json(previous_items or [])
 
+    # R50-FIX: Dedup lock to prevent duplicate KOTs from concurrent requests
+    dedup_key = f"ury_kot_execute_lock:{invoice_id}"
+    lock_token = frappe.generate_hash(length=12)
+    if frappe.cache().get_value(dedup_key):
+        frappe.throw(_("KOT creation already in progress for {0}").format(invoice_id))
+    frappe.cache().set_value(dedup_key, lock_token, expires_in_sec=30)
+    if frappe.cache().get_value(dedup_key) != lock_token:
+        frappe.throw(_("KOT creation already in progress for {0}").format(invoice_id))
+
     new_invoice_items_array = create_order_items(previous_items)
     new_Order_items_array = create_order_items(current_items)
 
@@ -475,6 +484,8 @@ def kot_execute(
             )
         except Exception:
             frappe.db.rollback(savepoint="before_positive_kot")
+            if frappe.cache().get_value(dedup_key) == lock_token:
+                frappe.cache().delete_value(dedup_key)
             raise
         # Release the savepoint — positive KOTs are now committed and printed
         frappe.db.release_savepoint("before_positive_kot")
@@ -491,7 +502,13 @@ def kot_execute(
             )
         except Exception:
             frappe.db.rollback(savepoint="before_cancel_kot")
+            if frappe.cache().get_value(dedup_key) == lock_token:
+                frappe.cache().delete_value(dedup_key)
             raise
+
+    # R50-FIX: Release dedup lock after KOT processing completes
+    if frappe.cache().get_value(dedup_key) == lock_token:
+        frappe.cache().delete_value(dedup_key)
 
 
 # ---------------------------------------------------------------------------

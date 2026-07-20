@@ -1,5 +1,4 @@
 import frappe
-import warnings
 from frappe import _
 from frappe.utils import flt, validate_phone_number
 from datetime import timedelta
@@ -125,7 +124,7 @@ def getMenuCourses():
 def getBranch():
     """Deprecated: Use _get_user_branch() from utils for new code.
     Kept for backward compatibility with existing callers."""
-    warnings.warn("getBranch() is deprecated, use _get_user_branch()", DeprecationWarning, stacklevel=2)
+    frappe.logger().warning("getBranch() is deprecated, use _get_user_branch()")
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
     return _get_user_branch()
 

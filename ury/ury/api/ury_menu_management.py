@@ -6,7 +6,7 @@ CRUD operations for menu items, categories (courses), and prices.
 import frappe
 import json
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, cint
 from ury.ury.api.utils import _get_user_branch
 
 
@@ -114,7 +114,7 @@ def toggle_menu(menu_name, enabled):
     user_branch = _get_user_branch()
     if menu.branch != user_branch:
         frappe.throw(_("Cannot access menu from a different branch"), frappe.PermissionError)
-    menu.enabled = enabled
+    menu.enabled = cint(enabled)
     menu.save(ignore_permissions=True)
     return {"name": menu.name, "enabled": menu.enabled}
 

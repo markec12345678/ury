@@ -69,7 +69,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
       const amount = parseFloat(paymentInputs[mode] || '');
       return amount > 0 ? { mode_of_payment: mode, amount } : null;
     })
-    .filter(Boolean) as Array<{ mode_of_payment: string; amount: number }>;
+    .filter((p): p is { mode_of_payment: string; amount: number } => p !== null);
   // R39-FIX: Use roundMoney at each accumulation step to prevent floating-point
   // drift when summing multiple payment amounts (e.g. 10.10 + 20.20 !== 30.30)
   const paymentsTotal = payments.reduce((sum, p) => roundMoney(sum + p.amount), 0);

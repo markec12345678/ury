@@ -142,7 +142,7 @@ def order_type_update(doc, method):
 
 # reload restaurant order page if submitted invoice is open there
 def ro_reload_submit(doc, method):
-    frappe.publish_realtime("reload_ro", {"name": doc.name})
+    frappe.publish_realtime("reload_ro_{}".format(doc.branch or ""), {"name": doc.name})
 
 
 def validate_price_list(doc, method):

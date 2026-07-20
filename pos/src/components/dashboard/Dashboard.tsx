@@ -56,6 +56,7 @@ const Dashboard = () => {
   const autoRefresh = useDashboardStore((s) => s.autoRefresh);
   const refreshInterval = useDashboardStore((s) => s.refreshInterval);
   const fetchAll = useDashboardStore((s) => s.fetchAll);
+  const partialErrors = useDashboardStore((s) => s.partialErrors);
   const fetchLiveMetrics = useDashboardStore((s) => s.fetchLiveMetrics);
   const setSelectedPeriod = useDashboardStore((s) => s.setSelectedPeriod);
   const setAutoRefresh = useDashboardStore((s) => s.setAutoRefresh);
@@ -124,6 +125,18 @@ const Dashboard = () => {
           </Button>
         </div>
       </div>
+
+      {/* Partial Errors Banner */}
+      {partialErrors.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-center justify-between">
+          <p className="text-sm text-amber-700">
+            {partialErrors.join(', ')}
+          </p>
+          <button onClick={() => useDashboardStore.getState().fetchAll()} className="text-xs text-amber-600 hover:text-amber-800 underline">
+            {t('common.retry')}
+          </button>
+        </div>
+      )}
 
       {/* Period Selector */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">

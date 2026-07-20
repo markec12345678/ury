@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Trash2, Edit, FrownIcon, Plus, Loader2, MessageSquare } from 'lucide-react';
 import { usePOSStore } from '../store/pos-store';
 import { formatCurrency, cn, roundMoney } from '../lib/utils';
@@ -83,7 +83,7 @@ const OrderPanel = () => {
   // getCartTotals() computed roundMoney(sum + (calculateItemPrice * qty)) —
   // different rounding order could produce totals off by 0.01.
   // Now both use the single source of truth: getCartTotals().
-  const cartTotals = getCartTotals();
+  const cartTotals = useMemo(() => getCartTotals(), [activeOrders]);
 
   const calculateItemTotal = (item: typeof activeOrders[0]) => {
     return roundMoney(calculateItemPrice(item) * item.quantity);
