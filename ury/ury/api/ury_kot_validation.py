@@ -66,6 +66,17 @@ def process_invoice(invoice):
     waiter = posInvoice.waiter
     kot_naming_series = frappe.db.get_value("POS Profile", posInvoice.pos_profile, "custom_kot_naming_series")
 
+    # R50-FIX (C1): Validate KOT naming series before proceeding — if not configured,
+    # kotdoc.insert() would throw an unhandled exception that the scheduler only logs,
+    # silently skipping the invoice's auto-KOT with no user-facing feedback.
+    if not kot_naming_series:
+        frappe.log_error(
+            f"KOT Naming Series not configured for POS Profile {posInvoice.pos_profile} — "
+            f"skipping auto-KOT for invoice {invoice.name}",
+            "URY KOT Validation Error"
+        )
+        return
+
     # Check if KOT already exists for this invoice
     kot_list = frappe.get_list(
         "URY KOT",

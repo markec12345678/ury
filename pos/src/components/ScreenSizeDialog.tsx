@@ -47,20 +47,20 @@ const ScreenSizeDialog = () => {
               {t('screen_size.current_width')} <span className="font-semibold text-gray-800">{window.innerWidth}px</span>
             </p>
             <p className="text-sm text-gray-600">
-              {t('screen_size.required')} <span className="font-semibold text-gray-800">{t('screen_size.min_width') || '1024px or larger'}</span>
+              {t('screen_size.required')} <span className="font-semibold text-gray-800">{t('screen_size.min_width')}</span>
             </p>
           </div>
           
           {/* Alternative Option */}
           <div className="bg-blue-50 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-800 mb-3">
-              {t('screen_size.mobile_version_hint') || 'You can use URY POS Version 1 for mobile devices.'}
+              {t('screen_size.mobile_version_hint')}
             </p>
             <Button
               onClick={handleSwitchToVersion1}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
+              <ExternalLink className="w-4 h-4 me-2" />
               {t('screen_size.switch_v1')}
             </Button>
           </div>

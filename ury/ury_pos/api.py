@@ -253,6 +253,10 @@ def searchPosInvoice(query,status):
     branch = _get_user_branch()
     if not query:
         return {"data": [], "next": False}
+    # R50-FIX (H2): Validate search term length to prevent expensive LIKE
+    # operations with multi-MB strings.
+    if len(query) > 100:
+        frappe.throw(_("Search query too long (max 100 characters)"), frappe.ValidationError)
     # R49-FIX: Validate status against the same whitelist used by
     # _get_invoices_list, preventing arbitrary filter values.
     ALLOWED_STATUSES = {"Draft", "Paid", "Cancelled", "Return", "Unbilled", "Recently Paid"}

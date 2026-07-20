@@ -209,7 +209,7 @@ function NewCustomerForm({
         >
           {isCreatingCustomer ? (
             <>
-              <Loader className="w-4 h-4 mr-2 animate-spin" />
+              <Loader className="w-4 h-4 me-2 animate-spin" />
               {t('customer.adding')}
             </>
           ) : (
@@ -376,7 +376,7 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
               )}
               {isSearching && (
                 <div className="flex items-center justify-center p-4 text-gray-500 text-sm select-none">
-                  <Loader className="w-4 h-4 mr-2 animate-spin" /> {t('common.searching')}
+                  <Loader className="w-4 h-4 me-2 animate-spin" /> {t('common.searching')}
                 </div>
               )}
               {searchError && (
@@ -403,7 +403,7 @@ export function CustomerSelect({ disabled }: CustomerSelectProps) {
                     onMouseEnter={() => setHighlightedIndex(idx)}
                   >
                     <div className="font-medium">{name}</div>
-                    <div className="ml-auto text-xs text-gray-500">{phone}</div>
+                    <div className="ms-auto text-xs text-gray-500">{phone}</div>
                   </button>
                 );
               })}

@@ -280,6 +280,10 @@ def sync_order(
     invoice.mobile_number = frappe.db.get_value("Customer", customer, "mobile_number")
     if comments:
         invoice.custom_comments = comments
+    # R50-FIX (M3): Validate no_of_pax to prevent negative or nonsensical values
+    no_of_pax = cint(no_of_pax)
+    if no_of_pax < 0:
+        frappe.throw(_("Number of pax cannot be negative"), frappe.ValidationError)
     invoice.no_of_pax = no_of_pax
     invoice.pos_profile = pos_profile
     # H-01: Validate cashier and waiter are active users
@@ -460,6 +464,14 @@ def get_restaurant_and_menu_name(table):
     if not result:
         frappe.throw(_("URY Table {0} not found").format(table))
     restaurant, branch, room = result
+
+    # R50-FIX (H1): Validate that the requested table belongs to the user's branch.
+    # Without this, a user from Branch A could query tables from Branch B,
+    # violating the branch isolation model enforced everywhere else.
+    user_branch = _get_user_branch()
+    if branch and user_branch and branch != user_branch:
+        frappe.throw(_("You do not have access to tables from another branch"), frappe.PermissionError)
+
     room_wise_menu = frappe.db.get_value(
         "URY Restaurant",
         restaurant,
@@ -646,6 +658,11 @@ def captain_transfer(currentCaptain, newCaptain, invoice):
     if captain_branch and captain_branch != user_branch:
         frappe.throw(_("Captain does not belong to your branch"), frappe.PermissionError)
     pos_profile=frappe.get_value("POS Invoice", invoice,"pos_profile")
+    # R50-FIX (M5): Validate new captain is assigned to the POS Profile.
+    # A user from the same branch but not configured in the POS Profile
+    # could be set as captain, bypassing POS Profile-level access controls.
+    if not frappe.db.exists("POS Profile User", {"parent": pos_profile, "user": newCaptain}):
+        frappe.throw(_("User {0} is not assigned to this POS Profile").format(newCaptain))
     multiple_cashier = frappe.db.get_value("POS Profile",pos_profile,"custom_enable_multiple_cashier")
     branch=frappe.get_value("POS Invoice", invoice,"branch")
     if multiple_cashier:
@@ -749,8 +766,11 @@ def cancel_order(invoice_id, reason):
         frappe.cache().delete_value(dedup_key)  # R49-FIX: Release lock on failure
         raise
 
-    # R49-FIX: Release dedup lock after cancellation completes
-    frappe.cache().delete_value(dedup_key)
+    # R50-FIX (H3): Verify lock token before deleting to match the standard
+    # dedup pattern used in kot_execute, serve_kot, confirm_cancel_kot.
+    # Without this, a concurrent request could delete another's lock.
+    if frappe.cache().get_value(dedup_key) == lock_token:
+        frappe.cache().delete_value(dedup_key)
 
     # Update table status
     if pos_invoice.restaurant_table:

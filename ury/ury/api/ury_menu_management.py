@@ -285,6 +285,11 @@ def update_menu_course(course_name, course=None, serving_priority=None, indicate
     frappe.only_for("Restaurant Manager")
     doc = frappe.get_doc("URY Menu Course", course_name)
     if course is not None:
+        # R50-FIX (M4): Check for duplicate course name on update, matching the
+        # validation that already exists on create (line 268–270).
+        existing = frappe.db.exists("URY Menu Course", {"course": course, "name": ["!=", course_name]})
+        if existing:
+            frappe.throw(_("Course '{0}' already exists").format(course), frappe.DuplicateEntryError)
         doc.course = course
     if serving_priority is not None:
         doc.custom_serving_priority = int(serving_priority)

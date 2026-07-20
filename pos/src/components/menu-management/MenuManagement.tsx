@@ -154,13 +154,14 @@ const MenuManagement = () => {
   // one item doesn't silently abort the remaining items. Each operation is
   // now individually error-handled, and the user is notified of failures.
   const handleEnableSelected = async () => {
+    if (!selectedMenu) return;
     const updates = Array.from(selectedItems);
     let failures = 0;
     for (const itemName of updates) {
       try {
-        const item = selectedMenu?.items.find((i) => i.name === itemName);
+        const item = selectedMenu.items.find((i) => i.name === itemName);
         if (item && item.disabled) {
-          await updateItemInMenu(selectedMenu!.name, itemName, { disabled: 0 });
+          await updateItemInMenu(selectedMenu.name, itemName, { disabled: 0 });
         }
       } catch {
         failures++;
@@ -173,13 +174,14 @@ const MenuManagement = () => {
   };
 
   const handleDisableSelected = async () => {
+    if (!selectedMenu) return;
     const updates = Array.from(selectedItems);
     let failures = 0;
     for (const itemName of updates) {
       try {
-        const item = selectedMenu?.items.find((i) => i.name === itemName);
+        const item = selectedMenu.items.find((i) => i.name === itemName);
         if (item && !item.disabled) {
-          await updateItemInMenu(selectedMenu!.name, itemName, { disabled: 1 });
+          await updateItemInMenu(selectedMenu.name, itemName, { disabled: 1 });
         }
       } catch {
         failures++;
@@ -192,14 +194,15 @@ const MenuManagement = () => {
   };
 
   const handleDeleteSelected = async () => {
+    if (!selectedMenu) return;
     const count = selectedItems.size;
-    if (!confirm(`Delete ${count} selected item${count > 1 ? 's' : ''} from menu?`)) return;
+    if (!confirm(t('menu_management.confirm_delete_selected', { count }))) return;
 
     const updates = Array.from(selectedItems);
     let failures = 0;
     for (const itemName of updates) {
       try {
-        await removeItemFromMenu(selectedMenu!.name, itemName);
+        await removeItemFromMenu(selectedMenu.name, itemName);
       } catch {
         failures++;
       }

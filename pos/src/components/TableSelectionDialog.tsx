@@ -63,7 +63,7 @@ const TableSelectionDialog: React.FC<Props> = ({ onClose }) => {
           sessionStorage.setItem(sessionKey, JSON.stringify(fetchedRooms));
         }
       } catch {
-        setError(t('errors.failed_load_rooms') || 'Failed to load rooms');
+        setError(t('errors.failed_load_rooms'));
       } finally {
         setLoadingRooms(false);
       }

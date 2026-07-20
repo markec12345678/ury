@@ -12,8 +12,11 @@ def reprint_kot(invoice_number):
 
     # R38-FIX: Validate invoice belongs to user's branch
     inv_branch = frappe.db.get_value("POS Invoice", invoice_number, "branch")
-    if not inv_branch:
+    # R50-FIX (M1): Distinguish "not found" from "no branch assigned"
+    if not frappe.db.exists("POS Invoice", invoice_number):
         frappe.throw(_("POS Invoice {0} not found.").format(invoice_number))
+    if not inv_branch:
+        frappe.throw(_("POS Invoice {0} has no branch assigned.").format(invoice_number))
     user_branch = _get_user_branch()
     if inv_branch != user_branch:
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)

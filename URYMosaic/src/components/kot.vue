@@ -46,7 +46,7 @@
     <!-- Alert Modal div end-->
 
     <div
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      class="relative"
     >
       <div v-for="kot in visibleKots" :key="kot.name">
         <div
@@ -551,6 +551,8 @@ export default {
               this.updateQtyColorTable();
               this.updateTimeRemaining();
               this.masonryLoading();
+              // R50-FIX (M1): Record last successful fetch time for dedup
+              this._lastFetchTime = Date.now();
               resolve();
             })
             .catch((error) => {
@@ -601,7 +603,10 @@ export default {
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
+      // R50-FIX (H2): Store controller on instance so it can be aborted on unmount
+      if (this._mutateAbortController) this._mutateAbortController.abort();
       const controller = new AbortController();
+      this._mutateAbortController = controller;
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       fetch('/api/method/ury.ury.api.ury_kot_display.confirm_cancel_kot', {
         method: 'POST',
@@ -639,7 +644,10 @@ export default {
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
+      // R50-FIX (H2): Store controller on instance so it can be aborted on unmount
+      if (this._mutateAbortController) this._mutateAbortController.abort();
       const controller = new AbortController();
+      this._mutateAbortController = controller;
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       fetch('/api/method/ury.ury.api.ury_kot_display.serve_kot', {
         method: 'POST',
@@ -676,17 +684,45 @@ export default {
     // R42-FIX: Return the promise so callers can chain on success/failure.
     // Previously, the .catch() swallowed the error and returned undefined,
     // making it impossible for callers to know whether the notification succeeded.
+    // R50-FIX (C1): Replace Frappe SDK call with raw fetch + AbortController (15s timeout)
+    // to prevent hung promises accumulating on server issues. Also add retry limit
+    // per KOT to avoid infinite retry loops on persistent failures.
     orderDelayNotify(kot) {
-      return this.call
-        .post(
-          "ury.ury.api.ury_kot_notification.order_delay_notification",
-          {
-            id: kot.name,
-          }
-        )
+      // R50-FIX: Retry limit — skip if this KOT has failed 3+ times consecutively
+      if (!this._notifiedFailCount) this._notifiedFailCount = new Map();
+      const failCount = this._notifiedFailCount.get(kot.name) || 0;
+      if (failCount >= 3) return Promise.resolve();
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const baseUrl = window.frappe?.boot?.frappe_url || '';
+      const url = `${baseUrl}/api/method/ury.ury.api.ury_kot_notification.order_delay_notification`;
+
+      return fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': window.csrf_token || '',
+        },
+        body: JSON.stringify({ id: kot.name }),
+        signal: controller.signal,
+      })
+        .then((response) => {
+          clearTimeout(timeoutId);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then(() => {
+          // R50-FIX: Reset fail count on success
+          this._notifiedFailCount.delete(kot.name);
+        })
         .catch((error) => {
-          if (import.meta.env?.DEV) console.error(error);
-          throw error; // Re-throw so caller knows it failed
+          clearTimeout(timeoutId);
+          // R50-FIX: Increment fail count on failure
+          this._notifiedFailCount.set(kot.name, failCount + 1);
+          if (import.meta.env?.DEV) console.error('orderDelayNotify failed:', error);
+          throw error;
         });
     },
     toggleItemStrikeThrough(kotitem, kot) {
@@ -1061,6 +1097,12 @@ export default {
         // R44-FIX: Use targeted single-KOT methods instead of processing ALL KOTs.
         this._updateSingleKotQtyColor(targetKot);
         this._updateSingleKotTimeRemaining(targetKot);
+        // R50-FIX (C2): Refresh alert settings from incremental payload so
+        // KDS reflects manager changes (e.g., alert threshold 15→10 min)
+        // without waiting for a full reconnect/refresh.
+        if (doc.kot_alert_time != null) this.kot_alert_time = doc.kot_alert_time;
+        if (doc.audio_alert != null) this.audio_alert = doc.audio_alert;
+        if (doc.daily_order_number != null) this.daily_order_number = doc.daily_order_number;
         // R40-FIX: Use debounced masonry layout for rapid socket events
         this._debouncedMasonryLayout();
         // R41-FIX: Cancel timeout and localStorage write are now ONLY in the incremental path.
@@ -1115,6 +1157,10 @@ export default {
       // R37-FIX: Guard against post-unmount execution
       if (!this._isMounted) return;
       this.isOnline = true;
+      // R50-FIX (H1): Reset disconnected timestamp so that a subsequent
+      // connect_error doesn't compute elapsed time from a stale value,
+      // producing confusing "Offline for 5+ minutes" right after "You are online".
+      this._disconnectedSince = null;
       this.setStatusMessage("You are online");
       this.hideStatusMessageAfterDelay();
       // R46-FIX (H1): Invalidate stale fetch promise so reconnect gets fresh data
@@ -1130,6 +1176,9 @@ export default {
       // R39-FIX: Use retry wrapper for transient network errors on reconnect
       // R41-FIX: Show error feedback if fetch fails after all retries —
       // without this the user sees "You are online" but stale/empty data.
+      // R50-FIX (M1): Record last successful fetch timestamp so the socket
+      // connect handler can skip redundant fetches within 5 seconds.
+      this._lastFetchTime = Date.now();
       this.fetchKOTWithRetry().then(() => {
         if (!this._isMounted) return;
         // R43-FIX: Removed redundant masonryLoading() — fetchKOT() already calls
@@ -1353,9 +1402,18 @@ export default {
           // swallowed errors. During extended outages, the user's session may have
           // expired, so auth errors need to show the login modal. Other errors
           // show a status message so the user knows data refresh failed.
-          this.fetchKOTWithRetry().catch((error) => {
-            this._handleFetchError(error, "Reconnected but data refresh failed. Click Refresh.");
-          });
+          // R50-FIX (M1): Skip fetch if handleOnline already fetched successfully
+          // within the last 5 seconds. Both handleOnline and this connect handler
+          // trigger fetchKOTWithRetry on reconnect — without this guard, the second
+          // fetch wastes bandwidth and causes a brief UI flicker.
+          const timeSinceLastFetch = Date.now() - (this._lastFetchTime || 0);
+          if (timeSinceLastFetch < 5000) {
+            if (import.meta.env?.DEV) console.log('Skipping socket connect fetch — recent fetch exists');
+          } else {
+            this.fetchKOTWithRetry().catch((error) => {
+              this._handleFetchError(error, "Reconnected but data refresh failed. Click Refresh.");
+            });
+          }
         });
 
         // R39-FIX: Use retry wrapper for initial fetch — transient server errors
@@ -1452,6 +1510,11 @@ export default {
     if (this._socketAbortController) {
       this._socketAbortController.abort();
       this._socketAbortController = null;
+    }
+    // R50-FIX (H2): Abort any in-flight confirm/serve request on unmount
+    if (this._mutateAbortController) {
+      this._mutateAbortController.abort();
+      this._mutateAbortController = null;
     }
     // R47-FIX (M4): Restore body scroll in case modal was open at unmount time
     document.body.style.overflow = '';

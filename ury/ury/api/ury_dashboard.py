@@ -164,18 +164,16 @@ def get_category_sales_chart(period="this_month"):
             ORDER BY total_amount DESC
         """, (branch_menu, tuple(invoice_names)), as_dict=True)
     else:
+        # R50-FIX (M2): No menu configured — return sales without course breakdown
+        # instead of using LEFT JOIN that duplicates rows when an item appears
+        # in multiple menus.
         items = frappe.db.sql("""
-            SELECT
-                COALESCE(mi.course, 'Uncategorized') as category,
-                SUM(ii.qty) as total_qty,
-                SUM(ii.amount) as total_amount
+            SELECT 'Uncategorized' as category,
+                   SUM(ii.qty) as total_qty,
+                   SUM(ii.amount) as total_amount
             FROM `tabPOS Invoice Item` ii
             JOIN `tabPOS Invoice` pi ON ii.parent = pi.name
-            LEFT JOIN `tabURY Menu Item` mi ON mi.item = ii.item_code AND mi.parenttype = 'URY Menu'
-            WHERE pi.name IN %s
-            AND pi.docstatus = 1
-            GROUP BY category
-            ORDER BY total_amount DESC
+            WHERE pi.name IN %s AND pi.docstatus = 1
         """, (tuple(invoice_names),), as_dict=True)
 
     return {"data": items}

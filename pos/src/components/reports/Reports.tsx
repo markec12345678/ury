@@ -94,20 +94,20 @@ const Reports = () => {
   };
 
   const reportTypes: { value: ReportType; label: string; icon: React.ReactNode; color: string }[] = [
-    { value: 'sales', label: t('reports.types.sales') || 'Sales Report', icon: <ShoppingCart className="w-5 h-5" />, color: 'blue' },
-    { value: 'expense', label: t('reports.types.expense') || 'Expense Report', icon: <DollarSign className="w-5 h-5" />, color: 'red' },
-    { value: 'profit_loss', label: t('reports.types.profitLoss') || 'Profit & Loss', icon: <TrendingUp className="w-5 h-5" />, color: 'emerald' },
-    { value: 'inventory', label: t('reports.types.inventory') || 'Inventory Report', icon: <Package className="w-5 h-5" />, color: 'violet' },
+    { value: 'sales', label: t('reports.types.sales'), icon: <ShoppingCart className="w-5 h-5" />, color: 'blue' },
+    { value: 'expense', label: t('reports.types.expense'), icon: <DollarSign className="w-5 h-5" />, color: 'red' },
+    { value: 'profit_loss', label: t('reports.types.profitLoss'), icon: <TrendingUp className="w-5 h-5" />, color: 'emerald' },
+    { value: 'inventory', label: t('reports.types.inventory'), icon: <Package className="w-5 h-5" />, color: 'violet' },
   ];
 
   const periods: { value: ReportPeriod; label: string }[] = [
-    { value: 'daily', label: t('reports.periods.today') || 'Today' },
-    { value: 'yesterday', label: t('reports.periods.yesterday') || 'Yesterday' },
-    { value: 'weekly', label: t('reports.periods.thisWeek') || 'This Week' },
-    { value: 'monthly', label: t('reports.periods.thisMonth') || 'This Month' },
-    { value: 'last_month', label: t('reports.periods.lastMonth') || 'Last Month' },
-    { value: 'last_7_days', label: t('reports.periods.last7Days') || 'Last 7 Days' },
-    { value: 'last_30_days', label: t('reports.periods.last30Days') || 'Last 30 Days' },
+    { value: 'daily', label: t('reports.periods.today') },
+    { value: 'yesterday', label: t('reports.periods.yesterday') },
+    { value: 'weekly', label: t('reports.periods.thisWeek') },
+    { value: 'monthly', label: t('reports.periods.thisMonth') },
+    { value: 'last_month', label: t('reports.periods.lastMonth') },
+    { value: 'last_7_days', label: t('reports.periods.last7Days') },
+    { value: 'last_30_days', label: t('reports.periods.last30Days') },
   ];
 
   return (
@@ -117,10 +117,10 @@ const Reports = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <FileText className="w-7 h-7 text-blue-600" />
-            {t('reports.title') || 'Reports'}
+            {t('reports.title')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {t('reports.subtitle') || 'Generate and export detailed reports'}
+            {t('reports.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -134,8 +134,8 @@ const Reports = () => {
             >
               <GitCompareArrows className="w-4 h-4" />
               {comparePeriods
-                ? (t('reports.compare.hide') || 'Hide Comparison')
-                : (t('reports.compare.show') || 'Compare Periods')
+                ? t('reports.compare.hide')
+                : t('reports.compare.show')
               }
             </Button>
           )}
@@ -215,7 +215,7 @@ const Reports = () => {
           onClick={() => setShowCustomDate(!showCustomDate)}
         >
           <Calendar className="w-4 h-4 inline me-1" />
-          {t('reports.periods.custom') || 'Custom'}
+          {t('reports.periods.custom')}
         </button>
       </div>
 
@@ -223,7 +223,7 @@ const Reports = () => {
       {showCustomDate && (
         <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">{t('reports.dateFrom') || 'From'}</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('reports.dateFrom')}</label>
             <Input
               type="date"
               value={customFrom}
@@ -231,7 +231,7 @@ const Reports = () => {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">{t('reports.dateTo') || 'To'}</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('reports.dateTo')}</label>
             <Input
               type="date"
               value={customTo}
@@ -243,7 +243,7 @@ const Reports = () => {
             disabled={!customFrom || !customTo}
             className="mt-5"
           >
-            {t('reports.apply') || 'Apply'}
+            {t('reports.apply')}
           </Button>
         </div>
       )}
@@ -253,7 +253,7 @@ const Reports = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Spinner className="w-8 h-8 mx-auto mb-3" />
-            <p className="text-gray-500">{t('reports.loading') || 'Generating report...'}</p>
+            <p className="text-gray-500">{t('reports.loading')}</p>
           </div>
         </div>
       ) : (

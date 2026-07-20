@@ -549,11 +549,11 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
               <div className={cn("grid grid-cols-2 gap-2 text-sm", isRTL && "flex-row-reverse")}>
                 <div>
                   <span className="text-gray-500">X:</span>
-                  <span className="ml-1">{Math.round(selectedTableData.x)}px</span>
+                  <span className="ms-1">{Math.round(selectedTableData.x)}px</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Y:</span>
-                  <span className="ml-1">{Math.round(selectedTableData.y)}px</span>
+                  <span className="ms-1">{Math.round(selectedTableData.y)}px</span>
                 </div>
               </div>
             </div>
@@ -564,11 +564,11 @@ const LayoutView: React.FC<Props> = ({ selectedRoom, tables, onBackToGrid, onRef
               <div className={cn("grid grid-cols-2 gap-2 text-sm", isRTL && "flex-row-reverse")}>
                 <div>
                   <span className="text-gray-500">W:</span>
-                  <span className="ml-1">{getTableDimensions(selectedTableData.table_shape || 'Rectangle').width}px</span>
+                  <span className="ms-1">{getTableDimensions(selectedTableData.table_shape || 'Rectangle').width}px</span>
                 </div>
                 <div>
                   <span className="text-gray-500">H:</span>
-                  <span className="ml-1">{getTableDimensions(selectedTableData.table_shape || 'Rectangle').height}px</span>
+                  <span className="ms-1">{getTableDimensions(selectedTableData.table_shape || 'Rectangle').height}px</span>
                 </div>
               </div>
             </div>

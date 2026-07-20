@@ -154,29 +154,29 @@ const AIInsightsPanel = () => {
               <div className="whitespace-pre-wrap">
                 {msg.content.split('\n').map((line, i) => {
                   // Split by **bold** markers and render as React elements (safe, no dangerouslySetInnerHTML)
-                  const renderLine = (text: string) => {
+                  const renderLine = (text: string, lineIdx: number) => {
                     const parts = text.split(/\*\*(.*?)\*\*/g);
                     return parts.map((part, j) =>
-                      j % 2 === 1 ? <strong key={j}>{part}</strong> : part
+                      j % 2 === 1 ? <strong key={`${lineIdx}-${j}`}>{part}</strong> : part
                     );
                   };
                   // Bullet points
                   if (line.startsWith('- ') || line.startsWith('* ')) {
                     return (
-                      <div key={i} className="flex gap-1.5">
+                      <div key={`${msg.id}-${i}`} className="flex gap-1.5">
                         <span className="text-violet-500 flex-shrink-0">•</span>
-                        <span>{renderLine(line.slice(2))}</span>
+                        <span>{renderLine(line.slice(2), i)}</span>
                       </div>
                     );
                   }
                   // Headers
                   if (line.startsWith('### ')) {
-                    return <div key={i} className="font-semibold mt-1">{renderLine(line.slice(4))}</div>;
+                    return <div key={`${msg.id}-${i}`} className="font-semibold mt-1">{renderLine(line.slice(4), i)}</div>;
                   }
                   if (line.startsWith('## ')) {
-                    return <div key={i} className="font-bold mt-1">{renderLine(line.slice(3))}</div>;
+                    return <div key={`${msg.id}-${i}`} className="font-bold mt-1">{renderLine(line.slice(3), i)}</div>;
                   }
-                  return <div key={i}>{renderLine(line)}</div>;
+                  return <div key={`${msg.id}-${i}`}>{renderLine(line, i)}</div>;
                 })}
               </div>
             ) : (

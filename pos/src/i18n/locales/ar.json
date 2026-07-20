@@ -54,6 +54,7 @@
     "back": "رجوع",
     "next": "التالي",
     "previous": "السابق",
+    "operation_failed": "فشلت العملية",
     "unknown": "غير معروف"
   },
   "header": {
@@ -259,6 +260,8 @@
     "editing_layout_hint_title": "تعديل المخطط",
     "drag_tables_hint": "• اسحب الطاولات لتغيير موضعها",
     "autosave_hint": "• يتم حفظ التغييرات تلقائيًا",
+    "preview": "معاينة",
+    "printing": "جاري الطباعة...",
     "zoom_pan_hint": "استخدم التمرير للتكبير • اسحب الخلفية للتحريك",
     "zoom_in": "تكبير",
     "zoom_out": "تصغير",
@@ -287,6 +290,7 @@
     "no_search_results": "لا توجد أصناف تطابق بحثك",
     "no_items": "لا توجد أصناف في هذه القائمة",
     "confirm_delete_item": "إزالة هذا الصنف من القائمة؟",
+    "confirm_delete_selected": "حذف {{count}} صنف محدد من القائمة؟",
     "confirm_delete_course": "حذف هذه الفئة؟ الأصناف التي تستخدمها ستصبح غير مصنفة.",
     "no_courses": "لم يتم تحديد فئات بعد",
     "course_name": "اسم الفئة",

@@ -50,6 +50,7 @@
     "back": "Nazaj",
     "next": "Naprej",
     "previous": "Prejšnje",
+    "operation_failed": "Operacija ni uspela",
     "unknown": "Neznano"
   },
   "header": {
@@ -255,6 +256,8 @@
     "editing_layout_hint_title": "Urejanje postavitve",
     "drag_tables_hint": "• Povlecite mize za premeščanje",
     "autosave_hint": "• Spremembe se samodejno shranijo",
+    "preview": "Predogled",
+    "printing": "Tiskanje...",
     "zoom_pan_hint": "Uporabite drsenje za povečavo • Povlecite ozadje za premik",
     "zoom_in": "Povečaj",
     "zoom_out": "Pomanjšaj",
@@ -283,6 +286,7 @@
     "no_search_results": "Nobena jed ne ustreza iskanju",
     "no_items": "Ni jedi v tem jedilniku",
     "confirm_delete_item": "Odstrani to jed iz jedilnika?",
+    "confirm_delete_selected": "Izbriši {{count}} izbranih jedi iz jedilnika?",
     "confirm_delete_course": "Izbriši to kategorijo? Jedi, ki jo uporabljajo, bodo nekategorizirane.",
     "no_courses": "Ni definiranih kategorij",
     "course_name": "Ime kategorije",

@@ -59,7 +59,7 @@ export function EmptyState({
     <div
       className={`flex flex-col items-center justify-center text-center ${styles.container}`}
       role="status"
-      aria-label={title || t('common.no_data') || 'No data'}
+      aria-label={title || t('common.no_data')}
     >
       {Icon && (
         <div className="mb-4 rounded-full bg-gray-100 p-3">

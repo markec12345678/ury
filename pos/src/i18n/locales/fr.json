@@ -47,6 +47,7 @@
     "back": "Retour",
     "next": "Suivant",
     "previous": "Précédent",
+    "operation_failed": "L'opération a échoué",
     "unknown": "Inconnu"
   },
   "header": {
@@ -252,6 +253,8 @@
     "editing_layout_hint_title": "Modification du plan",
     "drag_tables_hint": "• Faites glisser les tables pour les repositionner",
     "autosave_hint": "• Les modifications sont enregistrées automatiquement",
+    "preview": "Aperçu",
+    "printing": "Impression...",
     "zoom_pan_hint": "Utilisez le défilement pour zoomer • Faites glisser l'arrière-plan pour déplacer",
     "zoom_in": "Zoom avant",
     "zoom_out": "Zoom arrière",
@@ -280,6 +283,7 @@
     "no_search_results": "Aucun article ne correspond à votre recherche",
     "no_items": "Aucun article dans ce menu",
     "confirm_delete_item": "Retirer cet article du menu ?",
+    "confirm_delete_selected": "Supprimer {{count}} article(s) sélectionné(s) du menu ?",
     "confirm_delete_course": "Supprimer cette catégorie ? Les articles qui l'utilisent deviendront non catégorisés.",
     "no_courses": "Aucune catégorie définie",
     "course_name": "Nom de la catégorie",

@@ -261,6 +261,9 @@
     "drag_tables_hint": "• Drag tables to reposition",
     "autosave_hint": "• Changes autosave",
     "zoom_pan_hint": "Use Scroll to zoom • Drag background to pan",
+    "zoom_in": "Zoom In",
+    "zoom_out": "Zoom Out",
+    "reset_zoom": "Reset Zoom",
     "no_bill_activity": "No bill activity yet"
   },
   "footer": {
@@ -285,6 +288,7 @@
     "no_search_results": "No items match your search",
     "no_items": "No items in this menu",
     "confirm_delete_item": "Remove this item from menu?",
+    "confirm_delete_selected": "Delete {{count}} selected item(s) from menu?",
     "confirm_delete_course": "Delete this course? Items using it will become uncategorized.",
     "no_courses": "No courses defined yet",
     "course_name": "Course Name",

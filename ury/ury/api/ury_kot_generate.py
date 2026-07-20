@@ -547,7 +547,11 @@ def compare_two_array(array_1, array_2):
             finalarray.append(item)
             continue
 
-        if item["qty"] == array_2_by_code[code]["qty"]:
+        # R50-FIX (C2): Replace float == with tolerance-based comparison.
+        # Float equality (e.g., 2.0 == 1.9999999999999998) can fail due to
+        # floating-point precision, causing items that haven't actually changed
+        # to appear as modified (spurious KOTs) or truly changed items to be skipped.
+        if abs(flt(item["qty"]) - flt(array_2_by_code[code]["qty"])) < 0.001:
             # No change
             continue
 
