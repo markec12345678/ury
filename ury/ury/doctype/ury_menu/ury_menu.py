@@ -60,7 +60,8 @@ class URYMenu(Document):
             "Price List", dict(restaurant_menu=self.name)
         )
         if price_list_name:
-            frappe.db.set_value("Price List", price_list_name, {"enabled": 1, "selling": 1})
+            # R48-FIX: Use update_modified=False — auxiliary config update
+            frappe.db.set_value("Price List", price_list_name, {"enabled": 1, "selling": 1}, update_modified=False)
             return price_list_name
 
         price_list = frappe.new_doc("Price List")

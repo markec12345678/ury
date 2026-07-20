@@ -7,6 +7,7 @@ import { getPaymentModes } from '../../lib/payment-api';
 import { DEFAULT_ORDER_TYPE } from '../../data/order-types';
 import { getErrorMessage } from '../../lib/error-utils';
 import type { POSSliceAll } from './combined';
+import { t } from '../../i18n';
 
 // --- Types ---
 
@@ -65,7 +66,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
         paymentModesResult.status === 'rejected'
       ) {
         set({
-          error: 'Failed to initialize app. Please refresh the page.',
+          error: t('app.errors.failed_initialize'),
           isInitializing: false,
         });
         return;
@@ -74,7 +75,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
       set({ isInitializing: false });
     } catch {
       set({
-        error: 'Failed to initialize app. Please refresh the page.',
+        error: t('app.errors.failed_initialize'),
         isInitializing: false,
       });
     }
@@ -122,7 +123,7 @@ export const createAppSlice: StateCreator<POSSliceAll, [], [], AppSlice> = (set,
     } catch (error) {
       logger.error('Error fetching POS profile:', error);
       set({
-        error: 'Failed to fetch POS profile',
+        error: t('app.errors.failed_fetch_profile'),
         profileLoading: false,
       });
     }

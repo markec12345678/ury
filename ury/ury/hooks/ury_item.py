@@ -12,7 +12,8 @@ def update_menu_item(doc, event):
     if menu_items:
         # H-06: Use frappe.db.set_value() instead of raw SQL UPDATE to trigger document hooks
         for m in menu_items:
-            frappe.db.set_value('URY Menu Item', m.name, 'item_name', doc.item_name)
+            # R48-FIX: Use update_modified=False — background sync, not user action
+            frappe.db.set_value('URY Menu Item', m.name, 'item_name', doc.item_name, update_modified=False)
 
 def update_variants_add_on(doc, event):
     if doc.custom_pos_add_on_items:

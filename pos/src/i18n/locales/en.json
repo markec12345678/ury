@@ -46,7 +46,8 @@
     "skip_to_content": "Skip to content",
     "back": "Back",
     "next": "Next",
-    "previous": "Previous"
+    "previous": "Previous",
+    "operation_failed": "Operation failed"
   },
   "header": {
     "search": "Search",
@@ -59,7 +60,14 @@
     "default_user": "User"
   },
   "menu": {
-    "special_items": "Special Items"
+    "special_items": "Special Items",
+    "errors": {
+      "failed_load_items": "Failed to load menu items",
+      "failed_load_aggregator": "Failed to load aggregator menu",
+      "failed_load_categories": "Failed to load menu categories",
+      "failed_load_customer_groups": "Failed to load customer groups",
+      "failed_load_territories": "Failed to load territories"
+    }
   },
   "pos_sidebar": {
     "categories": "Categories",
@@ -79,7 +87,13 @@
     "loading_order": "Loading order details...",
     "edit_item": "Edit item",
     "add_comment": "Add comment",
-    "edit_comment": "Edit comment"
+    "edit_comment": "Edit comment",
+    "errors": {
+      "failed_add": "Failed to add item to cart",
+      "failed_remove": "Failed to remove item from cart",
+      "failed_update_quantity": "Failed to update quantity",
+      "failed_clear": "Failed to clear cart"
+    }
   },
   "order": {
     "select_to_view": "Select an order to view details",
@@ -173,6 +187,12 @@
     "failed_save_layout": "Failed to save table layout",
     "failed_update_table": "Failed to update table"
   },
+  "app": {
+    "errors": {
+      "failed_initialize": "Failed to initialize app. Please refresh the page.",
+      "failed_fetch_profile": "Failed to fetch POS profile"
+    }
+  },
   "success": {
     "order_cancelled": "Order cancelled successfully",
     "order_created": "Order created successfully",
@@ -192,6 +212,9 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {{number}}"
+    },
+    "errors": {
+      "failed_load_table_order": "Failed to load table order"
     }
   },
   "tables": {
@@ -234,7 +257,8 @@
     "editing_layout_hint_title": "Editing Layout",
     "drag_tables_hint": "• Drag tables to reposition",
     "autosave_hint": "• Changes autosave",
-    "zoom_pan_hint": "Use Scroll to zoom • Drag background to pan"
+    "zoom_pan_hint": "Use Scroll to zoom • Drag background to pan",
+    "no_bill_activity": "No bill activity yet"
   },
   "footer": {
     "pos": "POS",
@@ -611,6 +635,11 @@
     "close_menu": "Close menu",
     "open_menu": "Open menu"
   },
+  "performance": {
+    "criticalLatency": "Critical latency detected",
+    "degradedLatency": "High latency detected",
+    "reconnected": "Connection restored"
+  },
   "ai": {
     "title": "AI Insights",
     "insights": "AI Insights",
@@ -627,6 +656,10 @@
     "disclaimer": "AI insights are suggestions — always verify with actual data",
     "default_question_top_items": "What are the top selling items?",
     "default_question_trends": "What trends do you see?",
-    "not_configured": "AI Insights requires configuration. Set VITE_AI_BASE_URL and VITE_AI_API_KEY environment variables."
+    "not_configured": "AI Insights requires configuration. Set VITE_AI_BASE_URL and VITE_AI_API_KEY environment variables.",
+    "errors": {
+      "request_failed": "AI request failed",
+      "generate_failed": "Failed to generate insight"
+    }
   }
 }

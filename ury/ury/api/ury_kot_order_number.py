@@ -121,8 +121,10 @@ def _do_set_order_number(doc, pos_profile):
             # Write the invoice name (not just the number) to be consistent
             # with set_last_invoice_in_pos_open which also writes invoice.name
             # R36-FIX: aggregator_invoice may be None in except path
+            # R48-FIX: Use update_modified=False — auxiliary reference update
             frappe.db.set_value(
-                "POS Opening Entry", pos_open_name, "custom_ury_last_aggregator_invoice", aggregator_invoice.name if aggregator_invoice else ""
+                "POS Opening Entry", pos_open_name, "custom_ury_last_aggregator_invoice", aggregator_invoice.name if aggregator_invoice else "",
+                update_modified=False,
             )
         else:
             invoice = None
@@ -134,8 +136,10 @@ def _do_set_order_number(doc, pos_profile):
                 pass
 
             # R36-FIX: invoice may be None in except path
+            # R48-FIX: Use update_modified=False — auxiliary reference update
             frappe.db.set_value(
-                "POS Opening Entry", pos_open_name, "custom_ury_last_invoice", invoice.name if invoice else ""
+                "POS Opening Entry", pos_open_name, "custom_ury_last_invoice", invoice.name if invoice else "",
+                update_modified=False,
             )
 
         default_value = "AGR - 1" if doc.order_type == "Aggregators" else "1"

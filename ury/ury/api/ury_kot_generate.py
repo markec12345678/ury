@@ -3,7 +3,7 @@ import json
 import frappe
 from frappe import _
 from frappe.utils import flt
-from ury.ury.api.utils import _get_user_branch
+from ury.ury.api.utils import _get_user_branch, _branch_filter
 
 
 def load_json(data):
@@ -100,18 +100,17 @@ def _get_production_item_groups(productions):
 
 def _get_existing_kots_with_items(invoice_id, branch=None):
     """Fetch all submitted KOTs for an invoice and their items in one query.
-    R41-FIX: Added optional branch filter for defense-in-depth."""
-    branch_filter = "AND k.branch = %s" if branch else ""
-    params = [invoice_id]
-    if branch:
-        params.append(branch)
+    R41-FIX: Added optional branch filter for defense-in-depth.
+    R48-FIX: Use _branch_filter helper for consistent branch SQL construction."""
+    branch_sql, branch_params = _branch_filter(branch, alias="k")
+    params = [invoice_id] + branch_params
     rows = frappe.db.sql(
         """SELECT ki.parent as kot_name, ki.item
            FROM `tabURY KOT Item` ki
            INNER JOIN `tabURY KOT` k ON ki.parent = k.name
            WHERE k.invoice = %s AND k.docstatus = 1
                AND k.type IN ('New Order', 'Order Modified')
-               """ + branch_filter,
+               """ + branch_sql,
         tuple(params),
         as_dict=True,
     )

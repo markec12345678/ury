@@ -717,7 +717,8 @@ def cancel_order(invoice_id, reason):
         # Use standard Frappe cancellation instead of raw SQL
         pos_invoice.cancel()
         if reason:
-            frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason)
+            # R48-FIX: Use update_modified=False — auxiliary metadata update after cancel()
+            frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason, update_modified=False)
     except Exception:
         frappe.db.rollback(savepoint="before_cancel")
         raise

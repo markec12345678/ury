@@ -63,16 +63,18 @@ class SubPOSClosing(Document):
 
     
     def on_submit(self):
+        # R48-FIX: Use update_modified=False — auxiliary status update
         frappe.db.set_value("POS Opening Entry", self.pos_opening_entry, {
             "custom_sub_pos_close": self.name,
             "status": "Closed",
-        })
+        }, update_modified=False)
     
     def on_cancel(self):
+        # R48-FIX: Use update_modified=False — auxiliary status update
         frappe.db.set_value("POS Opening Entry", self.pos_opening_entry, {
             "custom_sub_pos_close": None,
             "status": "Open",
-        })
+        }, update_modified=False)
 
 
 @frappe.whitelist()

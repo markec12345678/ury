@@ -3,6 +3,8 @@
     <!-- Alert Modal div start-->
     <div
       v-if="showModal"
+      ref="authModal"
+      tabindex="-1"
       class="fixed inset-0 z-[60] overflow-y-auto modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -410,7 +412,15 @@ export default {
       // AbortController signal is actually connected to the network request.
       // The SDK's .get() does not accept a signal parameter, making the
       // timeout dead code. Raw fetch() with signal enables real cancellation.
+      // R48-FIX (M1): Abort any previous in-flight fetch before starting a new one.
+      // Without this, station changes and reconnects leave stale fetches running —
+      // their responses may arrive after the new station's data is already displayed,
+      // overwriting it with old-station data or triggering redundant re-renders.
+      if (this._fetchAbortController) {
+        this._fetchAbortController.abort();
+      }
       const controller = new AbortController();
+      this._fetchAbortController = controller;
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       const promise = new Promise((resolve, reject) => {
         try {
@@ -564,8 +574,8 @@ export default {
           this.masonryLoading();
         })
         .catch((error) => {
-          this.setStatusMessage("Action failed. Please try again.");
-          this.hideStatusMessageAfterDelay();
+          // R48-FIX (M4): Use _handleFetchError to detect auth expiry
+          this._handleFetchError(error, "Action failed. Please try again.");
         })
         .finally(() => { this._clearInflight(kot.name); });
     },
@@ -590,9 +600,9 @@ export default {
           this._sortedItemsCache.delete(kot.name);
           this.masonryLoading();
         })
-        .catch(() => {
-          this.setStatusMessage("Action failed. Please try again.");
-          this.hideStatusMessageAfterDelay();
+        .catch((error) => {
+          // R48-FIX (M4): Use _handleFetchError to detect auth expiry
+          this._handleFetchError(error, "Action failed. Please try again.");
         })
         .finally(() => { this._clearInflight(kot.name); });
     },
@@ -767,6 +777,8 @@ export default {
         // R42-FIX: Mark as notified AFTER the API call succeeds, not before.
         const kotName = kot.name;
         this.orderDelayNotify(kot).then(() => {
+          // R48-FIX (L1): Guard against post-unmount state mutation
+          if (!this._isMounted) return;
           this.notifiedKots.add(kotName);
         }).catch(() => {
           // Notification failed — don't add to notifiedKots so it retries
@@ -946,6 +958,12 @@ export default {
       this.setStatusMessage("You are online");
       this.hideStatusMessageAfterDelay();
       // R46-FIX (H1): Invalidate stale fetch promise so reconnect gets fresh data
+      // R48-FIX (M1): Abort any in-flight fetch before invalidating — prevents
+      // stale fetch from overwriting data after reconnect.
+      if (this._fetchAbortController) {
+        this._fetchAbortController.abort();
+        this._fetchAbortController = null;
+      }
       // R47-FIX (H2): Increment fetch generation so any in-flight fetch discards its results
       this._fetchId++;
       this._fetchInProgress = null;
@@ -1034,6 +1052,10 @@ export default {
     // R45-FIX: Initialize _cancelTimeout for consistency with other cleanup
     // properties — previously relied on falsy undefined check in serveOrder/confirmOrder.
     this._cancelTimeout = null;
+    // R48-FIX (M1): AbortController reference for cancelling in-flight fetches
+    this._fetchAbortController = null;
+    // R48-FIX (M3): Store previously focused element to restore on modal close
+    this._preModalFocus = null;
   },
   mounted() {
     this._isMounted = true;
@@ -1207,7 +1229,7 @@ export default {
                     if (import.meta.env?.DEV) console.error('localStorage write failed:', e);
                   }
                 }
-              }).catch((e) => { console.error("KOT fetch failed:", e); });
+              }).catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
               return;
             }
             // R36-FIX: Guard against missing doc.kot to prevent TypeError crash
@@ -1216,7 +1238,7 @@ export default {
             // return undefined, causing findIndex to fail and the bad data to
             // be unshifted into the KOT array, corrupting the display.
             if (!doc.kot || typeof doc.kot !== 'object' || Array.isArray(doc.kot)) {
-              this.fetchKOTWithRetry().catch((e) => { console.error("KOT fetch failed:", e); });
+              this.fetchKOTWithRetry().catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
               return;
             }
             // Incremental update — deduplicate to avoid duplicate cards
@@ -1261,7 +1283,7 @@ export default {
               this._cancelTimeout = setTimeout(() => {
                 if (!this._isMounted) return;
                 // R43-FIX: Remove redundant masonryLoading() — fetchKOT() calls it.
-                this.fetchKOTWithRetry().catch((e) => { console.error("KOT fetch failed:", e); });
+                this.fetchKOTWithRetry().catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
               }, 1500);
             }
             // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
@@ -1323,6 +1345,11 @@ export default {
     if (this._socketRetryTimer) clearTimeout(this._socketRetryTimer);
     if (this._fetchRetryTimer) clearTimeout(this._fetchRetryTimer);
     if (this._notificationCooldownTimer) clearTimeout(this._notificationCooldownTimer);
+    // R48-FIX (M1): Abort any in-flight fetch on unmount
+    if (this._fetchAbortController) {
+      this._fetchAbortController.abort();
+      this._fetchAbortController = null;
+    }
     // R47-FIX (M4): Restore body scroll in case modal was open at unmount time
     document.body.style.overflow = '';
     // R41-FIX: Cancel pending debounced masonry calls on unmount.
@@ -1366,8 +1393,30 @@ export default {
   },
   watch: {
     // R47-FIX (M4): Prevent background scrolling when auth modal is open
+    // R48-FIX (M2): Auto-focus first focusable element when modal opens.
+    // R48-FIX (M3): Return focus to previously active element on close.
     showModal(val) {
       document.body.style.overflow = val ? 'hidden' : '';
+      if (val) {
+        // R48-FIX (M3): Capture the element that had focus before modal opened
+        this._preModalFocus = document.activeElement;
+        // R48-FIX (M2): Auto-focus the modal or first focusable child
+        this.$nextTick(() => {
+          const modal = this.$refs.authModal;
+          if (modal) {
+            const first = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            (first || modal).focus();
+          }
+        });
+      } else {
+        // R48-FIX (M3): Restore focus to the element that was active before modal opened
+        if (this._preModalFocus && typeof this._preModalFocus.focus === 'function') {
+          this.$nextTick(() => {
+            this._preModalFocus.focus();
+            this._preModalFocus = null;
+          });
+        }
+      }
     },
     // R41-FIX: Vue reuses component instances when navigating between routes
     // that use the same component (Home). Without this watcher, navigating
@@ -1388,6 +1437,11 @@ export default {
       // Re-register socket handler on the new channel
       if (this.kot_channel && this._socket && this.socketHandler) {
         this._socket.off(this.kot_channel, this.socketHandler);
+      }
+      // R48-FIX (M1): Abort any in-flight fetch for the old station before switching.
+      if (this._fetchAbortController) {
+        this._fetchAbortController.abort();
+        this._fetchAbortController = null;
       }
       // R46-FIX (H1): Invalidate stale fetch promise so a fresh one is created
       // for the new station. Without this, fetchKOT() returns the in-flight

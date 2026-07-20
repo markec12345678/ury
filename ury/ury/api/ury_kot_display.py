@@ -28,26 +28,50 @@ def serve_kot(name):
     if kot_data.order_status != "Ready For Prepare":
         frappe.throw(_("KOT {0} is not in a servable state (current: {1})").format(name, kot_data.order_status), frappe.ValidationError)
 
-    current_time = get_datetime()
-    creation_time = kot_data.creation
+    # R48-FIX: Use cache-based dedup lock to prevent TOCTOU race — two
+    # concurrent requests could both pass the status check above and
+    # both set order_status="Served", causing duplicate serve processing.
+    dedup_key = f"ury_kot_serve_lock:{name}"
+    lock_token = frappe.generate_hash(length=12)
+    existing_lock = frappe.cache().get_value(dedup_key)
+    if existing_lock:
+        frappe.throw(_("KOT {0} serve is already in progress").format(name), frappe.ValidationError)
+    frappe.cache().set_value(dedup_key, lock_token, expires_in_sec=30)
+    # Double-check we won the lock
+    if frappe.cache().get_value(dedup_key) != lock_token:
+        frappe.throw(_("KOT {0} serve is already in progress").format(name), frappe.ValidationError)
 
-    production_time = current_time - creation_time
-    production_time_minutes = flt(production_time.total_seconds() / 60, 2)
-    # R47-FIX: Use update_modified=False to avoid unnecessary modified timestamp
-    # changes that could interfere with optimistic concurrency checks
-    frappe.db.set_value("URY KOT", name, {
-        "start_time_serv": current_time,
-        "production_time": production_time_minutes,
-        "order_status": "Served",
-    }, update_modified=False)
+    try:
+        # Re-check status under the lock to close the race window
+        current_status = frappe.db.get_value("URY KOT", name, "order_status")
+        if current_status != "Ready For Prepare":
+            frappe.throw(_("KOT {0} is not in a servable state (current: {1})").format(name, current_status), frappe.ValidationError)
+
+        current_time = get_datetime()
+        creation_time = kot_data.creation
+
+        production_time = current_time - creation_time
+        production_time_minutes = flt(production_time.total_seconds() / 60, 2)
+        # R47-FIX: Use update_modified=False to avoid unnecessary modified timestamp
+        # changes that could interfere with optimistic concurrency checks
+        frappe.db.set_value("URY KOT", name, {
+            "start_time_serv": current_time,
+            "production_time": production_time_minutes,
+            "order_status": "Served",
+        }, update_modified=False)
+    finally:
+        # Only release our own lock
+        if frappe.cache().get_value(dedup_key) == lock_token:
+            frappe.cache().delete_value(dedup_key)
 
 
 # Function to mark it as verified by a user in cancel type KOT
 @frappe.whitelist()
 def confirm_cancel_kot(name):
     frappe.only_for("Restaurant Manager", "Restaurant User")
-    # R39-FIX: Validate KOT exists and belongs to user's branch
-    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "type"], as_dict=True)
+    # R48-FIX: Include "verified" in the initial query to avoid a redundant
+    # get_value call and enable a single-pass check-then-set pattern.
+    kot_data = frappe.db.get_value("URY KOT", name, ["branch", "type", "verified"], as_dict=True)
     if not kot_data:
         frappe.throw(_("KOT {0} not found").format(name))
     kot_branch = kot_data.branch
@@ -65,14 +89,34 @@ def confirm_cancel_kot(name):
     if kot_data.type not in ("Cancelled", "Partially cancelled"):
         frappe.throw(_("Only cancelled KOTs can be verified"), frappe.ValidationError)
     # R45-FIX: Prevent duplicate verification
-    already_verified = frappe.db.get_value("URY KOT", name, "verified")
-    if already_verified:
+    if kot_data.verified:
         frappe.throw(_("KOT {0} has already been verified").format(name), frappe.ValidationError)
-    # Use server-side identity instead of client-supplied user parameter
-    verified_by = frappe.session.user
-    # R47-FIX: Use update_modified=False to avoid unnecessary modified timestamp
-    # changes that could interfere with optimistic concurrency checks
-    frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by}, update_modified=False)
+    # R48-FIX: Use cache-based dedup lock to prevent TOCTOU race — two
+    # concurrent requests could both pass the verified check above and
+    # both write verified=1, leading to duplicate verification.
+    dedup_key = f"ury_kot_verify_lock:{name}"
+    lock_token = frappe.generate_hash(length=12)
+    existing_lock = frappe.cache().get_value(dedup_key)
+    if existing_lock:
+        frappe.throw(_("KOT {0} verification is already in progress").format(name), frappe.ValidationError)
+    frappe.cache().set_value(dedup_key, lock_token, expires_in_sec=30)
+    # Double-check we won the lock
+    if frappe.cache().get_value(dedup_key) != lock_token:
+        frappe.throw(_("KOT {0} verification is already in progress").format(name), frappe.ValidationError)
+    try:
+        # Re-check verified under the lock to close the race window
+        current_verified = frappe.db.get_value("URY KOT", name, "verified")
+        if current_verified:
+            frappe.throw(_("KOT {0} has already been verified").format(name), frappe.ValidationError)
+        # Use server-side identity instead of client-supplied user parameter
+        verified_by = frappe.session.user
+        # R47-FIX: Use update_modified=False to avoid unnecessary modified timestamp
+        # changes that could interfere with optimistic concurrency checks
+        frappe.db.set_value("URY KOT", name, {"verified": 1, "verified_by": verified_by}, update_modified=False)
+    finally:
+        # Only release our own lock
+        if frappe.cache().get_value(dedup_key) == lock_token:
+            frappe.cache().delete_value(dedup_key)
 
 
 @frappe.whitelist()

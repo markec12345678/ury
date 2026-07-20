@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { storage } from './storage';
+import { t } from '../i18n';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -30,19 +31,20 @@ export function formatCurrency(amount: number): string {
 } 
 
 export const formatInvoiceTime = (timestamp: string | null) => {
-    if (!timestamp) return 'No bill activity yet';
+    if (!timestamp) return t('tables.no_bill_activity');
 
+    const locale = typeof navigator !== 'undefined' ? undefined : 'en';
     const parsedDate = new Date(timestamp);
     if (!Number.isNaN(parsedDate.getTime())) {
-      return parsedDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric' });
+      return parsedDate.toLocaleTimeString(locale, { hour: 'numeric', minute: 'numeric' });
     }
 
     const timeOnlyMatch = timestamp.match(/^(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d+))?$/);
     if (timeOnlyMatch) {
-      const [, hours, minutes, seconds] = timeOnlyMatch;
+      const [, hours, minutes] = timeOnlyMatch;
       const date = new Date();
-      date.setHours(Number(hours), Number(minutes), Number(seconds), 0);
-      const formatted = date.toLocaleTimeString(undefined, {
+      date.setHours(Number(hours), Number(minutes), 0, 0);
+      const formatted = date.toLocaleTimeString(locale, {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,

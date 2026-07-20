@@ -2,7 +2,8 @@
 
     <header class="bg-white p-4 flex justify-between items-center">
     <div class="flex items-center">
-        <img :src="imagePath" alt="Logo" class="ml-20 w-40 h-14 mr-2">
+        <img v-if="!imageFailed" :src="imagePath" alt="Logo" class="ml-20 w-40 h-14 mr-2" @error="imageFailed = true">
+        <span v-else class="ml-20 w-40 h-14 mr-2 flex items-center text-xl font-bold text-blue-600">Mosaic</span>
 
     </div>
     <div class="flex items-center">
@@ -29,6 +30,7 @@ export default {
   data() {
     return {
       imagePath: uriMosaicImage,
+      imageFailed: false,
     };
   },
 };

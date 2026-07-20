@@ -6,6 +6,7 @@ import {
   type AIMessage,
   type AIChatResponse,
 } from '../lib/ai-service';
+import { t } from '../i18n';
 
 // ---- Types ----
 
@@ -127,7 +128,7 @@ export const useAIStore = create<AIStore>()((set, get) => ({
         _messageCounter: assistCounter,
       }));
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'AI request failed';
+      const errorMsg = error instanceof Error ? error.message : t('ai.errors.request_failed');
       set({ error: errorMsg, loading: false });
 
       // Add error as assistant message for visibility
@@ -160,7 +161,7 @@ export const useAIStore = create<AIStore>()((set, get) => ({
         _messageCounter: insightCounter,
       }));
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to generate insight';
+      const errorMsg = error instanceof Error ? error.message : t('ai.errors.generate_failed');
       set({ error: errorMsg, loading: false });
 
       const errCounter = get()._messageCounter + 1;

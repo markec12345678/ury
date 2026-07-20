@@ -5,6 +5,7 @@ import { CartError, MAX_QUANTITY, MIN_QUANTITY } from './types';
 import { generateUniqueId, calculateItemPrice } from './helpers';
 import type { POSSliceAll } from './combined';
 import { roundMoney } from '../../lib/utils';
+import { t } from '../../i18n';
 
 // --- Types ---
 
@@ -79,7 +80,7 @@ export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (se
       if (error instanceof CartError) {
         set({ error: error.message });
       } else {
-        set({ error: 'Failed to add item to cart' });
+        set({ error: t('cart.errors.failed_add') });
       }
     }
   },
@@ -89,7 +90,7 @@ export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (se
       const newOrders = get().activeOrders.filter(item => item.uniqueId !== uniqueId);
       set({ activeOrders: newOrders });
     } catch {
-      set({ error: 'Failed to remove item from cart' });
+      set({ error: t('cart.errors.failed_remove') });
     }
   },
 
@@ -107,7 +108,7 @@ export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (se
       if (error instanceof CartError) {
         set({ error: error.message });
       } else {
-        set({ error: 'Failed to update quantity' });
+        set({ error: t('cart.errors.failed_update_quantity') });
       }
     }
   },
@@ -116,7 +117,7 @@ export const createCartSlice: StateCreator<POSSliceAll, [], [], CartSlice> = (se
     try {
       set({ activeOrders: [] });
     } catch {
-      set({ error: 'Failed to clear cart' });
+      set({ error: t('cart.errors.failed_clear') });
     }
   },
 

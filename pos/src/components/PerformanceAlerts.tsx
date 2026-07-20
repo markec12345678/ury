@@ -16,7 +16,7 @@
 import { useRef, useEffect } from 'react';
 import { usePerformanceMonitor, type ConnectionState } from '../hooks/use-performance-monitor';
 import { showToast } from './ui/toast';
-import { i18n } from '../i18n';
+import { t } from '../i18n';
 
 interface AlertState {
   lastCriticalAlert: number;
@@ -50,7 +50,7 @@ export default function PerformanceAlerts() {
         state.lastCriticalAlert = now;
         state.hasAlertedCritical = true;
         showToast.error(
-          i18n.t('performance.criticalLatency', 'Critical latency detected'),
+          t('performance.criticalLatency'),
           {
             duration: 5000,
             description: `${metrics.latency}ms`,
@@ -65,7 +65,7 @@ export default function PerformanceAlerts() {
       if (now - state.lastDegradedAlert > THROTTLE_DEGRADED_MS) {
         state.lastDegradedAlert = now;
         showToast.warning(
-          i18n.t('performance.degradedLatency', 'High latency detected'),
+          t('performance.degradedLatency'),
           {
             duration: 4000,
             description: `${metrics.latency}ms`,
@@ -87,7 +87,7 @@ export default function PerformanceAlerts() {
       if (now - state.lastReconnectAlert > THROTTLE_RECONNECT_MS) {
         state.lastReconnectAlert = now;
         showToast.info(
-          i18n.t('performance.reconnected', 'Connection restored')
+          t('performance.reconnected')
         );
       }
     }

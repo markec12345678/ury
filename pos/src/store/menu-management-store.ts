@@ -25,11 +25,11 @@ function extractServerMessage(error: unknown): string {
     if (err?._server_messages) {
       const parsed = JSON.parse(err._server_messages);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return JSON.parse(parsed[0]).message || 'Operation failed';
+        return JSON.parse(parsed[0]).message || t('common.operation_failed');
       }
     }
   } catch { /* ignore parse errors */ }
-  return 'Operation failed';
+  return t('common.operation_failed');
 }
 
 interface MenuManagementState {
@@ -169,7 +169,7 @@ export const useMenuManagementStore = create<
       await get().fetchMenuDetail(menuName);
       showToast.success(t('menu_management.item_added'));
     } catch (error: unknown) {
-      const msg = extractServerMessage(error) || t('menu_management.failed_add_item'));
+      const msg = extractServerMessage(error) || t('menu_management.failed_add_item');
       showToast.error(msg);
     }
   },
@@ -210,7 +210,7 @@ export const useMenuManagementStore = create<
       await get().fetchCourses();
       showToast.success(t('menu_management.course_created'));
     } catch (error: unknown) {
-      const msg = extractServerMessage(error) || t('menu_management.failed_create_course'));
+      const msg = extractServerMessage(error) || t('menu_management.failed_create_course');
       showToast.error(msg);
     }
   },
@@ -231,7 +231,7 @@ export const useMenuManagementStore = create<
       await get().fetchCourses();
       showToast.success(t('menu_management.course_deleted'));
     } catch (error: unknown) {
-      const msg = extractServerMessage(error) || t('menu_management.failed_delete_course'));
+      const msg = extractServerMessage(error) || t('menu_management.failed_delete_course');
       showToast.error(msg);
     }
   },

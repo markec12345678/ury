@@ -153,15 +153,17 @@ def qz_print_update(invoice):
         frappe.throw(_("You do not have access to invoices from another branch"), frappe.PermissionError)
 
     try:
-        table = frappe.db.get_value("POS Invoice", invoice, "restaurant_table")
+        # R48-FIX: Combine two get_value calls into one for efficiency
+        result = frappe.db.get_value("POS Invoice", invoice, ["restaurant_table", "invoice_printed"])
+        if not result:
+            frappe.throw(_("POS Invoice {0} not found").format(invoice))
+        table, invoice_printed = result
 
         if not table:
             frappe.db.set_value(
                 "POS Invoice", invoice, "invoice_printed", 1, update_modified=False
             )
         else:
-            invoice_printed = frappe.db.get_value("POS Invoice", invoice, "invoice_printed")
-
             if invoice_printed == 0:
                 frappe.db.set_value("POS Invoice", invoice, "invoice_printed", 1, update_modified=False)
                 frappe.db.set_value("URY Table", table, {"occupied": 0, "latest_invoice_time": None}, update_modified=False)

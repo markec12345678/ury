@@ -3,6 +3,7 @@ import { getRestaurantMenu, getAggregatorMenu } from '../../lib/menu-api';
 import { getMenuCourses } from '../../lib/menu-course-api';
 import { getCustomerGroups, getCustomerTerritories } from '../../lib/customer-api';
 import { logger } from '../../lib/logger';
+import { t } from '../../i18n';
 import type { MenuItem, Category } from './types';
 import type { POSSliceAll } from './combined';
 
@@ -70,7 +71,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
       set({ menuItems, menuLoading: false });
     } catch (error) {
       if (get()._fetchMenuSeq !== seq) return;
-      set({ error: 'Failed to load menu items', menuLoading: false });
+      set({ error: t('menu.errors.failed_load_items'), menuLoading: false });
       logger.error('Error loading menu items:', error);
     }
   },
@@ -96,7 +97,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
       set({ menuItems, menuLoading: false });
     } catch (error) {
       if (get()._fetchMenuSeq !== seq) return;
-      set({ error: 'Failed to load aggregator menu', menuLoading: false });
+      set({ error: t('menu.errors.failed_load_aggregator'), menuLoading: false });
       logger.error('Error loading aggregator menu:', error);
     }
   },
@@ -118,7 +119,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
       sessionStorage.setItem('menuCategories', JSON.stringify(courses));
       set({ categories: courses });
     } catch {
-      set({ error: 'Failed to load menu categories' });
+      set({ error: t('menu.errors.failed_load_categories') });
     }
   },
 
@@ -138,7 +139,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
       set({ customerGroups: names });
       sessionStorage.setItem('customerGroups', JSON.stringify(names));
     } catch {
-      set({ error: 'Failed to load customer groups' });
+      set({ error: t('menu.errors.failed_load_customer_groups') });
     }
   },
 
@@ -158,7 +159,7 @@ export const createMenuSlice: StateCreator<POSSliceAll, [], [], MenuSlice> = (se
       set({ territories: names });
       sessionStorage.setItem('territories', JSON.stringify(names));
     } catch {
-      set({ error: 'Failed to load territories' });
+      set({ error: t('menu.errors.failed_load_territories') });
     }
   },
 });

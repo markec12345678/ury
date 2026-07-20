@@ -4,6 +4,7 @@ import { DEFAULT_ORDER_TYPE, type OrderType } from '../../data/order-types';
 import type { Customer, Aggregator, OrderItem, MenuItem } from './types';
 import { generateUniqueId } from './helpers';
 import type { POSSliceAll } from './combined';
+import { t } from '../../i18n';
 
 // --- Types ---
 
@@ -152,7 +153,7 @@ export const createSelectionSlice: StateCreator<POSSliceAll, [], [], SelectionSl
       }
     } catch {
       set({
-        error: 'Failed to load table order',
+        error: t('orders.errors.failed_load_table_order'),
         tableOrder: null,
         activeOrders: [],
         selectedCustomer: null,
