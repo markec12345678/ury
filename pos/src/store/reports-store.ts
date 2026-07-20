@@ -1120,8 +1120,7 @@ function _generateInventoryPdf(doc: jsPDF, report: InventoryReport) {
         4: { halign: 'right', fontStyle: 'bold' },
         5: { cellWidth: 25 },
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      didParseCell: (data: any) => {
+      didParseCell: (data: { section: string; column: { index: number }; cell: { raw: string; styles: { textColor: number[]; fontStyle: string } } }) => {
         if (data.section === 'body' && data.column.index === 5) {
           const status = data.cell.raw;
           if (status === 'Out of Stock') {

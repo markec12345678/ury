@@ -17,7 +17,7 @@ const PeriodComparisonView = () => {
   if (!salesReport) {
     return (
       <div className="text-center py-12 text-gray-400">
-        {t('reports.comparison.noData') || 'Generate a sales report first to enable period comparison'}
+        {t('reports.comparison.noData')}
       </div>
     );
   }
@@ -30,25 +30,25 @@ const PeriodComparisonView = () => {
       <div className="space-y-6">
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <p className="text-gray-500 mb-2">
-            {t('reports.comparison.noPreviousData') || 'No previous period data available for comparison'}
+            {t('reports.comparison.noPreviousData')}
           </p>
           <p className="text-sm text-gray-400">
-            {t('reports.comparison.hint') || 'Previous period data will be loaded automatically when you view a sales report'}
+            {t('reports.comparison.hint')}
           </p>
         </div>
 
         {/* Still show current period summary */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            {t('reports.comparison.currentPeriod') || 'Current Period'}
+            {t('reports.comparison.currentPeriod')}
           </h3>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            <CurrentOnlyCard label={t('reports.comparison.revenue') || 'Revenue'} value={formatCurrency(current.total_revenue)} />
-            <CurrentOnlyCard label={t('reports.comparison.orders') || 'Orders'} value={`${current.total_orders}`} />
-            <CurrentOnlyCard label={t('reports.comparison.avgOrder') || 'Avg Order Value'} value={formatCurrency(current.avg_order_value)} />
-            <CurrentOnlyCard label={t('reports.comparison.customers') || 'Customers'} value={`${current.unique_customers}`} />
-            <CurrentOnlyCard label={t('reports.comparison.tax') || 'Tax'} value={formatCurrency(current.total_tax)} />
-            <CurrentOnlyCard label={t('reports.comparison.netRevenue') || 'Net Revenue'} value={formatCurrency(current.net_revenue)} />
+            <CurrentOnlyCard label={t('reports.comparison.revenue')} value={formatCurrency(current.total_revenue)} />
+            <CurrentOnlyCard label={t('reports.comparison.orders')} value={`${current.total_orders}`} />
+            <CurrentOnlyCard label={t('reports.comparison.avgOrder')} value={formatCurrency(current.avg_order_value)} />
+            <CurrentOnlyCard label={t('reports.comparison.customers')} value={`${current.unique_customers}`} />
+            <CurrentOnlyCard label={t('reports.comparison.tax')} value={formatCurrency(current.total_tax)} />
+            <CurrentOnlyCard label={t('reports.comparison.netRevenue')} value={formatCurrency(current.net_revenue)} />
           </div>
         </div>
       </div>
@@ -59,42 +59,42 @@ const PeriodComparisonView = () => {
 
   const metrics: ComparisonMetric[] = [
     {
-      label: t('reports.comparison.revenue') || 'Revenue',
+      label: t('reports.comparison.revenue'),
       previous: previous.total_revenue,
       current: current.total_revenue,
       format: 'currency',
       higherIsBetter: true,
     },
     {
-      label: t('reports.comparison.orders') || 'Orders',
+      label: t('reports.comparison.orders'),
       previous: previous.total_orders,
       current: current.total_orders,
       format: 'number',
       higherIsBetter: true,
     },
     {
-      label: t('reports.comparison.avgOrder') || 'Avg Order Value',
+      label: t('reports.comparison.avgOrder'),
       previous: previous.avg_order_value,
       current: current.avg_order_value,
       format: 'currency',
       higherIsBetter: true,
     },
     {
-      label: t('reports.comparison.customers') || 'Customers',
+      label: t('reports.comparison.customers'),
       previous: previous.unique_customers,
       current: current.unique_customers,
       format: 'number',
       higherIsBetter: true,
     },
     {
-      label: t('reports.comparison.tax') || 'Tax',
+      label: t('reports.comparison.tax'),
       previous: previous.total_tax,
       current: current.total_tax,
       format: 'currency',
       higherIsBetter: true,
     },
     {
-      label: t('reports.comparison.netRevenue') || 'Net Revenue',
+      label: t('reports.comparison.netRevenue'),
       previous: previous.net_revenue,
       current: current.net_revenue,
       format: 'currency',
@@ -108,18 +108,18 @@ const PeriodComparisonView = () => {
       <div className="grid grid-cols-3 gap-4">
         <div className="text-center">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            {t('reports.comparison.previousPeriod') || 'Previous Period'}
+            {t('reports.comparison.previousPeriod')}
           </p>
           <p className="text-sm text-gray-600 mt-1">{previousSalesReport.from_date} — {previousSalesReport.to_date}</p>
         </div>
         <div className="text-center">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            {t('reports.comparison.change') || 'Change'}
+            {t('reports.comparison.change')}
           </p>
         </div>
         <div className="text-center">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            {t('reports.comparison.currentPeriod') || 'Current Period'}
+            {t('reports.comparison.currentPeriod')}
           </p>
           <p className="text-sm text-gray-600 mt-1">{salesReport.from_date} — {salesReport.to_date}</p>
         </div>
@@ -150,10 +150,10 @@ const PeriodComparisonView = () => {
             'text-gray-700'
           )}>
             {getOverallTrend(metrics) === 'up'
-              ? (t('reports.comparison.overallUp') || 'Overall trend is positive compared to the previous period')
+              ? t('reports.comparison.overallUp')
               : getOverallTrend(metrics) === 'down'
-              ? (t('reports.comparison.overallDown') || 'Overall trend shows decline compared to the previous period')
-              : (t('reports.comparison.overallNeutral') || 'Performance is similar to the previous period')
+              ? t('reports.comparison.overallDown')
+              : t('reports.comparison.overallNeutral')
             }
           </span>
         </div>
