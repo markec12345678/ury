@@ -137,7 +137,7 @@ function PerformanceOverlayInner() {
         <button
           data-testid="perf-overlay-close"
           onClick={(e) => { e.stopPropagation(); setState('hidden'); }}
-          className="ml-1 text-gray-500 hover:text-gray-300"
+          className="ms-1 text-gray-500 hover:text-gray-300"
         >
           <X className="w-3 h-3" />
         </button>

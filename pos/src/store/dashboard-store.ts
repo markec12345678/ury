@@ -185,7 +185,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
       } catch (error) {
         set((s) => ({
           liveLoading: false,
-          partialErrors: [...s.partialErrors, 'live_metrics'],
+          partialErrors: [...s.partialErrors, t('dashboard.failed_load_live_metrics')],
         }));
         logger.error('Failed to fetch live metrics:', error);
       }

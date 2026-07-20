@@ -129,6 +129,7 @@
     "switch_to_desk": "Switch to Desk"
   },
   "customer": {
+    "search_results": "Search results",
     "search_placeholder": "Search customer...",
     "type_to_search": "Please type to search...",
     "no_customers_found": "No customers found",
@@ -431,7 +432,8 @@
     "failed_load_orders_chart": "Failed to load orders chart",
     "failed_load_category_sales": "Failed to load category sales",
     "failed_load_payment_chart": "Failed to load payment method chart",
-    "failed_load_table_occupancy": "Failed to load table occupancy"
+    "failed_load_table_occupancy": "Failed to load table occupancy",
+    "failed_load_live_metrics": "Failed to load live metrics"
   },
   "reports": {
     "title": "Reports",
@@ -621,6 +623,8 @@
     "mobile_hint": "Mobile support will be available in a future version.",
     "current_width": "Current screen width:",
     "required": "Required:",
+    "min_width": "1024px or larger",
+    "mobile_version_hint": "You can use URY POS Version 1 for mobile devices.",
     "switch_v1": "Switch to Version 1"
   },
   "error_boundary": {

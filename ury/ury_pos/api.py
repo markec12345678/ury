@@ -615,11 +615,10 @@ def validate_pos_close(pos_profile):
         current_datetime = frappe.utils.now_datetime()
         start_of_day = current_datetime.replace(hour=5, minute=0, second=0, microsecond=0)
         
-        if current_datetime > start_of_day:
-            previous_day = start_of_day - timedelta(days=1)
-            
-        else:
-            previous_day = start_of_day
+        # R51-FIX (M1): Always check the previous business day's POS opening,
+        # regardless of whether it's before or after 5 AM. Both branches were
+        # identical (start_of_day - 1 day), so the if/else was redundant.
+        previous_day = start_of_day - timedelta(days=1)
     
         unclosed_pos_opening = frappe.db.exists(
             "POS Opening Entry",

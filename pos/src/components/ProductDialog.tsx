@@ -351,7 +351,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
         <div className="md:w-1/3 p-6 overflow-y-auto">
           {isItemLoading && (
             <div className="flex items-center justify-center py-4 text-gray-500">
-              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin me-2" />
               {t('common.loading')}
             </div>
           )}

@@ -94,7 +94,7 @@ const AuthGuard: React.FC<Props> = ({ children }) => {
               }
             }}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4 me-2" />
             {t('auth_guard.recheck_permissions')}
           </Button>
         </div>

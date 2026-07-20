@@ -127,7 +127,7 @@ const HourlyHeatmap = () => {
 
           <div className="overflow-x-auto">
             {/* Hour labels */}
-            <div className="flex items-end ml-10 mb-1">
+            <div className="flex items-end ms-10 mb-1">
               {HOURS.filter((h) => h % 2 === 0).map((h) => (
                 <div
                   key={h}
@@ -178,13 +178,13 @@ const HourlyHeatmap = () => {
 
           {/* Legend */}
           <div className="flex items-center justify-end gap-2 mt-3">
-            <span className="text-[10px] text-gray-400 mr-1">{t('dashboard.legend_less')}</span>
+            <span className="text-[10px] text-gray-400 me-1">{t('dashboard.legend_less')}</span>
             {legendSteps.map((step) => (
               <div key={step.label} className="flex items-center gap-1">
                 <div className={cn('w-3 h-3 rounded-sm', step.color)} />
               </div>
             ))}
-            <span className="text-[10px] text-gray-400 ml-1">{t('dashboard.legend_more')}</span>
+            <span className="text-[10px] text-gray-400 ms-1">{t('dashboard.legend_more')}</span>
           </div>
         </div>
       )}

@@ -46,15 +46,14 @@
     <!-- Alert Modal div end-->
 
     <div
-      class="relative"
+      class="relative grid"
     >
-      <div v-for="kot in visibleKots" :key="kot.name">
-        <div
-          :class="[kot.color]"
-          class="shadow-lg gap-4 p-3 rounded-2xl max-w-80 w-full h-auto masonry-item mt-7"
-          role="group"
-          :aria-label="`${kot.tableortakeaway}, Order ${kot.order_no || (kot.invoice ? String(kot.invoice).slice(-4) : '—')}, ${kot.timeRemaining} elapsed`"
-        >
+      <div v-for="kot in visibleKots" :key="kot.name"
+        :class="[kot.color]"
+        class="shadow-lg gap-4 p-3 rounded-2xl max-w-80 w-full h-auto masonry-item mt-7"
+        role="group"
+        :aria-label="`${kot.tableortakeaway}, Order ${kot.order_no || (kot.invoice ? String(kot.invoice).slice(-4) : '—')}, ${kot.timeRemaining} elapsed`"
+      >
           <div class="w-64">
             <div
               :class="[{ hidden: !kot.isRotated }]"
@@ -188,7 +187,6 @@
             
           </div>
         </div>
-      </div>
     </div>
 
     <!-- Audio Alert Message -->
@@ -631,6 +629,8 @@ export default {
           this.removeAllItemsFromLocalStorage(kot);
           this.notifiedKots.delete(kot.name);
           this._sortedItemsCache.delete(kot.name);
+          // R51-FIX (M3): Clean up _notifiedFailCount for served/confirmed KOTs
+          if (this._notifiedFailCount) this._notifiedFailCount.delete(kot.name);
           this.masonryLoading();
         })
         .catch((error) => {
@@ -672,6 +672,8 @@ export default {
           this.removeAllItemsFromLocalStorage(kot);
           this.notifiedKots.delete(kot.name);
           this._sortedItemsCache.delete(kot.name);
+          // R51-FIX (M3): Clean up _notifiedFailCount for served/confirmed KOTs
+          if (this._notifiedFailCount) this._notifiedFailCount.delete(kot.name);
           this.masonryLoading();
         })
         .catch((error) => {
@@ -696,8 +698,10 @@ export default {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      const baseUrl = window.frappe?.boot?.frappe_url || '';
-      const url = `${baseUrl}/api/method/ury.ury.api.ury_kot_notification.order_delay_notification`;
+      // R51-FIX (M1): Use relative URL consistent with all other API calls
+      // (fetchKOT, confirmOrder, serveOrder). The frappe_url prefix could make
+      // this cross-origin, and missing credentials would cause silent auth failures.
+      const url = '/api/method/ury.ury.api.ury_kot_notification.order_delay_notification';
 
       return fetch(url, {
         method: 'POST',
@@ -705,6 +709,7 @@ export default {
           'Content-Type': 'application/json',
           'X-Frappe-CSRF-Token': window.csrf_token || '',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ id: kot.name }),
         signal: controller.signal,
       })
@@ -1008,10 +1013,13 @@ export default {
     // this logic was duplicated in the socket init chain's .catch() and would
     // be needed again in the connect handler and station watcher.
     _isAuthError(error) {
+      // R51-FIX (M5): Differentiate 401 (auth expired) from 403 (permission denied).
+      // In Frappe, 403 often means "Not Permitted" (insufficient role), not session
+      // expiry. Showing "Session Expired" for a 403 causes a confusing re-login loop.
       return error && (
         error.httpStatus === 401 ||
-        error.httpStatus === 403 ||
-        /(?:session|csrf|token).*expir|unauthorized|not permitted|authentication_failed/i.test(String(error.message || ''))
+        (error.httpStatus === 403 &&
+          /(?:session|csrf|token).*expir|authentication_failed/i.test(String(error.message || '')))
       );
     },
     // R45-FIX: Centralized fetch error handler for fetchKOTWithRetry failures.
@@ -1052,7 +1060,11 @@ export default {
         if (doc.last_kot_time !== kottime || kottime === null) {
           // R43-FIX: Move localStorage sentinel update AFTER fetchKOT succeeds.
           this.fetchKOTWithRetry().then(() => {
-            if (doc.kot && doc.kot.time != null) {
+            // R51-FIX (M2): Guard on doc.last_kot_time (the field we actually store)
+            // instead of doc.kot.time (a different field). Previously, if doc.kot.time
+            // was not null but doc.last_kot_time was null, localStorage.setItem(key, null)
+            // would store the string "null", corrupting the sentinel.
+            if (doc.last_kot_time != null) {
               try {
                 localStorage.setItem("kot_time_" + this.production, doc.last_kot_time);
               } catch (e) {
@@ -1115,7 +1127,8 @@ export default {
           }, 1500);
         }
         // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
-        if (doc.kot.time != null) {
+        // R51-FIX (M2): Guard on doc.last_kot_time (the field we actually store)
+        if (doc.last_kot_time != null) {
           try {
             localStorage.setItem("kot_time_" + this.production, doc.last_kot_time);
           } catch (e) {
@@ -1124,6 +1137,12 @@ export default {
         }
       } catch (err) {
         if (import.meta.env?.DEV) console.error("Socket handler error:", err);
+        // R51-FIX (M4): Attempt recovery via full refresh when the incremental
+        // update path fails, instead of silently swallowing the error and leaving
+        // the KOT in a partially updated state with incorrect color/quantity data.
+        if (this._isMounted) {
+          this.fetchKOTWithRetry().catch(() => {});
+        }
       }
     },
     // R41-FIX: In-flight operation tracking for serveOrder/confirmOrder.
@@ -1176,9 +1195,9 @@ export default {
       // R39-FIX: Use retry wrapper for transient network errors on reconnect
       // R41-FIX: Show error feedback if fetch fails after all retries —
       // without this the user sees "You are online" but stale/empty data.
-      // R50-FIX (M1): Record last successful fetch timestamp so the socket
-      // connect handler can skip redundant fetches within 5 seconds.
-      this._lastFetchTime = Date.now();
+      // R51-FIX (H1): Moved _lastFetchTime into .then() callback — setting it
+      // before the fetch means the socket connect handler skips its fetch even
+      // when handleOnline's fetch fails, leaving the user with stale data.
       this.fetchKOTWithRetry().then(() => {
         if (!this._isMounted) return;
         // R43-FIX: Removed redundant masonryLoading() — fetchKOT() already calls
@@ -1231,8 +1250,8 @@ export default {
     // trigger orderDelayNotify() simultaneously on mount.
     this._notificationCooldown = true;
     this._notificationCooldownTimer = setTimeout(() => { this._notificationCooldown = false; }, 30000);
-    // API client as non-reactive instance property (avoids Proxy overhead)
-    this.call = markRaw(frappe.call());
+    // R51-FIX (H3): Removed dead code `this.call = markRaw(frappe.call())` —
+    // all API calls have been migrated to raw fetch() with AbortController.
     // R37-FIX: socketHandler as non-reactive to avoid unnecessary Proxy overhead
     // R49-FIX (H2): Initialize socketHandler immediately instead of null —
     // ensures the handler is always available for fetchKOT() to register
@@ -1426,9 +1445,10 @@ export default {
       })
       .then(() => {
         if (!this._isMounted || !this._socket) return;
-        if (Number(this.audio_alert) === 1) {
-          this.showAudioAlertMessage = true;
-        }
+        // R51-FIX (H2): Removed premature showAudioAlertMessage = true.
+        // Showing "Audio notifications disabled" before any playback attempt
+        // is misleading. The NotAllowedError handler in playAlertSound()
+        // already shows this message when audio is genuinely blocked.
         // R49-FIX (H2): socketHandler is now defined in created() via
         // _handleSocketEvent, so we only need to register it on the
         // channel here. Previously, the handler was defined inline, which

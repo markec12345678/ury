@@ -429,7 +429,8 @@
     "failed_load_orders_chart": "Grafa naročil ni bilo mogoče naložiti",
     "failed_load_category_sales": "Prodaje po kategorijah ni bilo mogoče naložiti",
     "failed_load_payment_chart": "Grafa načinov plačila ni bilo mogoče naložiti",
-    "failed_load_table_occupancy": "Zasedenosti miz ni bilo mogoče naložiti"
+    "failed_load_table_occupancy": "Zasedenosti miz ni bilo mogoče naložiti",
+    "failed_load_live_metrics": "Metrik v živo ni bilo mogoče naložiti"
   },
   "reports": {
     "title": "Poročila",

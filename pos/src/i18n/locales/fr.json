@@ -426,7 +426,8 @@
     "failed_load_orders_chart": "Échec du chargement du graphique des commandes",
     "failed_load_category_sales": "Échec du chargement des ventes par catégorie",
     "failed_load_payment_chart": "Échec du chargement du graphique des modes de paiement",
-    "failed_load_table_occupancy": "Échec du chargement de l'occupation des tables"
+    "failed_load_table_occupancy": "Échec du chargement de l'occupation des tables",
+    "failed_load_live_metrics": "Échec du chargement des métriques en direct"
   },
   "reports": {
     "title": "Rapports",

@@ -168,9 +168,21 @@ def validate_price_list(doc, method):
                 "Menu for Room", {"parent": doc.restaurant, "room": room}, "menu"
             )
 
-    doc.selling_price_list = frappe.db.get_value(
+    if not menu_name:
+        frappe.throw(_("No menu configured for restaurant {0}").format(doc.restaurant))
+
+    price_list = frappe.db.get_value(
         "Price List", dict(restaurant_menu=menu_name, enabled=1)
     )
+    # R51-FIX (H1): Validate that a Price List was found — previously, a None
+    # value was silently assigned to doc.selling_price_list, causing incorrect
+    # tax/price calculations or confusing errors during invoice submission.
+    if not price_list:
+        frappe.throw(
+            _("No enabled Price List found for menu {0}. Please create one.").format(menu_name),
+            frappe.ValidationError
+        )
+    doc.selling_price_list = price_list
 
 
 def restrict_existing_order(doc, event):

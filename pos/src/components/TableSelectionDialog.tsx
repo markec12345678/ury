@@ -89,7 +89,7 @@ const TableSelectionDialog: React.FC<Props> = ({ onClose }) => {
         setTables(sortedTables);
         setTablesCache(prev => ({ ...prev, [selectedRoom]: fetchedTables }));
       } catch {
-        setError(t('errors.failed_load_tables') || 'Failed to load tables');
+        setError(t('errors.failed_load_tables'));
         setTables([]);
       } finally {
         setLoadingTables(false);

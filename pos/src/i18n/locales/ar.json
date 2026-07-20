@@ -433,7 +433,8 @@
     "failed_load_orders_chart": "فشل تحميل مخطط الطلبات",
     "failed_load_category_sales": "فشل تحميل مبيعات الفئات",
     "failed_load_payment_chart": "فشل تحميل مخطط طرق الدفع",
-    "failed_load_table_occupancy": "فشل تحميل إشغال الطاولات"
+    "failed_load_table_occupancy": "فشل تحميل إشغال الطاولات",
+    "failed_load_live_metrics": "فشل تحميل المقاييس المباشرة"
   },
   "reports": {
     "title": "التقارير",

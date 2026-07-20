@@ -633,7 +633,7 @@ function addReportHeader(doc: jsPDF, reportType: ReportType): void {
   doc.setFontSize(20);
   doc.setTextColor(...(colorMap[reportType] || [26, 86, 219]));
   doc.setFont('helvetica', 'bold');
-  doc.text(titleMap[reportType] || 'Report', 14, 28);
+  doc.text(titleMap[reportType], 14, 28);
 
   // Generation timestamp
   doc.setFontSize(8);
