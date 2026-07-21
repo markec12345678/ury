@@ -127,9 +127,10 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
             </Button>
           </div>
           <p className="text-xs text-gray-400 mt-1">
+            {/* R51-FIX: Wrap hardcoded English hint text in t() calls */}
             {applyMode === 'percentage'
-              ? 'Enter a percentage (e.g. +10 for increase, -5 for decrease)'
-              : 'Enter a fixed amount (e.g. +50 for increase, -20 for decrease)'}
+              ? t('menu_management.percentage_hint')
+              : t('menu_management.fixed_amount_hint')}
           </p>
         </div>
 

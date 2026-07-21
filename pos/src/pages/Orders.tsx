@@ -141,7 +141,7 @@ export default function Orders() {
       }
       setSelectedCustomer({ id: order.customer, name: order.customer_name, phone: order.mobile_number });
       // Fill cart
-      const items = (order.items || []).map((item: { item_code: string; item_name: string; rate: number; qty: number; amount: number; image?: string; description?: string; comment?: string; name?: string }) => ({
+      const items = (order.items || []).map((item: { item_code: string; item_name: string; rate: number; qty: number; amount: number; image?: string; description?: string; comment?: string; name?: string; tax_rate?: number }) => ({
         id: item.item_code,
         name: item.item_name,
         price: item.rate,
@@ -155,7 +155,11 @@ export default function Orders() {
         course: '',
         description: item.description || '',
         special_dish: 0,
-        tax_rate: 0,
+        // R51-FIX: Use effective tax rate from POS Invoice item instead of
+        // hardcoded 0. Previously the cart showed incorrect totals (0 tax)
+        // when editing an existing order, misleading the user into thinking
+        // the order total was lower than it actually is.
+        tax_rate: item.tax_rate || 0,
       }));
       for (const cartItem of items) {
         await addToOrder(cartItem);

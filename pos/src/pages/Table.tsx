@@ -264,7 +264,7 @@ const TableView = () => {
                   >
                     {room.name}
                     {typeof roomCounts[room.name] === 'number' ? (
-                      <Badge variant="outline" className="ml-2 bg-white/60">
+                      <Badge variant="outline" className="ms-2 bg-white/60">
                         {roomCounts[room.name]}
                       </Badge>
                     ) : null}
@@ -405,11 +405,12 @@ const TableView = () => {
         <div className="max-w-screen-xl mx-auto">
           <div className="flex items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
+              {/* R51-FIX: Match actual card colors (emerald/amber) instead of green/red */}
+              <div className="w-4 h-4 bg-emerald-50 border-2 border-emerald-300 rounded"></div>
               <span>{t('tables.available')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
+              <div className="w-4 h-4 bg-amber-50 border-2 border-amber-400 rounded"></div>
               <span>{t('tables.occupied')}</span>
             </div>
           </div>

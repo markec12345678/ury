@@ -54,11 +54,17 @@ export function AggregatorSelect({ disabled }: AggregatorSelectProps) {
 
   return (
     <div>
+      {/* R51-FIX: Show error message to user when aggregators API fails.
+          Previously the error state was set but never rendered, leaving users
+          with no feedback about what went wrong or how to fix it. */}
+      {error && (
+        <p className="text-xs text-red-500 mb-1">{error}</p>
+      )}
       <Select
         value={selectedAggregator?.customer || ''}
         onValueChange={handleAggregatorChange}
         disabled={disabled || loading}
-        placeholder={loading ? t('aggregator.loading') : error ? t('aggregator.retry_placeholder') : t('aggregator.select_placeholder')}
+        placeholder={loading ? t('aggregator.loading') : t('aggregator.select_placeholder')}
       >
         {aggregators.map((aggregator) => (
           <SelectItem 

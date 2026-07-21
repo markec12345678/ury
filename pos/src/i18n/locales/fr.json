@@ -318,6 +318,8 @@
     "export_menu": "Exporter le menu",
     "current_price": "Prix actuel",
     "fixed_amount": "Fixe",
+    "percentage_hint": "Entrez un pourcentage (ex. +10 pour augmentation, -5 pour réduction)",
+    "fixed_amount_hint": "Entrez un montant fixe (ex. +50 pour augmentation, -20 pour réduction)",
     "change": "Modification",
     "failed_update_prices": "Échec de la mise à jour des prix",
     "bulk_action_failed": "Échec de l'action en masse",
@@ -648,7 +650,7 @@
     "select_placeholder": "Sélectionner un agrégateur",
     "failed_load": "Échec du chargement des agrégateurs",
     "failed_load_menu": "Échec du chargement du menu agrégateur",
-    "retry_placeholder": "Échec du chargement — appuyez pour réessayer"
+    "retry_placeholder": "Réessayer le chargement des agrégateurs"
   },
   "accessibility": {
     "loading_content": "Chargement du contenu...",

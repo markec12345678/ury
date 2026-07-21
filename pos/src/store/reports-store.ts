@@ -15,9 +15,6 @@ import { showToast } from '../components/ui/toast';
 import { t } from '../i18n';
 import jsPDF from 'jspdf';
 
-// R50-FIX: Sequence counter to discard stale fetch results when concurrent
-// fetchSalesReport/fetchExpenseReport/fetchProfitLossReport calls overlap.
-let _fetchReportSeq = 0;
 import autoTable from 'jspdf-autotable';
 
 // ---- Inventory Types ----
@@ -69,6 +66,11 @@ interface ReportsState {
   exporting: boolean;
   error: string | null;
   comparePeriods: boolean;
+  // R51-FIX: Move sequence counter into store state (matching ai-store.ts
+  // pattern). Module-level vars persist across HMR, so after a hot reload
+  // the store is recreated but the stale counter value persists, causing
+  // new fetch responses to be incorrectly discarded as stale.
+  _fetchReportSeq: number;
 }
 
 // ---- Actions Interface ----
@@ -103,45 +105,46 @@ export const useReportsStore = create<ReportsState & ReportsActions>(
     exporting: false,
     error: null,
     comparePeriods: false,
+    _fetchReportSeq: 0,
 
     fetchSalesReport: async (period, fromDate, toDate) => {
-      const seq = ++_fetchReportSeq;
+      const seq = get()._fetchReportSeq + 1;
+      set({ _fetchReportSeq: seq, loading: true, error: null });
       try {
-        set({ loading: true, error: null });
         const p = period || get().selectedPeriod;
         const report = await getSalesReport(p, fromDate, toDate);
-        if (seq !== _fetchReportSeq) return; // stale, discard
+        if (get()._fetchReportSeq !== seq) return; // stale, discard
         set({ salesReport: report, loading: false });
       } catch {
-        if (seq !== _fetchReportSeq) return; // stale, discard
+        if (get()._fetchReportSeq !== seq) return; // stale, discard
         set({ error: t('reports.failed_load_sales'), loading: false });
         showToast.error(t('reports.failed_load_sales'));
       }
     },
 
     fetchExpenseReport: async (fromDate, toDate) => {
-      const seq = ++_fetchReportSeq;
+      const seq = get()._fetchReportSeq + 1;
+      set({ _fetchReportSeq: seq, loading: true, error: null });
       try {
-        set({ loading: true, error: null });
         const report = await getExpenseReport(fromDate, toDate);
-        if (seq !== _fetchReportSeq) return; // stale, discard
+        if (get()._fetchReportSeq !== seq) return; // stale, discard
         set({ expenseReport: report, loading: false });
       } catch {
-        if (seq !== _fetchReportSeq) return; // stale, discard
+        if (get()._fetchReportSeq !== seq) return; // stale, discard
         set({ error: t('reports.failed_load_expense'), loading: false });
         showToast.error(t('reports.failed_load_expense'));
       }
     },
 
     fetchProfitLossReport: async (fromDate, toDate) => {
-      const seq = ++_fetchReportSeq;
+      const seq = get()._fetchReportSeq + 1;
+      set({ _fetchReportSeq: seq, loading: true, error: null });
       try {
-        set({ loading: true, error: null });
         const report = await getProfitLossReport(fromDate, toDate);
-        if (seq !== _fetchReportSeq) return; // stale, discard
+        if (get()._fetchReportSeq !== seq) return; // stale, discard
         set({ profitLossReport: report, loading: false });
       } catch {
-        if (seq !== _fetchReportSeq) return; // stale, discard
+        if (get()._fetchReportSeq !== seq) return; // stale, discard
         set({ error: t('reports.failed_load_profit_loss'), loading: false });
         showToast.error(t('reports.failed_load_profit_loss'));
       }

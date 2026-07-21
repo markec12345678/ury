@@ -223,6 +223,10 @@ const SalesReportView = () => {
 };
 
 // Calculate percentage change between two values
+// R51-FIX: Handle negative previous values correctly — using Math.abs(previous)
+// in the denominator produces misleading % when previous is negative (e.g.
+// going from -100 loss to +50 profit). The direction is now determined by
+// raw comparison (current vs previous) rather than the signed difference.
 function calcChange(previous: number, current: number): { percent: number; direction: 'up' | 'down' | 'neutral' } {
   if (previous === 0) {
     if (current > 0) return { percent: 100, direction: 'up' };

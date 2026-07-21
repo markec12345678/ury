@@ -43,13 +43,20 @@ class URYMenu(Document):
         self.clear_item_price(price_list_name)
 
         # batch insert item prices using bulk SQL
+        # R51-FIX (H1): Include selling=1 and currency in bulk_insert.
+        # Previously, only price_list/item_code/price_list_rate were inserted,
+        # causing Item Price records with selling=0 (invisible to aggregator
+        # and available-items queries that filter by selling=1) and NULL
+        # currency (potential currency mismatch with the Price List).
         if self.items:
+            currency = frappe.db.get_value("Price List", price_list_name, "currency") or \
+                frappe.db.get_single_value("Global Defaults", "default_currency") or "USD"
             rows = []
             for d in self.items:
-                rows.append((price_list_name, d.item, d.rate))
+                rows.append((price_list_name, d.item, d.rate, 1, currency))
             frappe.db.bulk_insert(
                 "Item Price",
-                ["price_list", "item_code", "price_list_rate"],
+                ["price_list", "item_code", "price_list_rate", "selling", "currency"],
                 rows,
                 ignore_duplicates=True,
             )

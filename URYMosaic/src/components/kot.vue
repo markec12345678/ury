@@ -499,6 +499,16 @@ export default {
                   this.notifiedKots.delete(name);
                 }
               }
+              // R51-FIX (L2): Prune _notifiedFailCount for removed KOTs — prevents
+              // unbounded growth over long shifts and avoids inherited fail counts
+              // if KOT names are ever recycled.
+              if (this._notifiedFailCount) {
+                for (const name of [...this._notifiedFailCount.keys()]) {
+                  if (!activeKotNames.has(name)) {
+                    this._notifiedFailCount.delete(name);
+                  }
+                }
+              }
               // R43-FIX: Clean up orphaned localStorage strike-through keys.
               // When KOTs are removed server-side (served/cancelled without going
               // through the KDS UI), their _strike keys accumulate in localStorage
@@ -601,10 +611,15 @@ export default {
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
-      // R50-FIX (H2): Store controller on instance so it can be aborted on unmount
-      if (this._mutateAbortController) this._mutateAbortController.abort();
+      // R51-FIX (H1): Use per-KOT AbortController map instead of shared single
+      // controller. Previously, serving/confirming KOT B would abort KOT A's
+      // in-flight request, causing KOT A to fail with a generic error message.
+      if (this._mutateAbortControllers && this._mutateAbortControllers.has(kot.name)) {
+        this._mutateAbortControllers.get(kot.name).abort();
+      }
       const controller = new AbortController();
-      this._mutateAbortController = controller;
+      if (!this._mutateAbortControllers) this._mutateAbortControllers = new Map();
+      this._mutateAbortControllers.set(kot.name, controller);
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       fetch('/api/method/ury.ury.api.ury_kot_display.confirm_cancel_kot', {
         method: 'POST',
@@ -631,10 +646,14 @@ export default {
           this._sortedItemsCache.delete(kot.name);
           // R51-FIX (M3): Clean up _notifiedFailCount for served/confirmed KOTs
           if (this._notifiedFailCount) this._notifiedFailCount.delete(kot.name);
+          // R51-FIX (H1): Clean up per-KOT AbortController
+          if (this._mutateAbortControllers) this._mutateAbortControllers.delete(kot.name);
           this.masonryLoading();
         })
         .catch((error) => {
           clearTimeout(timeoutId);
+          // R51-FIX (H1): Clean up per-KOT AbortController on failure
+          if (this._mutateAbortControllers) this._mutateAbortControllers.delete(kot.name);
           this._handleFetchError(error, "Action failed. Please try again.");
         })
         .finally(() => { this._clearInflight(kot.name); });
@@ -644,10 +663,13 @@ export default {
       if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
       if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
-      // R50-FIX (H2): Store controller on instance so it can be aborted on unmount
-      if (this._mutateAbortController) this._mutateAbortController.abort();
+      // R51-FIX (H1): Use per-KOT AbortController map instead of shared single
+      if (this._mutateAbortControllers && this._mutateAbortControllers.has(kot.name)) {
+        this._mutateAbortControllers.get(kot.name).abort();
+      }
       const controller = new AbortController();
-      this._mutateAbortController = controller;
+      if (!this._mutateAbortControllers) this._mutateAbortControllers = new Map();
+      this._mutateAbortControllers.set(kot.name, controller);
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       fetch('/api/method/ury.ury.api.ury_kot_display.serve_kot', {
         method: 'POST',
@@ -674,10 +696,14 @@ export default {
           this._sortedItemsCache.delete(kot.name);
           // R51-FIX (M3): Clean up _notifiedFailCount for served/confirmed KOTs
           if (this._notifiedFailCount) this._notifiedFailCount.delete(kot.name);
+          // R51-FIX (H1): Clean up per-KOT AbortController
+          if (this._mutateAbortControllers) this._mutateAbortControllers.delete(kot.name);
           this.masonryLoading();
         })
         .catch((error) => {
           clearTimeout(timeoutId);
+          // R51-FIX (H1): Clean up per-KOT AbortController on failure
+          if (this._mutateAbortControllers) this._mutateAbortControllers.delete(kot.name);
           this._handleFetchError(error, "Action failed. Please try again.");
         })
         .finally(() => { this._clearInflight(kot.name); });
@@ -696,6 +722,11 @@ export default {
       if (failCount >= 3) return Promise.resolve();
 
       const controller = new AbortController();
+      // R51-FIX (M4): Track notification AbortControllers on the instance for
+      // cleanup on unmount. Previously, only a local variable held the controller,
+      // so in-flight notification requests continued after navigating away from KDS.
+      if (!this._notifyAbortControllers) this._notifyAbortControllers = new Set();
+      this._notifyAbortControllers.add(controller);
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       // R51-FIX (M1): Use relative URL consistent with all other API calls
@@ -728,6 +759,10 @@ export default {
           this._notifiedFailCount.set(kot.name, failCount + 1);
           if (import.meta.env?.DEV) console.error('orderDelayNotify failed:', error);
           throw error;
+        })
+        .finally(() => {
+          // R51-FIX (M4): Remove controller from tracking set
+          if (this._notifyAbortControllers) this._notifyAbortControllers.delete(controller);
         });
     },
     toggleItemStrikeThrough(kotitem, kot) {
@@ -1180,6 +1215,11 @@ export default {
       // connect_error doesn't compute elapsed time from a stale value,
       // producing confusing "Offline for 5+ minutes" right after "You are online".
       this._disconnectedSince = null;
+      // R51-FIX (M2): Clear _notifiedFailCount on reconnect — a reconnect means
+      // the network has recovered and previous notification failures are no longer
+      // predictive. Without this, KOTs that hit the 3-failure limit during an
+      // outage remain permanently silenced for the rest of the shift.
+      if (this._notifiedFailCount) this._notifiedFailCount.clear();
       this.setStatusMessage("You are online");
       this.hideStatusMessageAfterDelay();
       // R46-FIX (H1): Invalidate stale fetch promise so reconnect gets fresh data
@@ -1205,8 +1245,17 @@ export default {
       }).catch((e) => {
         if (import.meta.env?.DEV) console.error("KOT fetch failed:", e);
         if (this._isMounted) {
-          this.setStatusMessage("Back online but data refresh failed. Click Refresh.");
-          this.hideStatusMessageAfterDelay();
+          // R51-FIX (M3): Suppress error if fetch was intentionally aborted
+          // (e.g., by socket connect handler). Previously, handleOnline's fetch
+          // would show "Back online but data refresh failed" even when the socket
+          // connect handler was successfully refreshing data, because the socket
+          // handler aborted handleOnline's in-flight fetch.
+          const wasAborted = e?.name === 'AbortError' ||
+            (e?.message && e.message.includes('Superseded'));
+          if (!wasAborted) {
+            this.setStatusMessage("Back online but data refresh failed. Click Refresh.");
+            this.hideStatusMessageAfterDelay();
+          }
         }
       });
     },
@@ -1403,6 +1452,8 @@ export default {
         this._socket.on('connect', () => {
           if (!this._isMounted) return;
           this._disconnectedSince = null;
+          // R51-FIX (M2): Clear _notifiedFailCount on socket reconnect
+          if (this._notifiedFailCount) this._notifiedFailCount.clear();
           // R50-FIX: Abort in-flight fetch and invalidate to prevent stale data after server restart
           if (this._fetchAbortController) {
             this._fetchAbortController.abort();
@@ -1532,9 +1583,17 @@ export default {
       this._socketAbortController = null;
     }
     // R50-FIX (H2): Abort any in-flight confirm/serve request on unmount
-    if (this._mutateAbortController) {
-      this._mutateAbortController.abort();
-      this._mutateAbortController = null;
+    // R51-FIX (H1): Use per-KOT map instead of shared single controller
+    if (this._mutateAbortControllers) {
+      this._mutateAbortControllers.forEach(c => c.abort());
+      this._mutateAbortControllers.clear();
+      this._mutateAbortControllers = null;
+    }
+    // R51-FIX (M4): Abort any in-flight notification requests on unmount
+    if (this._notifyAbortControllers) {
+      this._notifyAbortControllers.forEach(c => c.abort());
+      this._notifyAbortControllers.clear();
+      this._notifyAbortControllers = null;
     }
     // R47-FIX (M4): Restore body scroll in case modal was open at unmount time
     document.body.style.overflow = '';

@@ -426,11 +426,16 @@ def kot_execute(
     if frappe.cache().get_value(dedup_key) != lock_token:
         frappe.throw(_("KOT creation already in progress for {0}").format(invoice_id))
 
-    new_invoice_items_array = create_order_items(previous_items)
-    new_Order_items_array = create_order_items(current_items)
+    # R51-FIX (L1): Rename misleading variables for clarity.
+    # previous_items_array comes from previous_items (BEFORE changes),
+    # current_items_array comes from current_items (AFTER changes).
+    # The old names (new_invoice_items_array / new_Order_items_array)
+    # suggested the opposite meaning, making maintenance error-prone.
+    previous_items_array = create_order_items(previous_items)
+    current_items_array = create_order_items(current_items)
 
-    final_array = compare_two_array(new_Order_items_array, new_invoice_items_array)
-    removed_item = get_removed_items(new_invoice_items_array, new_Order_items_array)
+    final_array = compare_two_array(current_items_array, previous_items_array)
+    removed_item = get_removed_items(previous_items_array, current_items_array)
 
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
     # R47-FIX: Validate invoice belongs to user's branch (was missing — all other
@@ -453,7 +458,10 @@ def kot_execute(
     branch = user_branch
 
     positive_qty_items = [item for item in final_array if flt(item["qty"]) > 0]
-    negative_qty_items = [item for item in final_array if flt(item["qty"]) <= 0]
+    # R51-FIX (M2): Exclude zero-qty items from negative_qty_items —
+    # items with exactly 0 qty are not cancels and would create meaningless
+    # cancel KOT entries with cancelled_qty=0, confusing kitchen staff.
+    negative_qty_items = [item for item in final_array if flt(item["qty"]) < 0]
     total_cancel_items = negative_qty_items + removed_item
 
     # Common data fetched once and passed to both processors

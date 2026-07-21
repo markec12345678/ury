@@ -26,6 +26,10 @@ const ProfitLossView = () => {
     profit_margin,
   } = profitLossReport;
 
+  // R51-FIX: Guard against NaN/Infinity from backend (e.g. division by zero
+  // when total_revenue is 0). Without this, Math.abs(NaN)% breaks the progress
+  // bar width and displays NaN% to the user.
+  const safeMargin = Number.isFinite(profit_margin) ? profit_margin : 0;
   const isProfitable = net_profit >= 0;
 
   return (
@@ -54,7 +58,7 @@ const ProfitLossView = () => {
           {formatCurrency(net_profit)}
         </p>
         <p className="text-sm text-gray-500 mt-1">
-          {t('reports.profit_margin')}: {profit_margin}%
+          {t('reports.profit_margin')}: {safeMargin.toFixed(1)}%
         </p>
       </div>
 
@@ -110,10 +114,10 @@ const ProfitLossView = () => {
                 className={`h-full rounded-full ${
                   isProfitable ? 'bg-emerald-500' : 'bg-red-500'
                 }`}
-                style={{ width: `${Math.min(Math.abs(profit_margin), 100)}%` }}
+                style={{ width: `${Math.min(Math.abs(safeMargin), 100)}%` }}
               />
             </div>
-            <span className="text-xs text-gray-500">{profit_margin}%</span>
+            <span className="text-xs text-gray-500">{safeMargin.toFixed(1)}%</span>
           </div>
         </div>
       </div>

@@ -161,8 +161,15 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Initialize quantity and comments from cart if not in edit mode
+  // R51-FIX: Use ref to track selectedItem changes so the effect only fires
+  // when selectedItem actually changes, not when existingCartItem gets a new
+  // object reference from activeOrders.find() (which happens on any cart change).
+  // Previously, any cart modification while the dialog was open would reset
+  // the user's manually-entered quantity and comments.
+  const prevSelectedItemRef = useRef(selectedItem);
   useEffect(() => {
-    if (!editMode && selectedItem) {
+    if (!editMode && selectedItem && selectedItem !== prevSelectedItemRef.current) {
+      prevSelectedItemRef.current = selectedItem;
       if (existingCartItem) {
         setQuantity(existingCartItem.quantity.toString());
         setComments(existingCartItem.comment || '');
@@ -171,7 +178,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
         setQuantity(cartQuantity.toString());
       }
     }
-  }, [selectedItem, editMode, getItemQuantityFromCart, existingCartItem]);
+  }, [selectedItem, editMode]);
 
   // Handle click outside to close dialog
   useEffect(() => {

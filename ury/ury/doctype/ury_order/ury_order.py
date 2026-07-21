@@ -5,7 +5,7 @@ import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, cint
 from datetime import datetime
 from erpnext.controllers.queries import item_query
 from ury.ury.api.utils import _get_user_branch
@@ -85,6 +85,15 @@ def _get_order_invoice_doc(table=None, invoiceNo=None, order_type=None, is_payme
         invoice.selling_price_list = frappe.db.get_value(
             "Price List", dict(restaurant_menu=menu_name, enabled=1)
         )
+        # R51-FIX (H2): Validate selling_price_list is not None — same class of
+        # bug as the validate_price_list fix, but in the order creation path.
+        # Without this, a missing Price List causes incorrect pricing or
+        # confusing downstream errors.
+        if not invoice.selling_price_list:
+            frappe.throw(
+                _("No enabled Price List found for menu {0}. Please create one.").format(menu_name),
+                frappe.ValidationError
+            )
 
     else:
 
@@ -116,6 +125,12 @@ def _get_order_invoice_doc(table=None, invoiceNo=None, order_type=None, is_payme
         invoice.selling_price_list = frappe.db.get_value(
             "Price List", dict(restaurant_menu=menu, enabled=1)
         )
+        # R51-FIX (H2): Validate selling_price_list is not None
+        if not invoice.selling_price_list:
+            frappe.throw(
+                _("No enabled Price List found for menu {0}. Please create one.").format(menu),
+                frappe.ValidationError
+            )
         # R43-FIX: Set branch on non-table invoices to prevent branchless invoices
         invoice.branch = branch
 
@@ -442,6 +457,10 @@ def item_query_restaurant(
 ):
     """Return items that are selected in active menu of the restaurant"""
     frappe.only_for("Restaurant Manager", "Restaurant User", "Cashier")
+    # R51-FIX (M1): Validate filters["table"] exists before accessing —
+    # previously a missing table key would raise KeyError (500 error).
+    if not filters or not filters.get("table"):
+        frappe.throw(_("Table is required for item query"), frappe.ValidationError)
     restaurant, menu = get_restaurant_and_menu_name(filters["table"])
     items = frappe.db.get_all("URY Menu Item", ["item"], dict(parent=menu, disabled=0))
     del filters["table"]
@@ -876,7 +895,14 @@ def cancel_kot(invoice_id):
     pos_invoice = frappe.get_doc("POS Invoice", invoice_id)
     pos_profile_id = pos_invoice.pos_profile
     kot_naming_series = frappe.db.get_value("POS Profile", pos_profile_id, "custom_kot_naming_series")
-    cancel_kot_naming_series = "CNCL-" + (kot_naming_series or "")
+    if not kot_naming_series:
+        frappe.log_error(
+            f"KOT Naming Series not configured for POS Profile {pos_profile_id} — "
+            f"skipping cancel KOT for invoice {invoice_id}",
+            "URY Cancel KOT Error"
+        )
+        return
+    cancel_kot_naming_series = "CNCL-" + kot_naming_series
 
     items = []
     # Create a list of items for the canceled KOT

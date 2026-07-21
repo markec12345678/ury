@@ -325,6 +325,8 @@
     "export_menu": "تصدير القائمة",
     "current_price": "السعر الحالي",
     "fixed_amount": "ثابت",
+    "percentage_hint": "أدخل نسبة مئوية (مثلاً +10 للزيادة، -5 للنقصان)",
+    "fixed_amount_hint": "أدخل مبلغًا ثابتًا (مثلاً +50 للزيادة، -20 للنقصان)",
     "change": "تغيير",
     "failed_update_prices": "فشل تحديث الأسعار",
     "bulk_action_failed": "فشل الإجراء الجماعي",
@@ -655,7 +657,7 @@
     "select_placeholder": "اختر منصة تجميع",
     "failed_load": "فشل في تحميل منصات التجميع",
     "failed_load_menu": "فشل في تحميل قائمة المنصة",
-    "retry_placeholder": "فشل التحميل — اضغط لإعادة المحاولة"
+    "retry_placeholder": "إعادة محاولة تحميل المنصات"
   },
   "accessibility": {
     "loading_content": "جاري تحميل المحتوى...",

@@ -13,22 +13,36 @@ def sub_pos_close_check(doc, method):
     cashier = None
     multiple_cashier = frappe.db.get_value("POS Profile", doc.pos_profile, "custom_enable_multiple_cashier")
     if multiple_cashier:
-        # Use lightweight query instead of full get_doc
-        sub_cashier = frappe.db.get_value(
+        # R51-FIX (H3): Use get_all instead of get_value to fetch ALL sub-cashiers.
+        # Previously, get_value returned only the first sub-cashier, so other
+        # sub-cashiers' open POS entries were not checked, allowing a POS Closing
+        # Entry to be created while other sub-cashiers still had open POS sessions.
+        sub_cashiers = frappe.get_all(
             "POS Profile User",
-            {"parent": doc.pos_profile, "custom_main_cashier": 0},
-            "user",
+            filters={"parent": doc.pos_profile, "custom_main_cashier": 0},
+            fields=["user"],
+            pluck="user",
         )
-        cashier = sub_cashier
+        if not sub_cashiers:
+            return
 
-        if frappe.session.user != cashier:
-            branch = frappe.db.get_value("POS Profile", doc.pos_profile, "branch")
+        branch = frappe.db.get_value("POS Profile", doc.pos_profile, "branch")
+
+        # If the current user is a sub-cashier, they cannot create closing entries
+        if frappe.session.user in sub_cashiers:
+            frappe.throw(_("Sub Cashiers are not allowed to make POS Closing Entries."))
+
+        # Check that ALL sub-cashiers have closed their POS
+        for cashier in sub_cashiers:
             has_open = frappe.db.exists(
                 "POS Opening Entry",
                 {"branch": branch, "user": cashier, "status": "Open", "docstatus": 1},
             )
             if has_open:
-                frappe.throw(_("Sub Cashier POS must be closed"), title=_("Sub Cashier POS Closing Required"))
+                frappe.throw(
+                    _("Sub Cashier {0}'s POS must be closed").format(cashier),
+                    title=_("Sub Cashier POS Closing Required"),
+                )
 
 
 def calculate_closing_amount(doc, method):
@@ -41,21 +55,22 @@ def calculate_closing_amount(doc, method):
                 ["period_start_date", ">=", doc.period_start_date],
                 ["docstatus", "=", 1]
             ],
-            fields=["name"]
+            pluck="name",
         )
         if sub_pos_closing:
-            parent = sub_pos_closing[0].name
             modes = [d.mode_of_payment for d in doc.payment_reconciliation]
-            # Batch-fetch all sub-closing amounts in one query
+            # R51-FIX (H4): Aggregate across ALL sub-closing entries, not just
+            # the first one. Previously, only sub_pos_closing[0].name was used,
+            # so other sub-cashiers' payment amounts were silently dropped,
+            # causing the POS Closing Entry to have incorrect totals.
             if modes:
-                sub_amounts = {
-                    r[0]: r[1]
-                    for r in frappe.db.get_values(
-                        "Sub POS Closing Payment",
-                        {"parent": parent, "mode_of_payment": ("in", modes)},
-                        ["mode_of_payment", "closing_amount"],
-                    )
-                }
+                sub_amount_rows = frappe.db.sql("""
+                    SELECT mode_of_payment, SUM(closing_amount) as closing_amount
+                    FROM `tabSub POS Closing Payment`
+                    WHERE parent IN %s AND mode_of_payment IN %s
+                    GROUP BY mode_of_payment
+                """, (tuple(sub_pos_closing), tuple(modes)), as_dict=True)
+                sub_amounts = {r.mode_of_payment: r.closing_amount for r in sub_amount_rows}
             else:
                 sub_amounts = {}
 
@@ -70,16 +85,18 @@ def calculate_closing_amount(doc, method):
 
 
 def validate_cashier(doc, method):
-    cashier = None
     multiple_cashier = frappe.db.get_value("POS Profile", doc.pos_profile, "custom_enable_multiple_cashier")
     if multiple_cashier:
-        # Use lightweight query instead of full get_doc
-        sub_cashier = frappe.db.get_value(
+        # R51-FIX (H3): Use get_all to fetch ALL sub-cashiers
+        sub_cashiers = frappe.get_all(
             "POS Profile User",
-            {"parent": doc.pos_profile, "custom_main_cashier": 0},
-            "user",
+            filters={"parent": doc.pos_profile, "custom_main_cashier": 0},
+            fields=["user"],
+            pluck="user",
         )
-        cashier = sub_cashier
+        if not sub_cashiers:
+            return
 
-        if frappe.session.user == cashier:
+        # If the current user is a sub-cashier, they cannot create closing entries
+        if frappe.session.user in sub_cashiers:
             frappe.throw(_("Sub Cashiers are not allowed to make POS Closing Entries."))

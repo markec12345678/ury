@@ -321,6 +321,8 @@
     "export_menu": "Izvozi jedilnik",
     "current_price": "Trenutna cena",
     "fixed_amount": "Fiksno",
+    "percentage_hint": "Vnesite odstotek (npr. +10 za povečanje, -5 za zmanjšanje)",
+    "fixed_amount_hint": "Vnesite fiksni znesek (npr. +50 za povečanje, -20 za zmanjšanje)",
     "change": "Sprememba",
     "failed_update_prices": "Neuspešna posodobitev cen",
     "bulk_action_failed": "Množično dejanje ni uspelo",
@@ -651,7 +653,7 @@
     "select_placeholder": "Izberite agregatorja",
     "failed_load": "Neuspešno nalaganje agregatorjev",
     "failed_load_menu": "Neuspešno nalaganje jedilnika agregatorja",
-    "retry_placeholder": "Nalaganje ni uspelo — tapnite za ponovni poskus"
+    "retry_placeholder": "Poskusi znova naložiti agregatorje"
   },
   "accessibility": {
     "loading_content": "Nalaganje vsebine...",
