@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { X, Check } from 'lucide-react';
 import { Button, Input } from '../ui';
 import { useMenuManagementStore } from '../../store/menu-management-store';
@@ -19,6 +19,9 @@ const EditItemDialog = ({ item, menuName, courses, onClose }: EditItemDialogProp
   const [specialDish, setSpecialDish] = useState(item.special_dish);
   const [saving, setSaving] = useState(false);
 
+  // R52-FIX (H2): Add catch block to prevent unhandled promise rejection.
+  // Previously, try/finally without catch meant a rejected updateItemInMenu
+  // would become an unhandled promise rejection at the window level.
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -28,16 +31,20 @@ const EditItemDialog = ({ item, menuName, courses, onClose }: EditItemDialogProp
         special_dish: specialDish,
       });
       onClose();
+    } catch {
+      // Error is handled by the store; no additional action needed here
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    // R52-FIX (H1): Add role="dialog" and aria-modal for screen reader accessibility.
+    // Compare with CommentDialog.tsx which already has these attributes.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="edit-item-dialog-title">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">{t('menu_management.edit_menu_item')}</h2>
+          <h2 id="edit-item-dialog-title" className="text-lg font-semibold">{t('menu_management.edit_menu_item')}</h2>
           <Button variant="ghost" onClick={onClose}>
             <X className="w-5 h-5" />
           </Button>

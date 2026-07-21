@@ -782,7 +782,10 @@ def cancel_order(invoice_id, reason):
             frappe.db.set_value("POS Invoice", invoice_id, "cancel_reason", reason, update_modified=False)
     except Exception:
         frappe.db.rollback(savepoint="before_cancel")
-        frappe.cache().delete_value(dedup_key)  # R49-FIX: Release lock on failure
+        # R51-FIX: Verify lock token before deleting to prevent releasing
+        # a concurrent request's lock (matches the pattern on line 791).
+        if frappe.cache().get_value(dedup_key) == lock_token:
+            frappe.cache().delete_value(dedup_key)
         raise
 
     # R50-FIX (H3): Verify lock token before deleting to match the standard

@@ -608,7 +608,9 @@ function getLastTableY(doc: jsPDF): number {
 }
 
 function addReportHeader(doc: jsPDF, reportType: ReportType): void {
-  const companyName = 'URY Restaurant';
+  // R52-FIX (M3): Wrap hardcoded English strings in t() for i18n.
+  // Previously, PDF headers always showed English regardless of locale.
+  const companyName = t('reports.pdf.company_name');
   const now = new Date();
   const timestamp = now.toLocaleString();
 
@@ -620,10 +622,10 @@ function addReportHeader(doc: jsPDF, reportType: ReportType): void {
 
   // Report title
   const titleMap: Record<ReportType, string> = {
-    sales: 'Sales Report',
-    expense: 'Expense Report',
-    profit_loss: 'Profit & Loss Report',
-    inventory: 'Inventory Report',
+    sales: t('reports.pdf.sales_title'),
+    expense: t('reports.pdf.expense_title'),
+    profit_loss: t('reports.pdf.profit_loss_title'),
+    inventory: t('reports.pdf.inventory_title'),
   };
 
   const colorMap: Record<ReportType, [number, number, number]> = {
@@ -642,7 +644,7 @@ function addReportHeader(doc: jsPDF, reportType: ReportType): void {
   doc.setFontSize(8);
   doc.setTextColor(156, 163, 175);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Generated: ${timestamp}`, 14, 34);
+  doc.text(`${t('reports.pdf.generated')}: ${timestamp}`, 14, 34);
 
   // Separator line
   doc.setDrawColor(229, 231, 235);

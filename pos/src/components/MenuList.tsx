@@ -40,7 +40,13 @@ const MenuList: React.FC<MenuListProps> = ({ onItemClick }) => {
     });
   }, [menuItems, selectedCategory, searchQuery, quickFilter]);
 
-  const isInteractionDisabled = isMenuInteractionDisabled() || isOrderInteractionDisabled();
+  // R52-FIX (M5): Memoize interaction-disabled computation instead of calling
+  // store action functions on every render. These internally call get() to read
+  // state, which is wasted work when the relevant state hasn't changed.
+  const isInteractionDisabled = useMemo(
+    () => isMenuInteractionDisabled() || isOrderInteractionDisabled(),
+    [isMenuInteractionDisabled, isOrderInteractionDisabled, menuLoading]
+  );
 
   return (
     <div className="flex-1 overflow-auto bg-gray-50" data-testid="menu-list">

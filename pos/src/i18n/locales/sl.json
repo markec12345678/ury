@@ -290,6 +290,7 @@
     "confirm_delete_course": "Izbriši to kategorijo? Jedi, ki jo uporabljajo, bodo nekategorizirane.",
     "no_courses": "Ni definiranih kategorij",
     "course_name": "Ime kategorije",
+    "course_name_placeholder": "npr. Predjedi, Glavne jedi, Sladice",
     "priority": "Prioriteta",
     "batch_update_prices": "Množična posodobitev cen",
     "bulk_actions": "Množična dejanja",
@@ -536,6 +537,14 @@
     "no_inventory_data_export": "Ni podatkov o zalogi za izvoz",
     "csv_exported": "CSV uspešno izvožen",
     "failed_export_csv": "Neuspešen izvoz CSV",
+    "pdf": {
+      "company_name": "URY Restaurant",
+      "sales_title": "Poročilo o prodaji",
+      "expense_title": "Poročilo o stroških",
+      "profit_loss_title": "Poročilo o dobičku in izgubi",
+      "inventory_title": "Poročilo o zalogi",
+      "generated": "Ustvarjeno"
+    },
     "sales": {
       "noData": "Izberite obdobje za generiranje poročila o prodaji",
       "totalRevenue": "Skupni prihodek",

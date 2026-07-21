@@ -56,6 +56,25 @@ def network_printing(
             frappe.throw(_("CUPS library is not installed on the server"))
 
         try:
+            # R51-FIX: Validate server_ip is a valid IP address or hostname
+            # to prevent SSRF via CUPS connection to internal services.
+            # Network Printer Settings are admin-controlled, but a compromised
+            # admin account could set server_ip to an internal service.
+            import ipaddress
+            import re as _re
+            server_ip = print_settings.server_ip
+            if server_ip:
+                # Allow valid IP addresses and RFC-compliant hostnames
+                try:
+                    ipaddress.ip_address(server_ip)
+                except ValueError:
+                    # Not an IP — validate as a hostname (alphanumeric, hyphens, dots)
+                    if not _re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$', server_ip):
+                        frappe.throw(_("Invalid printer server address: {0}").format(server_ip), frappe.ValidationError)
+                    # Block obvious internal/metadata endpoints
+                    blocked_prefixes = ("169.254.", "metadata.google", "metadata.azure")
+                    if any(server_ip.lower().startswith(p) for p in blocked_prefixes):
+                        frappe.throw(_("Printer server address cannot be a metadata endpoint"), frappe.ValidationError)
             cups.setServer(print_settings.server_ip)
             cups.setPort(print_settings.port)
             conn = cups.Connection()
@@ -238,9 +257,9 @@ def qz_certificate():
 @frappe.whitelist()
 def sign_message(message):
     """Sign a message with the QZ private key server-side. Never expose the key."""
+    frappe.only_for("System Manager")
     if len(str(message)) > 10000:
         frappe.throw(_("Message too long for signing (max 10000 characters)"), frappe.ValidationError)
-    frappe.only_for("System Manager")
     site_config = frappe.get_site_config()
     private_key_pem = site_config.get("qz_private_key")
     if not private_key_pem:

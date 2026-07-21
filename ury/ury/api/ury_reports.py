@@ -24,6 +24,13 @@ def get_sales_report(period="daily", from_date=None, to_date=None):
         from_date = getdate(from_date)
         to_date = getdate(to_date)
 
+    # R51-FIX: Cap date range to prevent expensive queries on arbitrarily
+    # large ranges. Without this, a user could request a 10-year report
+    # that overwhelms the database with full-table scans.
+    MAX_DATE_RANGE_DAYS = 366
+    if (to_date - from_date).days > MAX_DATE_RANGE_DAYS:
+        frappe.throw(_("Date range cannot exceed {0} days").format(MAX_DATE_RANGE_DAYS), frappe.ValidationError)
+
     branch = _get_user_branch()
 
     # R37-FIX: Replace .format() SQL pattern with _branch_filter helper
@@ -171,6 +178,12 @@ def get_inventory_report(from_date=None, to_date=None):
 
     from_date = getdate(from_date)
     to_date = getdate(to_date)
+
+    # R51-FIX: Cap date range
+    MAX_DATE_RANGE_DAYS = 366
+    if (to_date - from_date).days > MAX_DATE_RANGE_DAYS:
+        frappe.throw(_("Date range cannot exceed {0} days").format(MAX_DATE_RANGE_DAYS), frappe.ValidationError)
+
     branch = _get_user_branch()
 
     # Material consumption
@@ -183,7 +196,8 @@ def get_inventory_report(from_date=None, to_date=None):
         "URY Materials",
         filters=material_filters,
         fields=["name", "date", "item", "qty", "rate", "amount"],
-        order_by="date"
+        order_by="date",
+        limit_page_length=5000  # R51-FIX: Cap results to prevent unbounded response
     )
 
     return {
@@ -205,6 +219,11 @@ def get_expense_report(from_date=None, to_date=None):
     from_date = getdate(from_date)
     to_date = getdate(to_date)
 
+    # R51-FIX: Cap date range
+    MAX_DATE_RANGE_DAYS = 366
+    if (to_date - from_date).days > MAX_DATE_RANGE_DAYS:
+        frappe.throw(_("Date range cannot exceed {0} days").format(MAX_DATE_RANGE_DAYS), frappe.ValidationError)
+
     branch = _get_user_branch()
 
     # Fixed expenses
@@ -217,7 +236,8 @@ def get_expense_report(from_date=None, to_date=None):
         "URY Fixed Expenses",
         filters=fixed_filters,
         fields=["name", "date", "expense_type", "amount", "description"],
-        order_by="expense_type"
+        order_by="expense_type",
+        limit_page_length=5000  # R51-FIX: Cap results
     )
 
     # Variable expenses
@@ -230,7 +250,8 @@ def get_expense_report(from_date=None, to_date=None):
         "URY Variable Expenses",
         filters=variable_filters,
         fields=["name", "date", "expense_type", "amount", "description"],
-        order_by="date"
+        order_by="date",
+        limit_page_length=5000  # R51-FIX: Cap results
     )
 
     total_fixed = sum(flt(e.amount) for e in fixed_expenses)
@@ -258,6 +279,12 @@ def get_profit_loss_report(from_date=None, to_date=None):
 
     from_date = getdate(from_date)
     to_date = getdate(to_date)
+
+    # R51-FIX: Cap date range
+    MAX_DATE_RANGE_DAYS = 366
+    if (to_date - from_date).days > MAX_DATE_RANGE_DAYS:
+        frappe.throw(_("Date range cannot exceed {0} days").format(MAX_DATE_RANGE_DAYS), frappe.ValidationError)
+
     branch = _get_user_branch()
 
     # R37-FIX: Replace .format() SQL pattern with _branch_filter helper

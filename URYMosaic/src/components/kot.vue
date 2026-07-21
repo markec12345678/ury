@@ -29,13 +29,24 @@
             {{ modalMessage }}
           </p>
 
-          <div class="flex justify-center">
+          <div class="flex justify-center gap-3">
+            <!-- R52-FIX (M3): Show "Retry" for network errors, "Login" for auth errors.
+                 Previously, the only button was "Login" even for connection errors,
+                 which confused users — they'd re-login only to see the same error. -->
+            <button
+              v-if="!modalIsAuthError"
+              @click="retryAfterError"
+              class="mt-8 rounded bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
+            >
+              Retry
+            </button>
             <button
               @click="
                 showModal = false;
                 redirectToLogin();
               "
-              class="mt-8 rounded bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
+              class="mt-8 rounded px-3 py-2 text-white hover:bg-blue-600"
+              :class="modalIsAuthError ? 'bg-blue-500' : 'bg-gray-500 hover:bg-gray-600'"
             >
               Login
             </button>
@@ -224,7 +235,6 @@
 </template>
 
 <script>
-import { FrappeApp } from "frappe-js-sdk";
 import Masonry from "masonry-layout";
 import io from "socket.io-client";
 import { markRaw } from "vue";
@@ -233,6 +243,10 @@ let host = window.location.hostname;
 let port = window.location.port;
 let protocol = window.location.protocol;
 let url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
+// R52-FIX: Removed FrappeApp import — all API calls now use raw fetch() with
+// AbortController. The FrappeApp's internal axios instance was only used for
+// auth(), which had no timeout/abort support. This eliminates ~30KB of unused
+// axios overhead from the bundle.
 // R37-REMOVED: module-level siteName and alertAudio — siteName was shared mutable state (race condition risk),
 // alertAudio was unused after R36 moved to instance-level this._alertAudio
 
@@ -297,7 +311,10 @@ async function initializeSocket(signal) {
 
 
 
-const frappe = new FrappeApp(url);
+// R52-FIX: Removed module-level `const frappe = new FrappeApp(url)` —
+// all API calls now use raw fetch(). The FrappeApp's internal axios was only
+// used by auth(), which had no timeout/abort support, creating a hung-promise
+// risk on network issues. auth() now uses raw fetch() with a 15s timeout.
 export default {
   inject: ['authState'],
   data() {
@@ -315,6 +332,9 @@ export default {
       // network/server errors instead of always showing "Not Permitted".
       modalTitle: "Connection Error",
       modalMessage: "Unable to reach the server. Please check your connection and try again.",
+      // R52-FIX (M3): Track whether the modal is showing an auth error so the
+      // template can show "Retry" for network errors vs "Login" for auth errors.
+      modalIsAuthError: false,
       kot_alert_time: "",
       showAudioAlertMessage: false,
       audio_alert: 0,
@@ -405,27 +425,69 @@ export default {
         }
       });
     },
-    // R40-FIX: Removed unnecessary new Promise() wrapper — frappe.auth().getLoggedInUser()
-    // already returns a Promise. The old pattern was an anti-pattern that added nesting
-    // and lost stack traces on rejection.
+    // R40-FIX: Removed unnecessary new Promise() wrapper — already returns a Promise.
+    // R52-FIX (H1): Replace Frappe SDK auth call with raw fetch + AbortController (15s timeout).
+    // The SDK's axios had no abort support, so a hung server would block the entire
+    // KDS init chain indefinitely — no data fetch, no socket listeners, no error recovery.
+    // R52-FIX (H2): Only set isLoggedIn = false for actual auth errors (401/403).
+    // Previously, ANY auth() failure (network timeout, DNS error, etc.) set
+    // isLoggedIn = false, causing the router guard to redirect to the login page
+    // even when the user was actually logged in but the network was temporarily down.
     auth() {
-      return frappe.auth().getLoggedInUser()
-        .then((user) => {
-          // R50-FIX (L1): Removed dead _loggedUser assignment — never read anywhere.
-          // Update shared auth state so route guard works
-          if (this.authState) {
-            this.authState.isLoggedIn = true;
+      if (this._authAbortController) {
+        this._authAbortController.abort();
+      }
+      const controller = new AbortController();
+      this._authAbortController = controller;
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      return fetch('/api/method/frappe.auth.get_logged_user', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        signal: controller.signal,
+      })
+        .then((response) => {
+          clearTimeout(timeoutId);
+          if (!response.ok) {
+            const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+            err.httpStatus = response.status;
+            throw err;
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (!this._isMounted) return;
+          const user = data?.message;
+          if (user && user !== 'Guest') {
+            // Update shared auth state so route guard works
+            if (this.authState) {
+              this.authState.isLoggedIn = true;
+            }
+          } else {
+            // Server returned Guest or empty — not authenticated
+            if (this.authState) {
+              this.authState.isLoggedIn = false;
+            }
+            throw new Error('Not authenticated');
           }
         })
         .catch((error) => {
+          clearTimeout(timeoutId);
           if (import.meta.env?.DEV) console.error(error);
-          // R41-FIX: Mark auth as failed so the route guard doesn't trap
-          // the user in a loop (Home → modal "Login" → Login page →
-          // guard redirects back to Home because isLoggedIn is still true).
-          if (this.authState) {
-            this.authState.isLoggedIn = false;
+          // R52-FIX (H2): Only mark as logged out for auth errors, not network errors.
+          // Network errors (timeout, DNS failure, etc.) should NOT change isLoggedIn —
+          // the user may still be logged in; it's the network that's broken.
+          if (this._isAuthError(error)) {
+            if (this.authState) {
+              this.authState.isLoggedIn = false;
+            }
           }
           throw error; // Re-throw so callers can catch
+        })
+        .finally(() => {
+          if (this._authAbortController === controller) {
+            this._authAbortController = null;
+          }
         });
     },
     fetchKOT() {
@@ -608,7 +670,13 @@ export default {
     },
     confirmOrder(kot) {
       if (this._inflightOps && this._inflightOps.has(kot.name)) return;
-      if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+      // R52-FIX (M1): Use per-KOT cancel timeout map instead of shared _cancelTimeout.
+      // Previously, serving KOT B would clear KOT A's cancel re-fetch timeout,
+      // delaying KOT A's state update until the next 60-second timer tick.
+      if (this._cancelTimeouts && this._cancelTimeouts.has(kot.name)) {
+        clearTimeout(this._cancelTimeouts.get(kot.name));
+        this._cancelTimeouts.delete(kot.name);
+      }
       if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
       // R51-FIX (H1): Use per-KOT AbortController map instead of shared single
@@ -660,7 +728,11 @@ export default {
     },
     serveOrder(kot) {
       if (this._inflightOps && this._inflightOps.has(kot.name)) return;
-      if (this._cancelTimeout) { clearTimeout(this._cancelTimeout); this._cancelTimeout = null; }
+      // R52-FIX (M1): Use per-KOT cancel timeout map (same as confirmOrder)
+      if (this._cancelTimeouts && this._cancelTimeouts.has(kot.name)) {
+        clearTimeout(this._cancelTimeouts.get(kot.name));
+        this._cancelTimeouts.delete(kot.name);
+      }
       if (!this.kot.find(k => k.name === kot.name)) return; // R50-FIX: Pre-flight check
       this._markInflight(kot.name);
       // R51-FIX (H1): Use per-KOT AbortController map instead of shared single
@@ -908,6 +980,11 @@ export default {
       if (
         // R41-FIX: Use >= instead of === for alert threshold comparison.
         hasValidTime &&
+        // R52-FIX (M1): Add alertThreshold > 0 guard to notification path, consistent
+        // with the color path below. Without this, kot_alert_time = 0 or "" makes
+        // validMinutes >= 0 always true, causing ALL KOTs to trigger delay
+        // notifications every 60 seconds — notification spam on misconfigured stations.
+        Number(this.kot_alert_time) > 0 &&
         validMinutes >= Number(this.kot_alert_time) &&
         kot.type !== "Cancelled" &&
         kot.type !== "Partially cancelled" &&
@@ -1066,12 +1143,32 @@ export default {
       if (this._isAuthError(error)) {
         this.modalTitle = "Session Expired";
         this.modalMessage = "Your session has expired. Please log in again.";
+        this.modalIsAuthError = true; // R52-FIX (M3): Track error type for modal buttons
         this.showModal = true;
         if (this.authState) this.authState.isLoggedIn = false;
       } else {
         this.setStatusMessage(fallbackMessage || "Data refresh failed. Click Refresh.");
         this.hideStatusMessageAfterDelay();
       }
+    },
+    // R52-FIX (M3): Retry action for network error modal — re-attempts the
+    // initialization sequence (auth + fetch) without redirecting to login.
+    retryAfterError() {
+      this.showModal = false;
+      this.modalIsAuthError = false;
+      if (!this._isMounted) return;
+      this.setStatusMessage("Retrying...");
+      this.auth().then(() => {
+        if (!this._isMounted) return;
+        return this.fetchKOTWithRetry();
+      }).then(() => {
+        if (!this._isMounted) return;
+        this.setStatusMessage("Connected");
+        this.hideStatusMessageAfterDelay();
+      }).catch((error) => {
+        if (!this._isMounted) return;
+        this._handleFetchError(error, "Retry failed. Click Refresh or try again.");
+      });
     },
     // R49-FIX (H2): Extract socket handler body into a named method so it can
     // be registered independently of the init-chain fetch result. Previously,
@@ -1129,7 +1226,12 @@ export default {
           const { name: _ignored, ...kotData } = doc.kot;
           Object.assign(targetKot, { timecolor: 'text-black', timeRemaining: '— : —', ...kotData });
           // Restore strikethrough state after Object.assign
-          if (targetKot.kot_items) {
+          // R52-FIX (L2): Validate kot_items is an array before forEach —
+          // Object.assign could set kot_items to a non-array truthy value
+          // (e.g., string, number) from a malformed server response, which
+          // would throw TypeError on forEach. The outer try-catch handles
+          // this but a specific guard gives a cleaner error path.
+          if (Array.isArray(targetKot.kot_items)) {
             targetKot.kot_items.forEach(i => {
               if (strikeMap.has(i.name)) i.striked = strikeMap.get(i.name);
             });
@@ -1152,14 +1254,22 @@ export default {
         if (doc.daily_order_number != null) this.daily_order_number = doc.daily_order_number;
         // R40-FIX: Use debounced masonry layout for rapid socket events
         this._debouncedMasonryLayout();
-        // R41-FIX: Cancel timeout and localStorage write are now ONLY in the incremental path.
-        if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
-        // R39-FIX: Only schedule cancel re-fetch if the KOT is actually a cancellation.
-        if (doc.kot.type === "Cancelled") {
-          this._cancelTimeout = setTimeout(() => {
+        // R52-FIX (M1): Use per-KOT cancel timeout map instead of shared _cancelTimeout.
+        // Also add "Partially cancelled" to the cancel re-fetch trigger — a
+        // partially cancelled KOT still needs a timely re-fetch to reflect
+        // updated quantities on the display.
+        const kotName = doc.kot.name;
+        if (this._cancelTimeouts && this._cancelTimeouts.has(kotName)) {
+          clearTimeout(this._cancelTimeouts.get(kotName));
+          this._cancelTimeouts.delete(kotName);
+        }
+        if (doc.kot.type === "Cancelled" || doc.kot.type === "Partially cancelled") {
+          if (!this._cancelTimeouts) this._cancelTimeouts = new Map();
+          this._cancelTimeouts.set(kotName, setTimeout(() => {
+            if (this._cancelTimeouts) this._cancelTimeouts.delete(kotName);
             if (!this._isMounted) return;
             this.fetchKOTWithRetry().catch((error) => { this._handleFetchError(error, "Data refresh failed. Click Refresh."); });
-          }, 1500);
+          }, 1500));
         }
         // R41-FIX: Guard against storing null/undefined as string "null"/"undefined"
         // R51-FIX (M2): Guard on doc.last_kot_time (the field we actually store)
@@ -1325,9 +1435,13 @@ export default {
     // R42-FIX: Generation counter for fetchKOTWithRetry — prevents orphaned
     // promise chains when concurrent calls cancel each other's retry timers.
     this._fetchGeneration = 0;
-    // R45-FIX: Initialize _cancelTimeout for consistency with other cleanup
-    // properties — previously relied on falsy undefined check in serveOrder/confirmOrder.
-    this._cancelTimeout = null;
+    // R45-FIX: Initialize _cancelTimeouts per-KOT map (R52-FIX: replaces
+    // shared _cancelTimeout which caused KOT B's serve to cancel KOT A's
+    // cancel re-fetch timeout).
+    this._cancelTimeouts = new Map();
+    // R52-FIX (H1): AbortController for auth() — previously the Frappe SDK
+    // auth call had no timeout or abort support, blocking KDS init indefinitely.
+    this._authAbortController = null;
     // R48-FIX (M1): AbortController reference for cancelling in-flight fetches
     this._fetchAbortController = null;
     // R48-FIX (M3): Store previously focused element to restore on modal close
@@ -1519,13 +1633,15 @@ export default {
           // Auth failure → "Not Permitted" with login prompt.
           // Network/server failure → "Connection Error" with retry guidance.
           // R45-FIX: Use centralized _isAuthError instead of duplicated inline check
-          if (this._isAuthError(error)) {
+          const isAuthErr = this._isAuthError(error);
+          if (isAuthErr) {
             this.modalTitle = "Not Permitted";
             this.modalMessage = "Log in to access this page.";
           } else {
             this.modalTitle = "Connection Error";
             this.modalMessage = "Unable to reach the server. Please check your connection and try again.";
           }
+          this.modalIsAuthError = isAuthErr; // R52-FIX (M3): Track error type for modal buttons
           this.showModal = true;
         }
       });
@@ -1567,11 +1683,21 @@ export default {
       this._socket.disconnect();
     }
     this._socketInitPromise = null;
-    if (this._cancelTimeout) clearTimeout(this._cancelTimeout);
+    // R52-FIX (M1): Clean up per-KOT cancel re-fetch timeouts
+    if (this._cancelTimeouts) {
+      this._cancelTimeouts.forEach(tid => clearTimeout(tid));
+      this._cancelTimeouts.clear();
+      this._cancelTimeouts = null;
+    }
     if (this._statusTimeout) clearTimeout(this._statusTimeout);
     if (this._socketRetryTimer) clearTimeout(this._socketRetryTimer);
     if (this._fetchRetryTimer) clearTimeout(this._fetchRetryTimer);
     if (this._notificationCooldownTimer) clearTimeout(this._notificationCooldownTimer);
+    // R52-FIX (H1): Abort in-flight auth request on unmount
+    if (this._authAbortController) {
+      this._authAbortController.abort();
+      this._authAbortController = null;
+    }
     // R48-FIX (M1): Abort any in-flight fetch on unmount
     if (this._fetchAbortController) {
       this._fetchAbortController.abort();
@@ -1617,6 +1743,14 @@ export default {
       this._masonry.destroy();
       this._masonry = null;
     }
+    // R52-FIX (L1): Clean up auxiliary data structures on unmount for
+    // consistency and to help GC. Without explicit cleanup, these Maps/Sets
+    // hold references until the component instance is collected, which may
+    // be delayed if closures retain the instance.
+    if (this._sortedItemsCache) this._sortedItemsCache.clear();
+    if (this._inflightOps) this._inflightOps.clear();
+    if (this.notifiedKots) this.notifiedKots.clear();
+    if (this._notifiedFailCount) this._notifiedFailCount.clear();
   },
   computed: {
     // R39-FIX: sortedKotItems moved from computed (which returned a function) to

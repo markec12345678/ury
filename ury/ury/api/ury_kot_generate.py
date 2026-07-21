@@ -506,7 +506,7 @@ def kot_execute(
                 items=total_cancel_items,
                 cancel_kot_naming_series=cancel_kot_naming_series,
                 kot_type="Partially cancelled",
-                invoiceItems=new_invoice_items_array,
+                invoiceItems=current_items_array,
             )
         except Exception:
             frappe.db.rollback(savepoint="before_cancel_kot")

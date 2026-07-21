@@ -57,5 +57,24 @@ router.beforeEach(async (to, from, next) => {
   }
 });
 
+// R52-FIX (M2): Global Vue error handler — catches unhandled errors from:
+// - Component lifecycle hooks (mounted, beforeUnmount, etc.)
+// - Event handlers (@click, @keydown, etc.)
+// - Watcher callbacks
+// - Methods called outside the template
+// Without this, errors in watchers/methods are only console.error'd by Vue
+// with no user feedback. For a KDS display running unattended in a kitchen,
+// silent failures mean stale data with no indication something is wrong.
+app.config.errorHandler = (err, instance, info) => {
+  console.error(`[KDS Error] ${info}:`, err);
+  // If the error originated from the KOT component, attempt recovery
+  if (instance && instance.$options?.name === 'KOT' && typeof instance.setStatusMessage === 'function') {
+    try {
+      instance.setStatusMessage('Unexpected error. Refreshing...');
+      instance.hideStatusMessageAfterDelay?.();
+    } catch (_e) { /* avoid infinite recursion */ }
+  }
+};
+
 app.provide('authState', authState);
 app.mount("#app");

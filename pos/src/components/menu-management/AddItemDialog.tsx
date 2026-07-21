@@ -34,23 +34,27 @@ const AddItemDialog = ({ menuName, courses, onClose }: AddItemDialogProps) => {
     setRate(item.standard_rate || 0);
   };
 
+  // R52-FIX (H2): Add catch block to prevent unhandled promise rejection.
   const handleAdd = async () => {
     if (!selectedItem || rate <= 0) return;
     setAdding(true);
     try {
       await addItemToMenu(menuName, selectedItem.name, rate, course || null, specialDish);
       onClose();
+    } catch {
+      // Error is handled by the store; no additional action needed here
     } finally {
       setAdding(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    // R52-FIX (H1): Add role="dialog" and aria-modal for screen reader accessibility.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="add-item-dialog-title">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden m-4 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">{t('menu_management.add_item_to_menu')}</h2>
+          <h2 id="add-item-dialog-title" className="text-lg font-semibold">{t('menu_management.add_item_to_menu')}</h2>
           <Button variant="ghost" onClick={onClose}>
             <X className="w-5 h-5" />
           </Button>

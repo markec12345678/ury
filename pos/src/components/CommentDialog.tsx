@@ -23,17 +23,19 @@ const CommentDialog = ({ isOpen, onClose, onSave, initialComment = '' }: Comment
     onClose();
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setComment(initialComment);
     onClose();
-  };
+  }, [initialComment, onClose]);
 
-  // R45-FIX: Close dialog on Escape key press for keyboard accessibility
+  // R52-FIX (M6): Include handleCancel in handleKeyDown deps to prevent stale closure.
+  // Previously, the eslint-disable-line suppressed the missing dep warning,
+  // but handleCancel's onClose could be stale if the parent re-rendered.
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleCancel();
     }
-  }, [initialComment, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleCancel]);
 
   useEffect(() => {
     if (!isOpen) return;

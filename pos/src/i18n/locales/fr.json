@@ -287,6 +287,7 @@
     "confirm_delete_course": "Supprimer cette catégorie ? Les articles qui l'utilisent deviendront non catégorisés.",
     "no_courses": "Aucune catégorie définie",
     "course_name": "Nom de la catégorie",
+    "course_name_placeholder": "ex : Entrées, Plat principal, Desserts",
     "priority": "Priorité",
     "batch_update_prices": "Mise à jour des prix par lot",
     "bulk_actions": "Actions en masse",
@@ -533,6 +534,14 @@
     "no_inventory_data_export": "Aucune donnée d'inventaire à exporter",
     "csv_exported": "CSV exporté avec succès",
     "failed_export_csv": "Échec de l'exportation CSV",
+    "pdf": {
+      "company_name": "URY Restaurant",
+      "sales_title": "Rapport des ventes",
+      "expense_title": "Rapport des dépenses",
+      "profit_loss_title": "Rapport des profits et pertes",
+      "inventory_title": "Rapport d'inventaire",
+      "generated": "Généré"
+    },
     "sales": {
       "noData": "Sélectionnez une période pour générer un rapport des ventes",
       "totalRevenue": "Chiffre d'affaires total",

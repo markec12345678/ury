@@ -48,15 +48,25 @@ const MenuItemsList = ({
   const allSelected = items.length > 0 && items.every((item) => selectedItems.has(item.name));
   const someSelected = items.some((item) => selectedItems.has(item.name)) && !allSelected;
 
+  // R52-FIX (H2): Add try/catch to prevent unhandled promise rejections.
   const handleToggleDisabled = async (item: URYMenuItem) => {
-    await updateItemInMenu(menuName, item.name, {
-      disabled: item.disabled ? 0 : 1,
-    });
+    try {
+      await updateItemInMenu(menuName, item.name, {
+        disabled: item.disabled ? 0 : 1,
+      });
+    } catch {
+      // Error is handled by the store; no additional action needed here
+    }
   };
 
+  // R52-FIX (H2): Add try/catch to prevent unhandled promise rejections.
   const handleDelete = async (item: URYMenuItem) => {
     if (confirm(t('menu_management.confirm_delete_item'))) {
-      await removeItemFromMenu(menuName, item.name);
+      try {
+        await removeItemFromMenu(menuName, item.name);
+      } catch {
+        // Error is handled by the store; no additional action needed here
+      }
     }
   };
 

@@ -294,6 +294,7 @@
     "confirm_delete_course": "حذف هذه الفئة؟ الأصناف التي تستخدمها ستصبح غير مصنفة.",
     "no_courses": "لم يتم تحديد فئات بعد",
     "course_name": "اسم الفئة",
+    "course_name_placeholder": "مثال: مقبلات، طبق رئيسي، حلويات",
     "priority": "الأولوية",
     "batch_update_prices": "تحديث الأسعار بالجملة",
     "bulk_actions": "إجراءات جماعية",
@@ -540,6 +541,14 @@
     "no_inventory_data_export": "لا توجد بيانات مخزون للتصدير",
     "csv_exported": "تم تصدير CSV بنجاح",
     "failed_export_csv": "فشل تصدير CSV",
+    "pdf": {
+      "company_name": "URY Restaurant",
+      "sales_title": "تقرير المبيعات",
+      "expense_title": "تقرير المصروفات",
+      "profit_loss_title": "تقرير الأرباح والخسائر",
+      "inventory_title": "تقرير المخزون",
+      "generated": "تم الإنشاء"
+    },
     "sales": {
       "noData": "حدد فترة لإنشاء تقرير المبيعات",
       "totalRevenue": "إجمالي الإيرادات",

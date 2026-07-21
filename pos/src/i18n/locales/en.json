@@ -293,6 +293,7 @@
     "confirm_delete_course": "Delete this course? Items using it will become uncategorized.",
     "no_courses": "No courses defined yet",
     "course_name": "Course Name",
+    "course_name_placeholder": "e.g., Starters, Main Course, Desserts",
     "priority": "Priority",
     "batch_update_prices": "Batch Update Prices",
     "bulk_actions": "Bulk Actions",
@@ -539,6 +540,14 @@
     "no_inventory_data_export": "No inventory report data to export",
     "csv_exported": "CSV exported successfully",
     "failed_export_csv": "Failed to export CSV",
+    "pdf": {
+      "company_name": "URY Restaurant",
+      "sales_title": "Sales Report",
+      "expense_title": "Expense Report",
+      "profit_loss_title": "Profit & Loss Report",
+      "inventory_title": "Inventory Report",
+      "generated": "Generated"
+    },
     "sales": {
       "noData": "Select a period to generate a sales report",
       "totalRevenue": "Total Revenue",

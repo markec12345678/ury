@@ -18,11 +18,16 @@ const CourseManager = () => {
   const [editName, setEditName] = useState('');
   const [editPriority, setEditPriority] = useState(0);
 
+  // R52-FIX (H2): Add try/catch to prevent unhandled promise rejections.
   const handleAddCourse = async () => {
     if (!newCourseName.trim()) return;
-    await addCourse(newCourseName.trim(), newPriority);
-    setNewCourseName('');
-    setNewPriority(0);
+    try {
+      await addCourse(newCourseName.trim(), newPriority);
+      setNewCourseName('');
+      setNewPriority(0);
+    } catch {
+      // Error is handled by the store; no additional action needed here
+    }
   };
 
   const handleStartEdit = (course: URYMenuCourse) => {
@@ -31,21 +36,31 @@ const CourseManager = () => {
     setEditPriority(course.custom_serving_priority || 0);
   };
 
+  // R52-FIX (H2): Add try/catch to prevent unhandled promise rejections.
   const handleSaveEdit = async (courseName: string) => {
-    await updateCourseItem(courseName, {
-      course: editName,
-      serving_priority: editPriority,
-    });
-    setEditingCourse(null);
+    try {
+      await updateCourseItem(courseName, {
+        course: editName,
+        serving_priority: editPriority,
+      });
+      setEditingCourse(null);
+    } catch {
+      // Error is handled by the store; no additional action needed here
+    }
   };
 
+  // R52-FIX (H2): Add try/catch to prevent unhandled promise rejections.
   const handleDelete = async (courseName: string) => {
     if (
       confirm(
         t('menu_management.confirm_delete_course')
       )
     ) {
-      await deleteCourse(courseName);
+      try {
+        await deleteCourse(courseName);
+      } catch {
+        // Error is handled by the store; no additional action needed here
+      }
     }
   };
 
@@ -66,7 +81,7 @@ const CourseManager = () => {
             {t('menu_management.course_name')}
           </label>
           <Input
-            placeholder="e.g., Starters, Main Course, Desserts"
+            placeholder={t('menu_management.course_name_placeholder')}
             value={newCourseName}
             onChange={(e) => setNewCourseName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddCourse()}
@@ -134,7 +149,7 @@ const CourseManager = () => {
                     </span>
                   </div>
                   <span className="text-xs text-gray-400">
-                    Priority: {course.custom_serving_priority}
+                    {t('menu_management.priority')}: {course.custom_serving_priority}
                   </span>
                   <Button
                     size="sm"

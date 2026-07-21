@@ -54,7 +54,10 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
     return items.map((item) => {
       const newPrice = priceMap[item.name] ?? item.rate;
       const diff = newPrice - item.rate;
-      const pctChange = item.rate !== 0 ? (diff / item.rate) * 100 : 0;
+      // R52-FIX (L1): Return null instead of 0 when going from free to paid.
+      // Showing "0%" for a transition from $0 to $5 is misleading —
+      // mathematically undefined (∞%). Show "N/A" instead.
+      const pctChange = item.rate !== 0 ? (diff / item.rate) * 100 : null;
       return { item, newPrice, diff, pctChange };
     });
   }, [items, priceMap]);
@@ -83,11 +86,12 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    // R52-FIX (H1): Add role="dialog" and aria-modal for screen reader accessibility.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="batch-price-dialog-title">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden m-4 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">
+          <h2 id="batch-price-dialog-title" className="text-lg font-semibold">
             {t('menu_management.batch_update_prices')}
           </h2>
           <Button variant="ghost" onClick={onClose}>
@@ -186,7 +190,7 @@ const BatchPriceUpdateDialog = ({ items, menuName, onClose }: BatchPriceUpdateDi
                           <ArrowDown className="w-3 h-3" />
                         )}
                         {formatCurrency(Math.abs(diff))}
-                        <span className="text-xs">({pctChange >= 0 ? '+' : ''}{pctChange.toFixed(1)}%)</span>
+                        <span className="text-xs">({pctChange !== null ? `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(1)}%` : 'N/A'})</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center text-gray-400 text-sm">

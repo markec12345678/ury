@@ -42,14 +42,21 @@ def kotValidationThread():
 
 
 def get_unprocessed_invoices(start_time, end_time):
+    # R51-FIX: Add LIMIT to prevent unbounded result sets in busy systems.
+    # In a high-throughput restaurant, a 5-minute window can contain hundreds
+    # of draft invoices. Each triggers a get_doc + KOT creation, so an
+    # unbounded query can exhaust memory and cause scheduler stalls.
+    MAX_INVOICES_PER_RUN = 200
     return frappe.db.sql(
         """
         SELECT name, creation
         FROM `tabPOS Invoice`
         WHERE docstatus = 0
             AND creation BETWEEN %s AND %s
+        ORDER BY creation ASC
+        LIMIT %s
         """,
-        (start_time, end_time),
+        (start_time, end_time, MAX_INVOICES_PER_RUN),
         as_dict=True,
     )
 
@@ -80,7 +87,7 @@ def process_invoice(invoice):
     # Check if KOT already exists for this invoice
     kot_list = frappe.get_list(
         "URY KOT",
-        filters={"creation": (">", posInvoice.creation), "invoice": posInvoice.name},
+        filters={"creation": (">", posInvoice.creation), "invoice": posInvoice.name, "docstatus": 1},
     )
 
     if kot_list:

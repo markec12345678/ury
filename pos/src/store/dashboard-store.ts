@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { logger } from '../lib/logger';
 import { t } from '../i18n';
+
+// R52-FIX (M4): Move auto-refresh timer to module scope instead of Zustand state.
+// Timer handles are non-serializable and shouldn't participate in Zustand's
+// shallow equality checks. They also break devtools/persistence.
+let _autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 import {
   getDashboardSummary,
   getRevenueChart,
@@ -53,8 +58,8 @@ interface DashboardState {
   error: string | null;
   autoRefresh: boolean;
   refreshInterval: number; // seconds
+  // R52-FIX (M4): Removed _autoRefreshTimer from Zustand state — now at module scope
   partialErrors: string[];
-  _autoRefreshTimer: ReturnType<typeof setInterval> | null;
 }
 
 interface DashboardActions {
@@ -92,8 +97,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
     error: null,
     autoRefresh: false,
     refreshInterval: 30,
+    // R52-FIX (M4): Removed _autoRefreshTimer from initial state — now at module scope
     partialErrors: [],
-    _autoRefreshTimer: null,
 
     fetchSummary: async (period) => {
       const p = period || get().selectedPeriod;
@@ -235,16 +240,15 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
       // Previously, setting autoRefresh=true only set a flag but never
       // created an interval, making the feature non-functional.
       const state = get();
-      // Clear any existing timer first
-      if (state._autoRefreshTimer) {
-        clearInterval(state._autoRefreshTimer);
-        set({ _autoRefreshTimer: null });
+      // R52-FIX (M4): Use module-scope timer instead of Zustand state
+      if (_autoRefreshTimer) {
+        clearInterval(_autoRefreshTimer);
+        _autoRefreshTimer = null;
       }
       if (enabled) {
-        const timer = setInterval(() => {
+        _autoRefreshTimer = setInterval(() => {
           get().fetchAll().catch(() => { /* fetchAll sets its own error state */ });
         }, state.refreshInterval * 1000);
-        set({ _autoRefreshTimer: timer });
       }
     },
 
@@ -257,11 +261,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>(
     },
 
     stopAutoRefresh: () => {
-      const timer = get()._autoRefreshTimer;
-      if (timer) {
-        clearInterval(timer);
+      // R52-FIX (M4): Use module-scope timer instead of Zustand state
+      if (_autoRefreshTimer) {
+        clearInterval(_autoRefreshTimer);
+        _autoRefreshTimer = null;
       }
-      set({ _autoRefreshTimer: null, autoRefresh: false });
+      set({ autoRefresh: false });
     },
   })
 );

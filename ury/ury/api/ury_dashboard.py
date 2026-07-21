@@ -78,6 +78,12 @@ def get_revenue_chart(period="this_month", granularity="daily"):
     granularity: hourly, daily, weekly, monthly
     """
     frappe.only_for("Restaurant Manager", "Accounts Manager")
+    # R51-FIX: Validate granularity against whitelist instead of silently
+    # falling through to monthly for invalid values.
+    VALID_GRANULARITIES = {"hourly", "daily", "weekly", "monthly"}
+    if granularity not in VALID_GRANULARITIES:
+        frappe.throw(_("Invalid granularity '{0}'. Valid values: {1}").format(
+            granularity, ", ".join(sorted(VALID_GRANULARITIES))), frappe.ValidationError)
     from_date, to_date = _get_period_dates(period)
     branch = _get_user_branch()
 
